@@ -16,21 +16,29 @@ meta-agent/
 ```
 
 ## 🚨 每次對話啟動必做（防幻覺第一道防線）
+0. 讀 `./memory/handoff/latest-handoff.md` — 上次中斷在哪？有未完成任務？
 1. 讀取 `./law.json` — 載入硬規則法典（路徑/技術棧/禁止動作）
-2. 先查 `error-log/` — 這個問題之前踩過坑嗎？
-3. 先查 `tech-stack/` — 技術選型是否已鎖定？
-4. 查官方文件或 GitHub README，不依賴模型本身的知識
+2. 查 `error-log/` — 這個問題之前踩過坑嗎？
+3. 查 `tech-stack/` — 技術選型是否已鎖定？
+4. 查文件優先用 qmd / Brave，不依賴模型本身知識
 5. 交叉驗證後才執行
 
+## 搜尋工具決策樹（降低成本）
+- 技術文件查詢 → **qmd**（免費，結構化）
+- 最新版本/API確認 → **Brave Search**（便宜）
+- 網頁爬取 → **lightpanda**（免費）
+- 記憶萃取/格式化 → **Groq**（免費額度高）
+- 複雜推理/最終決策 → **Claude Sonnet**（最後手段）
+
 ## 決策三問
-- 這條 law.json 的 forbidden 有沒有命中？
+- law.json 的 forbidden 有沒有命中？
 - error-log 有沒有相同根因？
 - 技術棧有沒有鎖定選型？
 
 ## 已確認技術棧
 - 串連層：n8n（Docker，已架好）
-- RAG + 知識庫：Dify.ai Cloud
-- 知識圖譜：LightRAG（待建）
+- RAG + 知識庫：Dify Cloud + LightRAG（port 9621，已運行）
+- 知識圖譜：LightRAG + PostgreSQL（已建置，已 ingest 8 份歷史文件）
 - 記憶庫：此目錄 + Git 版本控制
 - 人類介面：Obsidian（iCloud 庫）
 - LLM：Claude API / Gemini API（不跑本地模型）
