@@ -1,0 +1,105 @@
+{
+  "version": "2.0",
+  "last_updated": "2026-03-16",
+  "description": "meta-agent 系統硬規則法典。每個分類上限 10 條，超過必須清洗合併。90天未觸發自動標記 deprecated。",
+
+  "paths": {
+    "meta_agent_dir": "/Users/ryan/meta-agent",
+    "obsidian_vault": "/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun",
+    "n8n_compose": "/Users/ryan/Projects/n8n/docker-compose.yml",
+    "lightrag_compose": "/Users/ryan/Projects/lightrag/docker-compose.yml",
+    "env_file": "/Users/ryan/meta-agent/.env",
+    "lightrag_api": "http://localhost:9621",
+    "n8n_api": "http://localhost:5678"
+  },
+
+  "tech_stack": {
+    "workflow_engine": "n8n（Docker，port 5678）",
+    "knowledge_graph": "LightRAG + PostgreSQL（port 9621）",
+    "rag_cloud": "Dify Cloud（API: https://api.dify.ai/v1）",
+    "memory_source": "/Users/ryan/meta-agent/ + Git",
+    "human_interface": "Obsidian（iCloud sync）",
+    "llm_primary": "claude-sonnet（Anthropic API）",
+    "llm_fast": "claude-haiku / gemini-flash（量大用，走 OpenRouter）",
+    "embedding": "text-embedding-3-small（OpenRouter）",
+    "forbidden_local_llm": "禁止本地跑任何 LLM 模型（8GB RAM 限制）"
+  },
+
+  "forbidden": [
+    {
+      "rule": "禁止在 n8n Code Node 將大型二進制轉 Base64",
+      "reason": "19MB+ 檔案轉 Base64 → Runner OOM 崩潰",
+      "solution": "改用 HTTP Request Node 設定為 File 模式串流下載",
+      "source": "error-log/douyin-parser-bugs.md BUG OOM",
+      "added": "2026-03-12"
+    },
+    {
+      "rule": "禁止讓 LLM 一次清洗 >4000 字逐字稿",
+      "reason": "觸發 Token 上限截斷 → JSON Invalid Syntax → 後續節點全掛",
+      "solution": "只做知識提取（core_point/summary），原文直接送 RAG",
+      "source": "error-log/douyin-parser-bugs.md BUG 2",
+      "added": "2026-03-12"
+    },
+    {
+      "rule": "禁止在 Dify/LightRAG ingest 前不加字數驗證",
+      "reason": "抓錯音軌只有 154 字 → 髒資料污染知識庫",
+      "solution": "IF 節點驗證 transcript 字數 > 500 才 ingest",
+      "source": "error-log/douyin-parser-bugs.md BUG BGM",
+      "added": "2026-03-12"
+    },
+    {
+      "rule": "禁止 .env 檔案 git commit",
+      "reason": "API Key 外洩",
+      "solution": ".gitignore 已設定，symlink 到 meta-agent/.env",
+      "source": "系統設計",
+      "added": "2026-03-16"
+    },
+    {
+      "rule": "禁止 Phase 1 規劃階段調用修改系統的 MCP",
+      "reason": "規劃未確認就執行 → 不可逆操作",
+      "solution": "Phase 1 只輸出 JSON 施工圖，Phase 2 才解鎖執行",
+      "source": "架構 V2.0",
+      "added": "2026-03-16"
+    }
+  ],
+
+  "n8n_rules": [
+    {
+      "rule": "MCP 更新 workflow 後只變 draft，不自動 publish",
+      "detail": "Production webhook: /webhook/{path}，Draft: /webhook/{workflowId}/webhook/{path}",
+      "source": "error-log/douyin-parser-bugs.md BUG 1",
+      "added": "2026-03-12"
+    },
+    {
+      "rule": "Code Node 不能用 child_process（n8n v2.11.2+）",
+      "detail": "task-runner 隔離執行，需在 docker-compose 加 N8N_RUNNERS_ENABLED=false",
+      "source": "error-log/douyin-parser-bugs.md BUG 2",
+      "added": "2026-03-12"
+    },
+    {
+      "rule": "updateNode 語法：改動必須在 updates 子物件內",
+      "detail": "{type: updateNode, nodeId: xxx, updates: {parameters: {...}}}",
+      "source": "error-log/douyin-parser-bugs.md BUG 3",
+      "added": "2026-03-12"
+    },
+    {
+      "rule": "updateNode 用 nodeId（UUID），不能用 name",
+      "detail": "查詢方式：n8n_get_workflow → data.nodes[].id",
+      "source": "error-log/douyin-parser-bugs.md BUG 5",
+      "added": "2026-03-12"
+    }
+  ],
+
+  "naming": {
+    "error_log": "YYYY-MM-DD-{topic}.md",
+    "truth_source": "YYYY-MM-DD-{decision}.md",
+    "tech_stack_doc": "{component}-stack.md"
+  },
+
+  "workflow_loop": {
+    "phase1": "主控腦讀取 law.json + CLAUDE.md，輸出 JSON 施工圖，禁止執行",
+    "phase2": "解鎖 MCP，Just-in-Time RAG 查 error-log/tech-stack，沙盒執行",
+    "phase3_exit0": "寫入 truth-source/ + 更新 LightRAG",
+    "phase3_exit1": "重試最多 3 次 → Haiku 歸檔 error-log → 人類介入"
+  }
+}
