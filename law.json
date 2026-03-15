@@ -129,6 +129,24 @@
     "cleaning_log": "memory/cleaning-log.md"
   },
 
+  "git_score": {
+    "threshold": 50,
+    "weights": {
+      "law.json 變更":       25,
+      "error-log/ 變更":     30,
+      "truth-source/ 新增":  15,
+      "tech-stack/ 變更":    20,
+      "memory/ 變更":        10,
+      "其他 .md 變更":        5,
+      "未提交超過 4 小時":    20,
+      "未提交超過 8 小時":    40
+    },
+    "trigger": "分數 >= 50 → 自動 git commit",
+    "schedule": "每小時由 launchd 執行 scripts/git-score.py",
+    "log": "memory/git-score-log.md",
+    "commit_format": "auto: [{type}] score={n} 超過閾值自動備份"
+  },
+
   "git_rules": {
     "decision_branch_format": "decision/{topic}-{YYYY-MM-DD}",
     "examples": [
