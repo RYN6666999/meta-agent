@@ -39,3 +39,5 @@ meta-agent/
 - n8n: Docker 本地架設
 - 錯誤庫: `./error-log/`
 - 技術棧文件: `./tech-stack/`
+- 迭代紀錄文件：/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun/TikTok_Notes/零幻覺迭代元代理模組meta-agent計畫.md
+- 初始設定：/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun/元agent.md

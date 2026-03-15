@@ -1,0 +1,11 @@
+# ⚠️ 機密
+.env
+.env.*
+*.key
+*.pem
+
+# 系統
+.DS_Store
+__pycache__/
+*.pyc
+node_modules/

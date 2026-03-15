@@ -13,22 +13,35 @@
 | 發送腳本 | `/Users/ryan/Desktop/douyin_sender.py` |
 | n8n API key | `~/Library/Application Support/Claude/claude_desktop_config.json` → `N8N_API_KEY` |
 
-## Workflow
+## Workflows
 
+### Douyin Parser（快速通道）
 - **ID:** `JLDy5AGM7aM2rTlhy3K4i`
-- **名稱:** Douyin Parser
+- **Active:** true
+- **最後更新:** 2026-03-14
 
-## 節點 ID 對照
+| 節點名稱 | Node ID | 類型 |
+|---|---|---|
+| Webhook | `fd73693c-c93e-4147-8bbd-e17f27e6ed4e` | webhook |
+| Get Douyin URL | `get-douyin-url-001` | httpRequest |
+| Download Audio | `download-audio-001` | code |
+| Process Audio | `process-audio-001` | code |
+| Write Basic Note | `write-basic-note-001` | code |
+| Respond to Webhook | `respond-001` | respondToWebhook |
+| Trigger Enrich | `trigger-enrich-001` | httpRequest |
 
-| 節點名稱 | Node ID |
-|---|---|
-| Webhook | `fd73693c-c93e-4147-8bbd-e17f27e6ed4e` |
-| yt-dlp Extract | `ytdlp-code-v2` |
-| Transcribe Audio | `b2c3d4e5-f6a7-8901-bcde-222222222222` |
-| Extract Knowledge | `c3d4e5f6-a7b8-9012-cdef-333333333333` |
-| Write Notes | `d4e5f6a7-b8c9-0123-defa-444444444444` |
-| Dify Ingest | `dify-ingest-001` |
-| Respond to Webhook | `8bbc0fd5-ee44-47bc-afd5-f3191839be84` |
+### Douyin Enricher（非同步深度處理）
+- **ID:** `gcXBDEFa5joixhX6`
+- **Active:** true
+- **建立日期:** 2026-03-14
+
+| 節點名稱 | Node ID | 類型 |
+|---|---|---|
+| Webhook | `enrich-webhook-001` | webhook |
+| Respond 200 | `enrich-respond-001` | respondToWebhook |
+| Build Combined Prompt | `enrich-prompt-001` | code |
+| Extract All | `enrich-extract-001` | httpRequest |
+| Update Note | `enrich-write-001` | code |
 
 ## API Keys（存放於 .env，勿明文寫入程式碼）
 
@@ -58,15 +71,24 @@
 - **Groq Whisper API**（雲端，免費額度高）
 - 備用：本地 Whisper（需更多 RAM，8GB Mac 不建議）
 
-## 資料流
+## 資料流（雙管道架構）
 
 ```
 douyin_sender.py
-    → POST webhook
-    → yt-dlp Extract（需 cookies + msToken）
-    → Transcribe Audio（Groq Whisper）
-    → Extract Knowledge
-    → Write Notes（寫入 Obsidian）
-    → Dify Ingest（寫入 Dify 知識庫）
-    → Respond to Webhook
+    → POST /webhook/douyin（Douyin Parser）
+        → Get Douyin URL
+        → Download Audio
+        → Process Audio（Groq Whisper 轉錄）
+        → Write Basic Note（寫入 Obsidian 基礎筆記）
+        → Respond to Webhook（立即回應，不卡使用者）
+        → Trigger Enrich → POST /webhook/enrich（Douyin Enricher）
+                              → Respond 200（立即回應）
+                              → Build Combined Prompt
+                              → Extract All（LLM 深度萃取）
+                              → Update Note（更新 Obsidian 筆記）
 ```
+
+**設計意圖：**
+- Parser 負責快速完成（下載、轉錄、寫入基礎筆記），讓使用者盡快收到回應
+- Enricher 非同步執行深度分析，完成後更新同一份筆記
+- 兩個 workflow 都已 active（Published 狀態）
