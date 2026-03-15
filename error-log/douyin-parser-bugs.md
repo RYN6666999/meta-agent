@@ -1,3 +1,12 @@
+---
+date: 2026-03-12
+type: error_fix
+status: active
+last_triggered: 2026-03-16
+expires_after_days: 365
+source: Douyin Parser workflow 除錯
+---
+
 # Douyin Parser — Bug 根因文檔
 
 **Workflow ID:** JLDy5AGM7aM2rTlhy3K4i

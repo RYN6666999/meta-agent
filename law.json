@@ -101,5 +101,45 @@
     "phase2": "解鎖 MCP，Just-in-Time RAG 查 error-log/tech-stack，沙盒執行",
     "phase3_exit0": "寫入 truth-source/ + 更新 LightRAG",
     "phase3_exit1": "重試最多 3 次 → Haiku 歸檔 error-log → 人類介入"
+  },
+
+  "memory_rules": {
+    "types": {
+      "error_fix": "從 error-log 蒸餾的修正規則",
+      "tech_decision": "技術選型決策（含棄用選項）",
+      "verified_truth": "Exit 0 驗證通過的事實",
+      "deprecated": "已過期或被取代的記憶，待清洗"
+    },
+    "frontmatter_schema": {
+      "date": "YYYY-MM-DD（記憶建立日）",
+      "type": "error_fix | tech_decision | verified_truth | deprecated",
+      "status": "active | deprecated",
+      "last_triggered": "YYYY-MM-DD（AI 最後引用此記憶的日期）",
+      "expires_after_days": 90,
+      "source": "來源文件或對話"
+    },
+    "cleaning_rules": [
+      "每類記憶上限 10 條，超過 → 強制由 Haiku 蒸餾合併",
+      "active 超過 90 天未觸發 → 自動降為 deprecated",
+      "deprecated 超過 30 天 → Haiku 判斷：刪除 or 合併進現有規則",
+      "同根因的 error_fix 超過 3 條 → 合併為 1 條通用規則",
+      "tech_decision 被新決策取代時 → 舊的標記 deprecated 但保留 30 天（考古用）"
+    ],
+    "cleaning_executor": "claude-haiku（低成本，每週觸發一次）",
+    "cleaning_log": "memory/cleaning-log.md"
+  },
+
+  "git_rules": {
+    "decision_branch_format": "decision/{topic}-{YYYY-MM-DD}",
+    "examples": [
+      "decision/lightrag-vs-neo4j-2026-03-15",
+      "decision/dify-cloud-vs-selfhost-2026-03-15",
+      "decision/v2-simplify-2026-03-16"
+    ],
+    "when_to_branch": "任何影響技術棧的重大選擇前，開 decision/ branch 記錄比較",
+    "merge_policy": "決策確認後 merge 回 main，branch 永久保留（考古用）",
+    "comparison_dir": "tech-stack/alternatives/",
+    "comparison_naming": "{topic}-comparison-{YYYY-MM-DD}.md",
+    "decision_template": "truth-source/decision-template.md"
   }
 }

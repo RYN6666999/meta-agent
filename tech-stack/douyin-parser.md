@@ -1,3 +1,12 @@
+---
+date: 2026-03-14
+type: tech_decision
+status: active
+last_triggered: 2026-03-16
+expires_after_days: 180
+source: Douyin Parser workflow 建立
+---
+
 # Douyin Parser — 技術棧與路徑總覽
 
 ## 關鍵路徑
