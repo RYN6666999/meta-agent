@@ -4,6 +4,7 @@ on-stop.py — Claude Code Stop hook
 每次 Claude 回應結束時執行：
 1. 計數器 +1，存到 memory/turn-count.txt
 2. 每 20 次 → 寫入 checkpoint（讀 master-plan 未完成項目）
+3. 每次 → 呼叫 generate-handoff.py 更新 latest-handoff.md（保持中斷恢復最新）
 
 注意：完整對話萃取需手動呼叫 scripts/extract-session.sh
 （Stop hook 無法取得對話文本，n8n P1-A webhook 靠手動觸發）
@@ -14,6 +15,7 @@ on-stop.py — Claude Code Stop hook
 import sys
 import json
 import os
+import subprocess
 from datetime import datetime, date
 from pathlib import Path
 
@@ -77,5 +79,15 @@ type: checkpoint
 # ── 每 50 次送 n8n 萃取（需要對話內容，此處跳過自動觸發）──
 # 對話文本無法直接從 Stop hook 取得，由使用者手動呼叫
 # /Users/ryan/meta-agent/scripts/extract-conversation.sh
+
+# ── 每次都更新 handoff（確保中斷恢復永遠最新）──────────────
+try:
+    subprocess.run(
+        [sys.executable, str(META / "scripts" / "generate-handoff.py")],
+        timeout=30, check=False, capture_output=True
+    )
+    sys.stderr.write(f"[on-stop] handoff updated (turn {turn})\n")
+except Exception as e:
+    sys.stderr.write(f"[on-stop] generate-handoff failed: {e}\n")
 
 sys.exit(0)

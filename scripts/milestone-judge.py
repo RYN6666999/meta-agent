@@ -176,7 +176,80 @@ score: {score}
     filename.write_text(content, encoding="utf-8")
 
 
-def log_result(topic, description, score, signals, branched, branch_name="", reason=""):
+def append_pending_decision(topic, description, score, signals):
+    """寫入決策收件匣 memory/pending-decisions.md，等待人類判斷"""
+    pending_file = REPO_DIR / "memory" / "pending-decisions.md"
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    signals_summary = "; ".join(s.strip() for s in signals[:3])
+    entry = f'| {date_str} | {topic} | {description[:60]} | {score} | {signals_summary} | pending |\n'
+    if pending_file.exists():
+        content = pending_file.read_text()
+        # 插在 comment 行之前（保持表格結構）
+        marker = '<!-- AI 偵測到重大決策時，自動在此插入列 -->'
+        if marker in content:
+            content = content.replace(marker, entry + marker)
+        else:
+            content += entry
+        pending_file.write_text(content)
+    else:
+        pending_file.parent.mkdir(parents=True, exist_ok=True)
+        pending_file.write_text(
+            "# 決策收件匣\n\n| date | topic | description | score | signals | status |\n"
+            "|------|-------|-------------|-------|---------|--------|\n" + entry
+        )
+
+
+def execute_approved(topic):
+    """讀 pending-decisions.md，找到 approved 的 topic 並執行"""
+    pending_file = REPO_DIR / "memory" / "pending-decisions.md"
+    if not pending_file.exists():
+        print(f"❌ pending-decisions.md 不存在")
+        return 1
+
+    content = pending_file.read_text()
+    found = None
+    for line in content.splitlines():
+        if f'| {topic} |' in line and '| approved |' in line:
+            parts = [p.strip() for p in line.split('|')]
+            # | date | topic | description | score | signals | status |
+            found = {'date': parts[1], 'topic': parts[2], 'description': parts[3],
+                     'score': int(parts[4]) if parts[4].isdigit() else 0, 'signals': parts[5].split('; ')}
+            break
+
+    if not found:
+        print(f"❌ 找不到 topic='{topic}' 且 status=approved 的決策")
+        print(f"   提示：先說 'approve {topic}' 確認，再執行 --approve")
+        return 1
+
+    print(f"✅ 執行核准決策：{topic} (score={found['score']})")
+    success, branch_name, msg = create_decision_branch(
+        found['topic'], found['description'], found['score'],
+        [f"  {s}" for s in found['signals']]
+    )
+    if success:
+        # 更新 pending-decisions.md status → done
+        content = content.replace(
+            f"| {found['topic']} | {found['description'][:60]}", ""
+        )
+        new_row = f"| {found['date']} | {found['topic']} | {found['description'][:60]} | {found['score']} | {'; '.join(found['signals'])} | ✅ done ({branch_name}) |"
+        content = content.replace(
+            f"| {found['date']} | {found['topic']} |", new_row.split('|')[0]
+        )
+        # 直接標記整列
+        old_line = next((l for l in content.splitlines() if f'| {topic} |' in l), None)
+        if old_line:
+            content = content.replace(old_line, old_line.replace('| approved |', f'| ✅ done ({branch_name}) |'))
+        pending_file.write_text(content)
+        log_result(topic, found['description'], found['score'], found['signals'], True, branch_name)
+        print(f"   分支：{branch_name}")
+        print(f"   pending-decisions.md 已更新為 done")
+    else:
+        print(f"❌ 建立分支失敗：{msg}")
+        return 1
+    return 0
+
+
+
     """寫入裁判日誌"""
     JUDGE_LOG.parent.mkdir(parents=True, exist_ok=True)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -201,13 +274,21 @@ def log_result(topic, description, score, signals, branched, branch_name="", rea
 
 
 def main():
-    parser = argparse.ArgumentParser(description="里程碑裁判 — 判斷是否建立 decision/ 分支")
-    parser.add_argument("--topic", required=True, help="里程碑主題（用於分支名稱，英文 kebab-case）")
-    parser.add_argument("--description", required=True, help="完成了什麼？驗證了什麼？")
-    parser.add_argument("--dry-run", action="store_true", help="只評分，不實際建立分支")
+    parser = argparse.ArgumentParser(description="里程碑裁判 — 偵測重大決策，送交人類判斷")
+    parser.add_argument("--topic", help="里程碑主題（英文 kebab-case）")
+    parser.add_argument("--description", help="完成了什麼？驗證了什麼？")
+    parser.add_argument("--dry-run", action="store_true", help="只評分，不寫收件匣")
+    parser.add_argument("--approve", metavar="TOPIC", help="執行已核准的決策（建立 decision/ 分支）")
     args = parser.parse_args()
 
     os.chdir(REPO_DIR)
+
+    # ── 執行核准的決策 ───────────────────────────────────────
+    if args.approve:
+        return execute_approved(args.approve)
+
+    if not args.topic or not args.description:
+        parser.error("--topic 和 --description 為必填（除非使用 --approve）")
 
     print(f"\n🔍 里程碑裁判啟動")
     print(f"   主題：{args.topic}")
@@ -228,20 +309,16 @@ def main():
         print(s)
 
     if score >= BRANCH_THRESHOLD:
-        print(f"\n🚨 達到閾值！此為重大里程碑")
+        print(f"\n🚨 達到閾值！偵測到重大里程碑")
         if args.dry_run:
-            print("   [dry-run] 不實際建立分支")
+            print("   [dry-run] 不寫入收件匣")
             log_result(args.topic, args.description, score, signals, False, reason="dry-run")
         else:
-            success, branch_name, msg = create_decision_branch(args.topic, args.description, score, signals)
-            log_result(args.topic, args.description, score, signals, success, branch_name)
-            if success:
-                print(f"✅ 分支已建立：{branch_name}")
-                print(f"   truth-source 記錄已寫入")
-                print(f"   已切回 main")
-            else:
-                print(f"❌ 建立分支失敗：{msg}")
-                return 1
+            # ⬇ 哲學變更：不自動建分支，送交人類判斷
+            append_pending_decision(args.topic, args.description, score, signals)
+            log_result(args.topic, args.description, score, signals, False, reason="pending human approval")
+            print(f"📥 已寫入 memory/pending-decisions.md")
+            print(f"   說 'approve {args.topic}' 確認後由 AI 建立 decision/ 分支")
     else:
         print(f"\n⏳ 未達閾值，不建分支（日常變更，交由 git-score.py 備份）")
         log_result(args.topic, args.description, score, signals, False)

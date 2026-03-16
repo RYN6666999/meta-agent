@@ -7,6 +7,19 @@
 0. `/Users/ryan/meta-agent/memory/handoff/latest-handoff.md` — 上次中斷在哪？
 1. `/Users/ryan/meta-agent/law.json` — 硬規則法典
 2. `/Users/ryan/meta-agent/memory/master-plan.md` — 完整計劃（找未完成項目）
+3. `/Users/ryan/meta-agent/memory/pending-decisions.md` — **⏳ 待判斷決策**（若有 `pending` 列，優先顯示）
+
+### 啟動輸出格式
+```
+Ryan，今天繼續哪個？
+
+⏳ 待你判斷（若有）：
+  1. {topic} — {description} (score={score})
+     → 說「approve {topic}」執行，或「reject {topic}」捨棄
+
+📋 前3個未完成項目：
+  ...
+```
 
 ---
 
@@ -18,6 +31,7 @@
 | law.json | `/Users/ryan/meta-agent/law.json` |
 | master-plan | `/Users/ryan/meta-agent/memory/master-plan.md` |
 | handoff | `/Users/ryan/meta-agent/memory/handoff/latest-handoff.md` |
+| pending-decisions | `/Users/ryan/meta-agent/memory/pending-decisions.md` |
 | error-log | `/Users/ryan/meta-agent/error-log/` |
 | memory | `/Users/ryan/meta-agent/memory/` |
 | scripts | `/Users/ryan/meta-agent/scripts/` |

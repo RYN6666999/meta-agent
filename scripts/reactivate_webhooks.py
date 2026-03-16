@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""重新激活所有 n8n webhook workflows，修復 webhook 未註冊問題"""
-import json, urllib.request, time
+"""
+重新激活所有 n8n active workflows 的 webhook
+用途：n8n Docker 重啟後 webhook 會靜默失效，需重新 deactivate→activate
 
-# 讀取 .env
+launchd：開機時延遲執行 (RunAtLoad=true, 等待 n8n 就緒)
+手動：python3 scripts/reactivate_webhooks.py
+"""
+import json, time, sys, urllib.request, urllib.error
+
 env = {}
 with open('/Users/ryan/meta-agent/.env') as f:
     for line in f:
@@ -12,37 +17,52 @@ with open('/Users/ryan/meta-agent/.env') as f:
             env[k.strip()] = v.strip()
 key = env.get('N8N_API_KEY', '')
 
+BASE = 'http://localhost:5678'
+
+
 def api(method, path, body=None):
-    url = f'http://localhost:5678{path}'
-    data = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(url, data=data,
+    data = json.dumps(body).encode() if body else b''
+    req = urllib.request.Request(
+        f'{BASE}{path}', data=data or None,
         headers={'X-N8N-API-KEY': key, 'Content-Type': 'application/json'},
-        method=method)
+        method=method
+    )
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.load(r)
 
-# 取得所有 active workflows
-wfs = api('GET', '/api/v1/workflows?limit=20').get('data', [])
-active_ids = [w['id'] for w in wfs if w.get('active')]
-print(f"找到 {len(active_ids)} 個 active workflows")
 
-for wid in active_ids:
-    api('POST', f'/api/v1/workflows/{wid}/deactivate')
-    time.sleep(0.3)
-    api('POST', f'/api/v1/workflows/{wid}/activate')
-    print(f"  ✅ re-registered: {wid}")
+def wait_for_n8n(max_wait=90):
+    for _ in range(max_wait):
+        try:
+            urllib.request.urlopen(f'{BASE}/healthz', timeout=3)
+            return True
+        except Exception:
+            time.sleep(1)
+    return False
 
-print("所有 webhook 重新註冊完成")
 
-# 驗證 memory-extract
-import urllib.error
-payload = json.dumps({'text': '[端對端測試 2026-03-16] n8n webhook 驗證', 'type': 'verification'}).encode()
-req2 = urllib.request.Request('http://localhost:5678/webhook/memory-extract',
-    data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-try:
-    with urllib.request.urlopen(req2, timeout=30) as r:
-        body = r.read().decode()
-        print(f"\n✅ webhook 端對端測試成功 HTTP {r.status}")
-        print(f"回應: {body[:300]}")
-except urllib.error.HTTPError as e:
-    print(f"\n❌ webhook 測試失敗 HTTP {e.code}: {e.read().decode()[:300]}")
+def main():
+    print('[reactivate_webhooks] 等待 n8n 就緒...', flush=True)
+    if not wait_for_n8n():
+        print('[reactivate_webhooks] ❌ n8n 未就緒，放棄', flush=True)
+        return 1
+
+    wfs = api('GET', '/api/v1/workflows?limit=20').get('data', [])
+    active = [w['id'] for w in wfs if w.get('active')]
+    print(f'[reactivate_webhooks] 找到 {len(active)} 個 active workflows', flush=True)
+
+    for wid in active:
+        try:
+            api('POST', f'/api/v1/workflows/{wid}/deactivate')
+            time.sleep(0.3)
+            api('POST', f'/api/v1/workflows/{wid}/activate')
+            print(f'[reactivate_webhooks] ✅ {wid}', flush=True)
+        except Exception as e:
+            print(f'[reactivate_webhooks] ❌ {wid}: {e}', flush=True)
+
+    print('[reactivate_webhooks] 完成', flush=True)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
