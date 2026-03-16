@@ -1,6 +1,6 @@
 ---
 date: 2026-03-16
-session: meta-agent 建設階段 — Session 2
+session: meta-agent 建設階段 — Session 4
 status: in_progress
 ---
 
@@ -10,33 +10,27 @@ status: in_progress
 基礎建設完畢，正在建設自動化層。
 
 ## 已完成 ✅
-- ✅ .env 統一管理所有 API Key
-- ✅ LightRAG + PostgreSQL（port 9621，運行中）
-- ✅ law.json 法典（5條禁止 + 4條n8n規則 + memory_rules + git_rules + git_score）
-- ✅ 記憶 frontmatter 生命週期（error_fix / tech_decision / verified_truth / deprecated）
-- ✅ Git 評分自動提交（launchd 每小時，閾值 50 分）
-- ✅ decision/ branch 技術決策備份（3個）
-- ✅ tech-stack/alternatives/ 比較文件（LightRAG vs Neo4j、Dify Cloud vs 自架）
-- ✅ 知識圖譜 ingest（8份歷史遺產，含完整架構討論）
-- ✅ Brave Search MCP 安裝
-- ✅ MCP 清單：obsidian / lightrag / filesystem / github / lightpanda / qmd / brave / nanoclaw / chrome-devtools
-- ✅ n8n workflow「P1-A｜對話記憶自動萃取 → LightRAG」已建立
-  - workflow ID: 9ABqAtFoJWHmhkEa（inactive，待設定 credential）
-  - webhook: POST http://localhost:5678/webhook/memory-extract
-  - 流程：對話文本 → Groq llama-3.1-8b 萃取 → LightRAG ingest
+- [x] **P0-B：交接文件自動生成**
+- [x] **P1-A：n8n 對話後萃取 workflow**
+- [x] **P3-A：`scripts/memory-decay.py`**
+- [x] **P5-A：`memory-mcp/server.py`**
 
 ## 未完成（按優先序）
-- ⏳ **P1-A 收尾**：n8n 加 Groq API Key credential → 啟動 → curl 測試
-- ⏳ **P3**：遺忘曲線引擎（scripts/memory-decay.py + launchd 每日 02:00）
-- ⏳ **P0-B**：自動生成交接文件（scripts/generate-handoff.py）
-- ⏳ **P5**：記憶黑盒 MCP（memory-mcp/server.py，4個工具）
-- ⏳ **P4**：矛盾偵測 + 實體去重
+- ⏳ **P0｜對話連續性（最緊急）**：**P0-A：對話檢查點系統**
+- ⏳ **P0｜對話連續性（最緊急）**：**P0-C：session 恢復指令**
+- ⏳ **P1｜自動對話記憶萃取（商業級最大缺口）**：**P1-B：Claude Code hook（PostConversation）**
+- ⏳ **P2｜搜尋增強 + 成本降低**：**P2-A：Brave MCP 加入**
+- ⏳ **P2｜搜尋增強 + 成本降低**：**P2-B：搜尋決策樹**
+- ⏳ **P2｜搜尋增強 + 成本降低**：**P2-C：Groq 替代昂貴操作**
+- ⏳ **P3｜遺忘曲線執行引擎**：**P3-B：觸發強化機制**
+- ⏳ **P4｜矛盾偵測 + 實體去重**：**P4-A：ingest 前矛盾檢查**
+- ⏳ **P4｜矛盾偵測 + 實體去重**：**P4-B：實體去重腳本**
+- ⏳ **P5｜記憶黑盒 MCP（共用大腦）**：**P5-B：加入 claude mcp + golem + nanoclaw**
 
 ## 下一步（立刻執行）
-1. n8n UI → Credentials → 新增 HTTP Header Auth → name: Groq API Key → value: Bearer gsk_...
-2. 啟動 workflow 9ABqAtFoJWHmhkEa
-3. curl 測試 webhook
-4. 建 scripts/memory-decay.py
+1. **P0-A：對話檢查點系統**
+2. **P0-C：session 恢復指令**
+3. **P1-B：Claude Code hook（PostConversation）**
 
 ## 關鍵路徑
 - 完整計劃：`/Users/ryan/meta-agent/memory/master-plan.md`

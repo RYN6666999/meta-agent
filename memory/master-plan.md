@@ -32,7 +32,7 @@ source: 完整差距分析
   格式：`checkpoint-{session_id}-{timestamp}.md`
   內容：當前任務狀態、決策、未完成項目
 
-- [ ] **P0-B：交接文件自動生成**
+- [x] **P0-B：交接文件自動生成**
   額度剩 10% 時，觸發 Haiku 生成交接文件（仿照你 Obsidian 裡的 Gemini 交接文件格式）
   存入 `memory/handoff/latest-handoff.md`
   下一個 AI 讀這個文件就能無縫接手
@@ -45,7 +45,7 @@ source: 完整差距分析
 ### P1｜自動對話記憶萃取（商業級最大缺口）
 **問題：現在要手動 ingest，商業方案自動萃取**
 
-- [ ] **P1-A：n8n 對話後萃取 workflow**
+- [x] **P1-A：n8n 對話後萃取 workflow**
   觸發：Telegram bot 接收對話 or webhook
   流程：
   ```
@@ -88,7 +88,7 @@ source: 完整差距分析
 ### P3｜遺忘曲線執行引擎
 **問題：設計了但沒跑**
 
-- [ ] **P3-A：`scripts/memory-decay.py`**
+- [x] **P3-A：`scripts/memory-decay.py`**
   每天執行（launchd）
   掃描所有 frontmatter → 計算衰退分數 → 更新 status
 
@@ -112,7 +112,7 @@ source: 完整差距分析
 ### P5｜記憶黑盒 MCP（共用大腦）
 **問題：Golem/Nanoclaw/本地 LLM 各自孤立**
 
-- [ ] **P5-A：`memory-mcp/server.py`**
+- [x] **P5-A：`memory-mcp/server.py`**
   4 個工具：
   - `query_memory(q)` → LightRAG 語意搜尋
   - `ingest_memory(content, type)` → 存入圖譜

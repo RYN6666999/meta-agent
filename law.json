@@ -66,9 +66,27 @@
   "n8n_rules": [
     {
       "rule": "MCP 更新 workflow 後只變 draft，不自動 publish",
-      "detail": "Production webhook: /webhook/{path}，Draft: /webhook/{workflowId}/webhook/{path}",
-      "source": "error-log/douyin-parser-bugs.md BUG 1",
-      "added": "2026-03-12"
+      "detail": "Draft webhook URL = /webhook/{workflowId}/webhook/{path}（非 /webhook/{path}）。workflow_published_version 表為空時，生產 webhook 永遠 404。Fix: INSERT INTO workflow_published_version + docker restart n8n",
+      "source": "error-log/2026-03-16-n8n-webhook-draft-path.md",
+      "added": "2026-03-16"
+    },
+    {
+      "rule": "webhook 節點名稱必須用純 ASCII",
+      "detail": "中文節點名稱（如「Webhook 接收對話」）→ webhook_entity 儲存 URL-encoded 路徑 → 查詢時已 decoded → 永不匹配 → 404。改名為英文 Webhook 即可。",
+      "source": "error-log/2026-03-16-n8n-webhook-draft-path.md",
+      "added": "2026-03-16"
+    },
+    {
+      "rule": "HTTP Request 節點動態 JSON body 用 keypair 模式，不用 specifyBody=json",
+      "detail": "specifyBody=json + jsonBody={{expr}} 衝突 → 靜默降級為 GET。正確做法：specifyBody=keypair + bodyParameters.parameters[{name,value={{expr}}}]",
+      "source": "error-log/2026-03-16-n8n-webhook-draft-path.md",
+      "added": "2026-03-16"
+    },
+    {
+      "rule": "Docker 容器內呼叫 host 服務用 host.docker.internal，不用 localhost",
+      "detail": "n8n 容器內 localhost = 容器本身，9621 不在容器內。改用 host.docker.internal:9621 或 172.17.0.1:9621",
+      "source": "error-log/2026-03-16-n8n-webhook-draft-path.md",
+      "added": "2026-03-16"
     },
     {
       "rule": "Code Node 不能用 child_process（n8n v2.11.2+）",
