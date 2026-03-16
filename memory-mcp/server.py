@@ -155,6 +155,19 @@ def _local_rerank_candidates(query: str, limit: int = 3, max_scan_files: int = 2
     return candidates[:limit]
 
 
+def _local_only_query_result(query: str, user_id: str, limit: int = 5) -> tuple[str, list[dict]]:
+    candidates = _local_rerank_candidates(query=query, limit=limit, max_scan_files=400, user_id=user_id)
+    if not candidates:
+        return "(no persona-local memory matched)", []
+
+    lines = ["[Persona Local Memory]"]
+    for idx, item in enumerate(candidates, start=1):
+        lines.append(f"{idx}. {item['title']} | score={item['score']} | src={item['path']}")
+        if item.get("snippet"):
+            lines.append(f"   snippet: {item['snippet']}")
+    return "\n".join(lines), candidates
+
+
 def _assess_ingest_risk(content: str, mem_type: str, title: str) -> dict:
     lowered = f"{title}\n{content}".lower()
     matched_keywords = sorted([kw for kw in RISKY_KEYWORDS if kw in lowered])
@@ -176,7 +189,7 @@ def _assess_ingest_risk(content: str, mem_type: str, title: str) -> dict:
     }
 
 
-def _update_last_triggered(query: str) -> int:
+def _update_last_triggered(query: str, user_id: str = "default") -> int:
     """
     P3-B：掃描本地記憶檔案，更新與 query 相關的 last_triggered + score_boost。
     回傳更新的檔案數量。
@@ -188,7 +201,10 @@ def _update_last_triggered(query: str) -> int:
         return 0
 
     updated = 0
-    for scan_dir in MEMORY_SCAN_DIRS:
+    user_id = _normalize_user_id(user_id)
+    scan_dirs = ([USERS_DIR / user_id] if user_id != "default" else MEMORY_SCAN_DIRS)
+
+    for scan_dir in scan_dirs:
         if not scan_dir.exists():
             continue
         for md_file in scan_dir.rglob("*.md"):
@@ -336,6 +352,19 @@ async def query_memory_structured(q: str, mode: str = "hybrid", user_id: str = "
     if mode not in ("hybrid", "local", "global", "naive"):
         mode = "hybrid"
 
+    # 嚴格人格隔離：非 default 人格只查本地 persona memory，不查全域 LightRAG。
+    if user_id != "default":
+        result, reranked = _local_only_query_result(query=q, user_id=user_id, limit=5)
+        updated = _update_last_triggered(q, user_id=user_id)
+        return {
+            "result": result,
+            "mode": "persona-local",
+            "query": q,
+            "user_id": user_id,
+            "memory_boost_updated": updated,
+            "rerank_candidates": reranked,
+        }
+
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             f"{LIGHTRAG_API}/query",
@@ -345,7 +374,7 @@ async def query_memory_structured(q: str, mode: str = "hybrid", user_id: str = "
         data = resp.json()
 
     result = data.get("response") or data.get("result") or str(data)
-    updated = _update_last_triggered(q)
+    updated = _update_last_triggered(q, user_id=user_id)
     reranked = _local_rerank_candidates(q, limit=3, user_id=user_id)
     return {
         "result": result,
@@ -423,6 +452,15 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
         f"{content_clean}\n"
     )
 
+    # 嚴格人格隔離：非 default 人格只寫入本地 persona memory，不寫全域 LightRAG。
+    if user_id != "default":
+        user_dir = USERS_DIR / re.sub(r"[^\w\-]", "_", user_id)
+        user_dir.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r"[^\w\-]", "-", title[:40].lower()).strip("-") or "untitled"
+        local_file = user_dir / f"{today}-{slug}.md"
+        local_file.write_text(doc, encoding="utf-8")
+        return f"✅ Ingest 成功（persona-local）：{title}\n狀態：written {local_file}"
+
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             f"{LIGHTRAG_API}/documents/text",
@@ -430,14 +468,6 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
         )
         resp.raise_for_status()
         data = resp.json()
-
-    # 多租戶：非預設用戶在本地保存隔離副本
-    if user_id != "default":
-        user_dir = USERS_DIR / re.sub(r"[^\w\-]", "_", user_id)
-        user_dir.mkdir(parents=True, exist_ok=True)
-        slug = re.sub(r"[^\w\-]", "-", title[:40].lower()).strip("-") or "untitled"
-        local_file = user_dir / f"{today}-{slug}.md"
-        local_file.write_text(doc, encoding="utf-8")
 
     return f"✅ Ingest 成功：{title}\n狀態：{data}"
 

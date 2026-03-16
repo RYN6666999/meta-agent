@@ -3,7 +3,8 @@ date: 2026-03-16
 type: verified_truth
 status: active
 last_triggered: 2026-03-16
-usage_count: 0
+base_score: 144.0
+usage_count: 2
 confidence: 0.78
 persona_id: builder
 source: persona_tech_radar
@@ -11,7 +12,7 @@ source: persona_tech_radar
 
 # 尖端工程師 技術雷達報告
 
-- 生成時間: 2026-03-16 20:48:56
+- 生成時間: 2026-03-16 21:06:43
 - 人格: builder
 
 ## 核心觀察

@@ -19,8 +19,10 @@ from api.agent_loop import parse_golem_protocol, run_protocol_loop
 BASE_DIR = Path("/Users/ryan/meta-agent")
 ENV_FILE = BASE_DIR / ".env"
 STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
+REGISTRY_FILE = BASE_DIR / "memory" / "persona-registry.json"
 BACKEND_FILE = BASE_DIR / "memory-mcp" / "server.py"
 USERS_DIR = BASE_DIR / "memory" / "users"
+PERSONA_REPORTS_DIR = BASE_DIR / "memory" / "persona-reports"
 TRACE_DIRS = [
     BASE_DIR / "truth-source",
     BASE_DIR / "error-log",
@@ -157,15 +159,74 @@ def _sanitize_persona_id(raw: str) -> str:
     return safe[:64] if safe else "default"
 
 
+def load_registry() -> dict[str, Any]:
+    if not REGISTRY_FILE.exists():
+        return {"active_persona": "default", "personas": {}}
+    try:
+        data = json.loads(REGISTRY_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {"active_persona": "default", "personas": {}}
+        if "personas" not in data or not isinstance(data.get("personas"), dict):
+            data["personas"] = {}
+        if "active_persona" not in data:
+            data["active_persona"] = "default"
+        return data
+    except Exception:
+        return {"active_persona": "default", "personas": {}}
+
+
+def save_registry(data: dict[str, Any]) -> None:
+    REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    REGISTRY_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _default_persona_config(persona_id: str) -> dict[str, Any]:
+    return {
+        "name": persona_id,
+        "backend": "lightrag",
+        "memory_namespace": persona_id,
+        "workflow": {
+            "tech_radar": {
+                "enabled": False,
+                "queries": [],
+                "max_results_per_query": 3,
+                "report_style": "generic",
+            }
+        },
+    }
+
+
+def ensure_persona_in_registry(persona_id: str) -> None:
+    safe = _sanitize_persona_id(persona_id)
+    reg = load_registry()
+    personas = reg.get("personas", {})
+    if safe not in personas:
+        personas[safe] = _default_persona_config(safe)
+        reg["personas"] = personas
+        save_registry(reg)
+
+
+def configured_personas() -> set[str]:
+    reg = load_registry()
+    personas = reg.get("personas", {})
+    return {_sanitize_persona_id(k) for k in personas.keys()}
+
+
 def get_active_persona() -> str:
-    status = load_status()
-    persona = status.get("persona", {})
-    return _sanitize_persona_id(str(persona.get("active", "default")))
+    reg = load_registry()
+    return _sanitize_persona_id(str(reg.get("active_persona", "default")))
 
 
 def set_active_persona(persona_id: str) -> str:
-    status = load_status()
     safe = _sanitize_persona_id(persona_id)
+    ensure_persona_in_registry(safe)
+
+    reg = load_registry()
+    reg["active_persona"] = safe
+    save_registry(reg)
+
+    # 保留 status 同步欄位，避免既有儀表板讀不到
+    status = load_status()
     persona = status.get("persona", {})
     persona["active"] = safe
     persona["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -183,6 +244,7 @@ def resolve_persona_id(request_user_id: str) -> str:
 
 def list_available_personas() -> list[str]:
     personas = {"default", get_active_persona()}
+    personas.update(configured_personas())
     if USERS_DIR.exists():
         for child in USERS_DIR.iterdir():
             if child.is_dir():
@@ -194,6 +256,37 @@ def find_trace_matches(topic: str, limit: int = 8) -> list[dict[str, Any]]:
     topic_lower = topic.lower()
     matches: list[dict[str, Any]] = []
     for scan_dir in TRACE_DIRS:
+        if not scan_dir.exists():
+            continue
+        for path in sorted(scan_dir.rglob("*.md")):
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except Exception:
+                continue
+            for idx, line in enumerate(lines, start=1):
+                if topic_lower in line.lower():
+                    matches.append(
+                        {
+                            "file": str(path.relative_to(BASE_DIR)),
+                            "line": idx,
+                            "snippet": line.strip(),
+                        }
+                    )
+                    break
+            if len(matches) >= limit:
+                return matches
+    return matches
+
+
+def find_trace_matches_for_persona(topic: str, persona_id: str, limit: int = 8) -> list[dict[str, Any]]:
+    safe = _sanitize_persona_id(persona_id)
+    if safe == "default":
+        return find_trace_matches(topic=topic, limit=limit)
+
+    topic_lower = topic.lower()
+    matches: list[dict[str, Any]] = []
+    scan_dirs = [USERS_DIR / safe, PERSONA_REPORTS_DIR / safe]
+    for scan_dir in scan_dirs:
         if not scan_dir.exists():
             continue
         for path in sorted(scan_dir.rglob("*.md")):
@@ -368,12 +461,15 @@ async def trace(
     request: Request,
     topic: str = Query(..., min_length=2),
     limit: int = Query(default=8, ge=1, le=20),
+    persona_id: str = Query(default="", max_length=64),
     _: None = Depends(require_auth),
 ) -> dict[str, Any]:
-    matches = find_trace_matches(topic, limit=limit)
+    effective_persona = resolve_persona_id(persona_id)
+    matches = find_trace_matches_for_persona(topic=topic, persona_id=effective_persona, limit=limit)
     return {
         "ok": True,
         "topic": topic,
+        "persona_id": effective_persona,
         "count": len(matches),
         "matches": matches,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

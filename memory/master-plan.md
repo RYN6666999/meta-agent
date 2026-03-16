@@ -3,6 +3,8 @@ date: 2026-03-16
 type: verified_truth
 status: active
 last_triggered: 2026-03-16
+base_score: 144.0
+usage_count: 2
 expires_after_days: 365
 source: 完整差距分析
 last_updated: 2026-03-16 17:10

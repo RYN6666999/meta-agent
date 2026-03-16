@@ -60,6 +60,17 @@ def pick_persona(registry: dict[str, Any], cli_arg: str | None) -> tuple[str, di
     return persona_id, cfg
 
 
+def fetch_active_persona_from_api(api_key: str) -> str:
+    req = Request(
+        f"{API_BASE}/api/v1/persona/current",
+        headers={"Authorization": f"Bearer {api_key}"},
+        method="GET",
+    )
+    with urlopen(req, timeout=20) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return normalize_persona_id(str(data.get("active_persona", "builder")))
+
+
 def brave_search(api_key: str, query: str, count: int) -> list[dict[str, str]]:
     params = urlencode({"q": query, "count": count})
     data = {}
@@ -179,8 +190,18 @@ def main() -> int:
     status = load_json(STATUS_FILE, {})
     registry = load_json(REGISTRY_FILE, {"active_persona": "builder", "personas": {}})
 
+    api_key = env.get("META_AGENT_API_KEY") or env.get("API_KEY") or env.get("N8N_API_KEY") or ""
     cli_persona = sys.argv[1] if len(sys.argv) > 1 else None
-    persona_id, persona_cfg = pick_persona(registry, cli_persona)
+
+    # 單一真相來源：無 CLI 參數時，優先讀 API active persona，避免 registry/status split-brain。
+    effective_persona = cli_persona
+    if not effective_persona and api_key:
+        try:
+            effective_persona = fetch_active_persona_from_api(api_key)
+        except Exception:
+            effective_persona = None
+
+    persona_id, persona_cfg = pick_persona(registry, effective_persona)
     persona_name = str(persona_cfg.get("name", persona_id))
 
     radar_cfg = persona_cfg.get("workflow", {}).get("tech_radar", {})
@@ -224,7 +245,6 @@ def main() -> int:
     report_file = report_dir / f"{datetime.now().strftime('%Y-%m-%d')}-tech-radar.md"
     report_file.write_text(report_text, encoding="utf-8")
 
-    api_key = env.get("META_AGENT_API_KEY") or env.get("API_KEY") or env.get("N8N_API_KEY") or ""
     ingest_ok = False
     ingest_msg = "API key missing"
     if api_key:
