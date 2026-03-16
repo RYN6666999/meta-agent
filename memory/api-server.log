@@ -24,3 +24,7 @@ INFO:     127.0.0.1:55445 - "POST /api/v1/protocol/parse HTTP/1.1" 200 OK
 HTTP Request: POST http://localhost:9621/query "HTTP/1.1 200 OK"
 INFO:     127.0.0.1:55445 - "POST /api/v1/loop HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55445 - "POST /api/v1/persona/switch HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [93194]
