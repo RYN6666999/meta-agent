@@ -27,6 +27,20 @@
 
   "forbidden": [
     {
+      "rule": "禁止在未窮盡工具前問用戶能查到的問題",
+      "reason": "用戶不是搜尋引擎。遇到不認識的名詞/路徑/工具，必須先：1) Grep 本地目錄 2) 搜 Obsidian vault 3) brave/WebSearch GitHub。三者都找不到才能問。",
+      "solution": "反射動作：看到不熟悉的名詞 → 立即 Grep /Users/ryan/ + brave search，不問用戶",
+      "source": "error-log/2026-03-16-agent-behavior-bugs.md BUG-1",
+      "added": "2026-03-16"
+    },
+    {
+      "rule": "禁止設計了查詢規則但自己不執行",
+      "reason": "search_decision_tree 和決策三問寫在 law.json，必須在每次行動前實際觸發，不是裝飾品",
+      "solution": "每次行動前強制走：query_memory → brave → 才行動。不走直接問 = 違反法典",
+      "source": "error-log/2026-03-16-agent-behavior-bugs.md BUG-2",
+      "added": "2026-03-16"
+    },
+    {
       "rule": "禁止在 n8n Code Node 將大型二進制轉 Base64",
       "reason": "19MB+ 檔案轉 Base64 → Runner OOM 崩潰",
       "solution": "改用 HTTP Request Node 設定為 File 模式串流下載",
