@@ -1,0 +1,49 @@
+{
+  "active_persona": "builder",
+  "personas": {
+    "builder": {
+      "name": "尖端工程師",
+      "backend": "lightrag",
+      "memory_namespace": "builder",
+      "workflow": {
+        "tech_radar": {
+          "enabled": true,
+          "queries": [
+            "FastAPI production patterns 2026",
+            "Model Context Protocol FastMCP best practices 2026",
+            "LightRAG architecture updates 2026",
+            "n8n AI workflow reliability patterns 2026"
+          ],
+          "max_results_per_query": 5,
+          "report_style": "engineering"
+        }
+      }
+    },
+    "domain-business": {
+      "name": "特定領域業務",
+      "backend": "lightrag",
+      "memory_namespace": "domain-business",
+      "workflow": {
+        "tech_radar": {
+          "enabled": false,
+          "queries": [],
+          "max_results_per_query": 3,
+          "report_style": "business"
+        }
+      }
+    },
+    "senior-hr": {
+      "name": "資深人資",
+      "backend": "lightrag",
+      "memory_namespace": "senior-hr",
+      "workflow": {
+        "tech_radar": {
+          "enabled": false,
+          "queries": [],
+          "max_results_per_query": 3,
+          "report_style": "hr"
+        }
+      }
+    }
+  }
+}

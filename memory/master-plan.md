@@ -182,6 +182,16 @@ last_updated: 2026-03-16 17:10
 
 ---
 
+### D8｜人格庫定時工作流（2026-03-16 完成 ✅）
+**目標：讓不同人格有獨立知識累積與獨立工作節奏（先落地尖端工程師人格）**
+
+- [x] **D8-1：人格註冊表** — `memory/persona-registry.json`（builder/domain-business/senior-hr）
+- [x] **D8-2：尖端工程師技術雷達腳本** — `scripts/persona_tech_radar.py`（Brave 搜尋 → 清洗報告 → ingest 人格庫）
+- [x] **D8-3：每日定時排程** — `com.meta-agent.persona-tech-radar`（每日 09:30）
+- [x] **D8-4：機器可讀狀態** — `system-status.json` 寫入 `persona_tech_radar` 執行結果
+
+---
+
 ## 執行順序（按緊急度）
 
 ```

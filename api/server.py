@@ -278,7 +278,18 @@ async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depe
         f"source_session: {payload.source_session or 'n/a'}\n"
         "[/META]\n"
     )
-    enriched_content = metadata_block + payload.content
+
+    raw_content = payload.content.strip()
+    approval_prefix = ""
+    if raw_content.startswith("[APPROVED]"):
+        approval_prefix = "[APPROVED] "
+        raw_content = raw_content[len("[APPROVED]"):].strip()
+    elif raw_content.startswith("[CONFIRMED]"):
+        approval_prefix = "[CONFIRMED] "
+        raw_content = raw_content[len("[CONFIRMED]"):].strip()
+
+    # 重要：審批標記必須維持在最前，才能通過 memory-mcp 風險閘判定。
+    enriched_content = f"{approval_prefix}{metadata_block}{raw_content}"
     result = await backend.ingest_memory(enriched_content, payload.mem_type, payload.title, persona_id)
     return {
         "ok": result.startswith("✅"),
