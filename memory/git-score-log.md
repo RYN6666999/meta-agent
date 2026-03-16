@@ -108,3 +108,11 @@
   memory 變更 (memory/tiered/) +10
   其他變更 (scripts/memory-tier-summary.py) +5
   → commit 成功（10 個檔案）
+
+## 2026-03-16 18:44 | 分數：10 | ⏳ 分數 10/50，未達閾值
+  memory 變更 (memory/turn-count.txt) +10
+
+## 2026-03-16 20:16 | 分數：30 | ⏳ 分數 30/50，未達閾值
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/system-status.json) +10
+  memory 變更 (memory/turn-count.txt) +10

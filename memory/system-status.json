@@ -45,7 +45,7 @@
   },
   "api_health": {
     "ok": true,
-    "checked_at": "2026-03-16 17:35:04",
+    "checked_at": "2026-03-16 20:00:53",
     "base_url": "http://127.0.0.1:9901",
     "endpoints": {
       "health": {
@@ -101,7 +101,7 @@
               "timestamp": "2026-03-16T08:44:09.981Z"
             }
           },
-          "checked_at": "2026-03-16 17:35:01"
+          "checked_at": "2026-03-16 20:00:50"
         }
       },
       "status": {
@@ -115,7 +115,7 @@
           },
           "api_health": {
             "ok": true,
-            "checked_at": "2026-03-16 17:28:45",
+            "checked_at": "2026-03-16 20:00:26",
             "base_url": "http://127.0.0.1:9901",
             "endpoints": {
               "health": {
@@ -171,7 +171,7 @@
                       "timestamp": "2026-03-16T08:44:09.981Z"
                     }
                   },
-                  "checked_at": "2026-03-16 17:28:44"
+                  "checked_at": "2026-03-16 20:00:23"
                 }
               },
               "status": {
@@ -185,7 +185,7 @@
                   },
                   "api_health": {
                     "ok": true,
-                    "checked_at": "2026-03-16 17:28:08",
+                    "checked_at": "2026-03-16 17:35:04",
                     "base_url": "http://127.0.0.1:9901",
                     "endpoints": {
                       "health": {
@@ -241,7 +241,7 @@
                               "timestamp": "2026-03-16T08:44:09.981Z"
                             }
                           },
-                          "checked_at": "2026-03-16 17:28:06"
+                          "checked_at": "2026-03-16 17:35:01"
                         }
                       },
                       "status": {
@@ -255,7 +255,7 @@
                           },
                           "api_health": {
                             "ok": true,
-                            "checked_at": "2026-03-16 17:16:32",
+                            "checked_at": "2026-03-16 17:28:45",
                             "base_url": "http://127.0.0.1:9901",
                             "endpoints": {
                               "health": {
@@ -311,7 +311,7 @@
                                       "timestamp": "2026-03-16T08:44:09.981Z"
                                     }
                                   },
-                                  "checked_at": "2026-03-16 17:16:29"
+                                  "checked_at": "2026-03-16 17:28:44"
                                 }
                               },
                               "status": {
@@ -325,7 +325,7 @@
                                   },
                                   "api_health": {
                                     "ok": true,
-                                    "checked_at": "2026-03-16 17:00:43",
+                                    "checked_at": "2026-03-16 17:28:08",
                                     "base_url": "http://127.0.0.1:9901",
                                     "endpoints": {
                                       "health": {
@@ -335,7 +335,7 @@
                                           "ok": true,
                                           "api": {
                                             "ok": true,
-                                            "version": "0.1.0"
+                                            "version": "0.2.0"
                                           },
                                           "health_check": {
                                             "ok": true,
@@ -381,7 +381,540 @@
                                               "timestamp": "2026-03-16T08:44:09.981Z"
                                             }
                                           },
-                                          "checked_at": "2026-03-16 17:00:21"
+                                          "checked_at": "2026-03-16 17:28:06"
+                                        }
+                                      },
+                                      "status": {
+                                        "ok": true,
+                                        "status_code": 200,
+                                        "response": {
+                                          "ok": true,
+                                          "api": {
+                                            "ok": true,
+                                            "version": "0.2.0"
+                                          },
+                                          "api_health": {
+                                            "ok": true,
+                                            "checked_at": "2026-03-16 17:16:32",
+                                            "base_url": "http://127.0.0.1:9901",
+                                            "endpoints": {
+                                              "health": {
+                                                "ok": true,
+                                                "status_code": 200,
+                                                "response": {
+                                                  "ok": true,
+                                                  "api": {
+                                                    "ok": true,
+                                                    "version": "0.2.0"
+                                                  },
+                                                  "health_check": {
+                                                    "ok": true,
+                                                    "checked_at": "2026-03-16 16:44:07",
+                                                    "services": {
+                                                      "lightrag": {
+                                                        "ok": true,
+                                                        "detail": "HTTP 200"
+                                                      },
+                                                      "n8n": {
+                                                        "ok": true,
+                                                        "detail": "HTTP 200"
+                                                      },
+                                                      "groq": {
+                                                        "transport_ok": true,
+                                                        "classification": "ok",
+                                                        "working_key": true,
+                                                        "model": "llama-3.1-8b-instant",
+                                                        "detail": "HTTP 200"
+                                                      }
+                                                    }
+                                                  },
+                                                  "e2e_memory_extract": {
+                                                    "ok": true,
+                                                    "checked_at": "2026-03-16 16:44:09",
+                                                    "detail": "HTTP 200",
+                                                    "quality_ok": true,
+                                                    "titles_total": 5,
+                                                    "titles_valid": 5,
+                                                    "titles_invalid": 0,
+                                                    "quality_failure_count": 0,
+                                                    "response": {
+                                                      "success": true,
+                                                      "summary": "✅ Ingest 5 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
+                                                      "ingested_count": 5,
+                                                      "memories_titles": [
+                                                        "n8n webhook 接收對話文本",
+                                                        "Groq llama-3.1-8b-instant 進行記憶萃取與結構化",
+                                                        "LightRAG API 接收 ingest 請求",
+                                                        "端對端流程驗證",
+                                                        "技術棧確認"
+                                                      ],
+                                                      "timestamp": "2026-03-16T08:44:09.981Z"
+                                                    }
+                                                  },
+                                                  "checked_at": "2026-03-16 17:16:29"
+                                                }
+                                              },
+                                              "status": {
+                                                "ok": true,
+                                                "status_code": 200,
+                                                "response": {
+                                                  "ok": true,
+                                                  "api": {
+                                                    "ok": true,
+                                                    "version": "0.2.0"
+                                                  },
+                                                  "api_health": {
+                                                    "ok": true,
+                                                    "checked_at": "2026-03-16 17:00:43",
+                                                    "base_url": "http://127.0.0.1:9901",
+                                                    "endpoints": {
+                                                      "health": {
+                                                        "ok": true,
+                                                        "status_code": 200,
+                                                        "response": {
+                                                          "ok": true,
+                                                          "api": {
+                                                            "ok": true,
+                                                            "version": "0.1.0"
+                                                          },
+                                                          "health_check": {
+                                                            "ok": true,
+                                                            "checked_at": "2026-03-16 16:44:07",
+                                                            "services": {
+                                                              "lightrag": {
+                                                                "ok": true,
+                                                                "detail": "HTTP 200"
+                                                              },
+                                                              "n8n": {
+                                                                "ok": true,
+                                                                "detail": "HTTP 200"
+                                                              },
+                                                              "groq": {
+                                                                "transport_ok": true,
+                                                                "classification": "ok",
+                                                                "working_key": true,
+                                                                "model": "llama-3.1-8b-instant",
+                                                                "detail": "HTTP 200"
+                                                              }
+                                                            }
+                                                          },
+                                                          "e2e_memory_extract": {
+                                                            "ok": true,
+                                                            "checked_at": "2026-03-16 16:44:09",
+                                                            "detail": "HTTP 200",
+                                                            "quality_ok": true,
+                                                            "titles_total": 5,
+                                                            "titles_valid": 5,
+                                                            "titles_invalid": 0,
+                                                            "quality_failure_count": 0,
+                                                            "response": {
+                                                              "success": true,
+                                                              "summary": "✅ Ingest 5 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
+                                                              "ingested_count": 5,
+                                                              "memories_titles": [
+                                                                "n8n webhook 接收對話文本",
+                                                                "Groq llama-3.1-8b-instant 進行記憶萃取與結構化",
+                                                                "LightRAG API 接收 ingest 請求",
+                                                                "端對端流程驗證",
+                                                                "技術棧確認"
+                                                              ],
+                                                              "timestamp": "2026-03-16T08:44:09.981Z"
+                                                            }
+                                                          },
+                                                          "checked_at": "2026-03-16 17:00:21"
+                                                        }
+                                                      },
+                                                      "rules": {
+                                                        "ok": true,
+                                                        "status_code": 200,
+                                                        "response": {
+                                                          "ok": true,
+                                                          "category": "forbidden",
+                                                          "rules": {
+                                                            "forbidden": [
+                                                              {
+                                                                "rule": "禁止發現 bug 後不立即 log_error，等用戶提醒才補記",
+                                                                "reason": "用戶需要提醒 = 系統失憶。每次修正任何 bug，必須在同一輪立刻呼叫 log_error，不批次、不延後。",
+                                                                "solution": "修完 bug → 立即 mcp__memory-mcp__log_error，然後繼續下一步。這是非可選動作。",
+                                                                "source": "error-log/2026-03-16-claude-bug-log-discipline.md",
+                                                                "added": "2026-03-16"
+                                                              },
+                                                              {
+                                                                "rule": "禁止在未窮盡工具前問用戶能查到的問題",
+                                                                "reason": "用戶不是搜尋引擎。遇到不認識的名詞/路徑/工具，必須先：1) Grep 本地目錄 2) 搜 Obsidian vault 3) brave/WebSearch GitHub。三者都找不到才能問。",
+                                                                "solution": "反射動作：看到不熟悉的名詞 → 立即 Grep /Users/ryan/ + brave search，不問用戶",
+                                                                "source": "error-log/2026-03-16-agent-behavior-bugs.md BUG-1",
+                                                                "added": "2026-03-16"
+                                                              },
+                                                              {
+                                                                "rule": "禁止設計了查詢規則但自己不執行",
+                                                                "reason": "search_decision_tree 和決策三問寫在 law.json，必須在每次行動前實際觸發，不是裝飾品",
+                                                                "solution": "每次行動前強制走：query_memory → brave → 才行動。不走直接問 = 違反法典",
+                                                                "source": "error-log/2026-03-16-agent-behavior-bugs.md BUG-2",
+                                                                "added": "2026-03-16"
+                                                              },
+                                                              {
+                                                                "rule": "禁止在 n8n Code Node 將大型二進制轉 Base64",
+                                                                "reason": "19MB+ 檔案轉 Base64 → Runner OOM 崩潰",
+                                                                "solution": "改用 HTTP Request Node 設定為 File 模式串流下載",
+                                                                "source": "error-log/douyin-parser-bugs.md BUG OOM",
+                                                                "added": "2026-03-12"
+                                                              },
+                                                              {
+                                                                "rule": "禁止讓 LLM 一次清洗 >4000 字逐字稿",
+                                                                "reason": "觸發 Token 上限截斷 → JSON Invalid Syntax → 後續節點全掛",
+                                                                "solution": "只做知識提取（core_point/summary），原文直接送 RAG",
+                                                                "source": "error-log/douyin-parser-bugs.md BUG 2",
+                                                                "added": "2026-03-12"
+                                                              },
+                                                              {
+                                                                "rule": "禁止在 Dify/LightRAG ingest 前不加字數驗證",
+                                                                "reason": "抓錯音軌只有 154 字 → 髒資料污染知識庫",
+                                                                "solution": "IF 節點驗證 transcript 字數 > 500 才 ingest",
+                                                                "source": "error-log/douyin-parser-bugs.md BUG BGM",
+                                                                "added": "2026-03-12"
+                                                              },
+                                                              {
+                                                                "rule": "禁止 .env 檔案 git commit",
+                                                                "reason": "API Key 外洩",
+                                                                "solution": ".gitignore 已設定，symlink 到 meta-agent/.env",
+                                                                "source": "系統設計",
+                                                                "added": "2026-03-16"
+                                                              },
+                                                              {
+                                                                "rule": "禁止 Phase 1 規劃階段調用修改系統的 MCP",
+                                                                "reason": "規劃未確認就執行 → 不可逆操作",
+                                                                "solution": "Phase 1 只輸出 JSON 施工圖，Phase 2 才解鎖執行",
+                                                                "source": "架構 V2.0",
+                                                                "added": "2026-03-16"
+                                                              }
+                                                            ]
+                                                          },
+                                                          "timestamp": "2026-03-16 17:00:21"
+                                                        }
+                                                      },
+                                                      "query": {
+                                                        "ok": true,
+                                                        "status_code": 200,
+                                                        "response": {
+                                                          "ok": true,
+                                                          "query": "health-title-restored",
+                                                          "mode": "hybrid",
+                                                          "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
+                                                          "timestamp": "2026-03-16 17:00:42"
+                                                        }
+                                                      },
+                                                      "trace": {
+                                                        "ok": true,
+                                                        "status_code": 200,
+                                                        "response": {
+                                                          "ok": true,
+                                                          "topic": "health-title-restored",
+                                                          "count": 4,
+                                                          "matches": [
+                                                            {
+                                                              "file": "truth-source/2026-03-16-health-title-restored.md",
+                                                              "line": 8,
+                                                              "snippet": "branch: decision/health-title-restored-2026-03-16"
+                                                            },
+                                                            {
+                                                              "file": "memory/git-score-log.md",
+                                                              "line": 96,
+                                                              "snippet": "verified_truth 變更 (truth-source/2026-03-16-health-title-restored.md) +15"
+                                                            },
+                                                            {
+                                                              "file": "memory/milestone-judge-log.md",
+                                                              "line": 64,
+                                                              "snippet": "## 2026-03-16 16:41 | health-title-restored | 分數 180 | ✅ 重大里程碑 → 建立分支 `decision/health-title-restored-2026-03-16`"
+                                                            },
+                                                            {
+                                                              "file": "memory/pending-decisions.md",
+                                                              "line": 9,
+                                                              "snippet": "| 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |"
+                                                            }
+                                                          ],
+                                                          "timestamp": "2026-03-16 17:00:43"
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "api_usage": {
+                                                    "total_calls": 1,
+                                                    "per_endpoint": {
+                                                      "GET /api/v1/health": {
+                                                        "count": 1,
+                                                        "last_status_code": 200,
+                                                        "last_called_at": "2026-03-16 17:16:29"
+                                                      }
+                                                    },
+                                                    "last_call": {
+                                                      "path": "/api/v1/health",
+                                                      "method": "GET",
+                                                      "status_code": 200,
+                                                      "called_at": "2026-03-16 17:16:29"
+                                                    }
+                                                  },
+                                                  "health_check": {
+                                                    "ok": true,
+                                                    "checked_at": "2026-03-16 16:44:07",
+                                                    "services": {
+                                                      "lightrag": {
+                                                        "ok": true,
+                                                        "detail": "HTTP 200"
+                                                      },
+                                                      "n8n": {
+                                                        "ok": true,
+                                                        "detail": "HTTP 200"
+                                                      },
+                                                      "groq": {
+                                                        "transport_ok": true,
+                                                        "classification": "ok",
+                                                        "working_key": true,
+                                                        "model": "llama-3.1-8b-instant",
+                                                        "detail": "HTTP 200"
+                                                      }
+                                                    }
+                                                  },
+                                                  "e2e_memory_extract": {
+                                                    "ok": true,
+                                                    "checked_at": "2026-03-16 16:44:09",
+                                                    "detail": "HTTP 200",
+                                                    "quality_ok": true,
+                                                    "titles_total": 5,
+                                                    "titles_valid": 5,
+                                                    "titles_invalid": 0,
+                                                    "quality_failure_count": 0,
+                                                    "response": {
+                                                      "success": true,
+                                                      "summary": "✅ Ingest 5 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
+                                                      "ingested_count": 5,
+                                                      "memories_titles": [
+                                                        "n8n webhook 接收對話文本",
+                                                        "Groq llama-3.1-8b-instant 進行記憶萃取與結構化",
+                                                        "LightRAG API 接收 ingest 請求",
+                                                        "端對端流程驗證",
+                                                        "技術棧確認"
+                                                      ],
+                                                      "timestamp": "2026-03-16T08:44:09.981Z"
+                                                    }
+                                                  },
+                                                  "timestamp": "2026-03-16 17:16:29"
+                                                }
+                                              },
+                                              "rules": {
+                                                "ok": true,
+                                                "status_code": 200,
+                                                "response": {
+                                                  "ok": true,
+                                                  "category": "forbidden",
+                                                  "rules": {
+                                                    "forbidden": [
+                                                      {
+                                                        "rule": "禁止發現 bug 後不立即 log_error，等用戶提醒才補記",
+                                                        "reason": "用戶需要提醒 = 系統失憶。每次修正任何 bug，必須在同一輪立刻呼叫 log_error，不批次、不延後。",
+                                                        "solution": "修完 bug → 立即 mcp__memory-mcp__log_error，然後繼續下一步。這是非可選動作。",
+                                                        "source": "error-log/2026-03-16-claude-bug-log-discipline.md",
+                                                        "added": "2026-03-16"
+                                                      },
+                                                      {
+                                                        "rule": "禁止在未窮盡工具前問用戶能查到的問題",
+                                                        "reason": "用戶不是搜尋引擎。遇到不認識的名詞/路徑/工具，必須先：1) Grep 本地目錄 2) 搜 Obsidian vault 3) brave/WebSearch GitHub。三者都找不到才能問。",
+                                                        "solution": "反射動作：看到不熟悉的名詞 → 立即 Grep /Users/ryan/ + brave search，不問用戶",
+                                                        "source": "error-log/2026-03-16-agent-behavior-bugs.md BUG-1",
+                                                        "added": "2026-03-16"
+                                                      },
+                                                      {
+                                                        "rule": "禁止設計了查詢規則但自己不執行",
+                                                        "reason": "search_decision_tree 和決策三問寫在 law.json，必須在每次行動前實際觸發，不是裝飾品",
+                                                        "solution": "每次行動前強制走：query_memory → brave → 才行動。不走直接問 = 違反法典",
+                                                        "source": "error-log/2026-03-16-agent-behavior-bugs.md BUG-2",
+                                                        "added": "2026-03-16"
+                                                      },
+                                                      {
+                                                        "rule": "禁止在 n8n Code Node 將大型二進制轉 Base64",
+                                                        "reason": "19MB+ 檔案轉 Base64 → Runner OOM 崩潰",
+                                                        "solution": "改用 HTTP Request Node 設定為 File 模式串流下載",
+                                                        "source": "error-log/douyin-parser-bugs.md BUG OOM",
+                                                        "added": "2026-03-12"
+                                                      },
+                                                      {
+                                                        "rule": "禁止讓 LLM 一次清洗 >4000 字逐字稿",
+                                                        "reason": "觸發 Token 上限截斷 → JSON Invalid Syntax → 後續節點全掛",
+                                                        "solution": "只做知識提取（core_point/summary），原文直接送 RAG",
+                                                        "source": "error-log/douyin-parser-bugs.md BUG 2",
+                                                        "added": "2026-03-12"
+                                                      },
+                                                      {
+                                                        "rule": "禁止在 Dify/LightRAG ingest 前不加字數驗證",
+                                                        "reason": "抓錯音軌只有 154 字 → 髒資料污染知識庫",
+                                                        "solution": "IF 節點驗證 transcript 字數 > 500 才 ingest",
+                                                        "source": "error-log/douyin-parser-bugs.md BUG BGM",
+                                                        "added": "2026-03-12"
+                                                      },
+                                                      {
+                                                        "rule": "禁止 .env 檔案 git commit",
+                                                        "reason": "API Key 外洩",
+                                                        "solution": ".gitignore 已設定，symlink 到 meta-agent/.env",
+                                                        "source": "系統設計",
+                                                        "added": "2026-03-16"
+                                                      },
+                                                      {
+                                                        "rule": "禁止 Phase 1 規劃階段調用修改系統的 MCP",
+                                                        "reason": "規劃未確認就執行 → 不可逆操作",
+                                                        "solution": "Phase 1 只輸出 JSON 施工圖，Phase 2 才解鎖執行",
+                                                        "source": "架構 V2.0",
+                                                        "added": "2026-03-16"
+                                                      }
+                                                    ]
+                                                  },
+                                                  "timestamp": "2026-03-16 17:16:29"
+                                                }
+                                              },
+                                              "query": {
+                                                "ok": true,
+                                                "status_code": 200,
+                                                "response": {
+                                                  "ok": true,
+                                                  "query": "health-title-restored",
+                                                  "mode": "hybrid",
+                                                  "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
+                                                  "timestamp": "2026-03-16 17:16:32"
+                                                }
+                                              },
+                                              "trace": {
+                                                "ok": true,
+                                                "status_code": 200,
+                                                "response": {
+                                                  "ok": true,
+                                                  "topic": "health-title-restored",
+                                                  "count": 4,
+                                                  "matches": [
+                                                    {
+                                                      "file": "truth-source/2026-03-16-health-title-restored.md",
+                                                      "line": 8,
+                                                      "snippet": "branch: decision/health-title-restored-2026-03-16"
+                                                    },
+                                                    {
+                                                      "file": "memory/git-score-log.md",
+                                                      "line": 96,
+                                                      "snippet": "verified_truth 變更 (truth-source/2026-03-16-health-title-restored.md) +15"
+                                                    },
+                                                    {
+                                                      "file": "memory/milestone-judge-log.md",
+                                                      "line": 64,
+                                                      "snippet": "## 2026-03-16 16:41 | health-title-restored | 分數 180 | ✅ 重大里程碑 → 建立分支 `decision/health-title-restored-2026-03-16`"
+                                                    },
+                                                    {
+                                                      "file": "memory/pending-decisions.md",
+                                                      "line": 9,
+                                                      "snippet": "| 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |"
+                                                    }
+                                                  ],
+                                                  "timestamp": "2026-03-16 17:16:32"
+                                                }
+                                              },
+                                              "ingest": {
+                                                "ok": true,
+                                                "status_code": 200,
+                                                "response": {
+                                                  "ok": true,
+                                                  "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'success', 'message': 'Text successfully received. Processing will continue in background.', 'track_id': 'insert_20260316_091632_c23883a5'}",
+                                                  "metadata": {
+                                                    "confidence": 0.91,
+                                                    "submitted_by": "scripts/test_api.py",
+                                                    "source_session": "d4-smoke"
+                                                  },
+                                                  "timestamp": "2026-03-16 17:16:32"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "api_usage": {
+                                            "total_calls": 73,
+                                            "per_endpoint": {
+                                              "GET /api/v1/health": {
+                                                "count": 2,
+                                                "last_status_code": 200,
+                                                "last_called_at": "2026-03-16 17:28:06"
+                                              },
+                                              "GET /api/v1/status": {
+                                                "count": 67,
+                                                "last_status_code": 429,
+                                                "last_called_at": "2026-03-16 17:17:42"
+                                              },
+                                              "GET /api/v1/rules": {
+                                                "count": 1,
+                                                "last_status_code": 200,
+                                                "last_called_at": "2026-03-16 17:16:29"
+                                              },
+                                              "POST /api/v1/query": {
+                                                "count": 1,
+                                                "last_status_code": 200,
+                                                "last_called_at": "2026-03-16 17:16:32"
+                                              },
+                                              "GET /api/v1/trace": {
+                                                "count": 1,
+                                                "last_status_code": 200,
+                                                "last_called_at": "2026-03-16 17:16:32"
+                                              },
+                                              "POST /api/v1/ingest": {
+                                                "count": 1,
+                                                "last_status_code": 200,
+                                                "last_called_at": "2026-03-16 17:16:32"
+                                              }
+                                            },
+                                            "last_call": {
+                                              "path": "/api/v1/health",
+                                              "method": "GET",
+                                              "status_code": 200,
+                                              "called_at": "2026-03-16 17:28:06"
+                                            }
+                                          },
+                                          "health_check": {
+                                            "ok": true,
+                                            "checked_at": "2026-03-16 16:44:07",
+                                            "services": {
+                                              "lightrag": {
+                                                "ok": true,
+                                                "detail": "HTTP 200"
+                                              },
+                                              "n8n": {
+                                                "ok": true,
+                                                "detail": "HTTP 200"
+                                              },
+                                              "groq": {
+                                                "transport_ok": true,
+                                                "classification": "ok",
+                                                "working_key": true,
+                                                "model": "llama-3.1-8b-instant",
+                                                "detail": "HTTP 200"
+                                              }
+                                            }
+                                          },
+                                          "e2e_memory_extract": {
+                                            "ok": true,
+                                            "checked_at": "2026-03-16 16:44:09",
+                                            "detail": "HTTP 200",
+                                            "quality_ok": true,
+                                            "titles_total": 5,
+                                            "titles_valid": 5,
+                                            "titles_invalid": 0,
+                                            "quality_failure_count": 0,
+                                            "response": {
+                                              "success": true,
+                                              "summary": "✅ Ingest 5 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
+                                              "ingested_count": 5,
+                                              "memories_titles": [
+                                                "n8n webhook 接收對話文本",
+                                                "Groq llama-3.1-8b-instant 進行記憶萃取與結構化",
+                                                "LightRAG API 接收 ingest 請求",
+                                                "端對端流程驗證",
+                                                "技術棧確認"
+                                              ],
+                                              "timestamp": "2026-03-16T08:44:09.981Z"
+                                            }
+                                          },
+                                          "timestamp": "2026-03-16 17:28:06"
                                         }
                                       },
                                       "rules": {
@@ -450,7 +983,7 @@
                                               }
                                             ]
                                           },
-                                          "timestamp": "2026-03-16 17:00:21"
+                                          "timestamp": "2026-03-16 17:28:06"
                                         }
                                       },
                                       "query": {
@@ -461,7 +994,7 @@
                                           "query": "health-title-restored",
                                           "mode": "hybrid",
                                           "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
-                                          "timestamp": "2026-03-16 17:00:42"
+                                          "timestamp": "2026-03-16 17:28:08"
                                         }
                                       },
                                       "trace": {
@@ -493,25 +1026,112 @@
                                               "snippet": "| 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |"
                                             }
                                           ],
-                                          "timestamp": "2026-03-16 17:00:43"
+                                          "timestamp": "2026-03-16 17:28:08"
+                                        }
+                                      },
+                                      "ingest": {
+                                        "ok": true,
+                                        "status_code": 200,
+                                        "response": {
+                                          "ok": true,
+                                          "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-83069e9f92d104f63cb11c7e814ca1dd, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_091632_c23883a5'}",
+                                          "metadata": {
+                                            "confidence": 0.91,
+                                            "submitted_by": "scripts/test_api.py",
+                                            "source_session": "d4-smoke"
+                                          },
+                                          "timestamp": "2026-03-16 17:28:08"
+                                        }
+                                      },
+                                      "protocol_parse": {
+                                        "ok": true,
+                                        "status_code": 200,
+                                        "response": {
+                                          "ok": true,
+                                          "parsed": {
+                                            "memory": "Save this as memory[/GOLEM_MEMORY]",
+                                            "actions": [],
+                                            "reply": "Done[/GOLEM_REPLY]",
+                                            "warnings": [
+                                              "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
+                                            ]
+                                          },
+                                          "timestamp": "2026-03-16 17:28:08"
+                                        }
+                                      },
+                                      "loop": {
+                                        "ok": true,
+                                        "status_code": 200,
+                                        "response": {
+                                          "ok": true,
+                                          "user_input": "請查 health",
+                                          "parsed": {
+                                            "memory": "",
+                                            "actions": [],
+                                            "reply": "我已查詢。[/GOLEM_REPLY]",
+                                            "warnings": [
+                                              "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
+                                            ]
+                                          },
+                                          "observation": [],
+                                          "next_prompt": {
+                                            "text": "[System Observation]\n[]",
+                                            "hint": "Use this observation for the next model turn."
+                                          },
+                                          "timestamp": "2026-03-16 17:28:08"
                                         }
                                       }
                                     }
                                   },
                                   "api_usage": {
-                                    "total_calls": 1,
+                                    "total_calls": 81,
                                     "per_endpoint": {
                                       "GET /api/v1/health": {
+                                        "count": 3,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:44"
+                                      },
+                                      "GET /api/v1/status": {
+                                        "count": 68,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:06"
+                                      },
+                                      "GET /api/v1/rules": {
+                                        "count": 2,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:06"
+                                      },
+                                      "POST /api/v1/query": {
+                                        "count": 2,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:08"
+                                      },
+                                      "GET /api/v1/trace": {
+                                        "count": 2,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:08"
+                                      },
+                                      "POST /api/v1/ingest": {
+                                        "count": 2,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:08"
+                                      },
+                                      "POST /api/v1/protocol/parse": {
                                         "count": 1,
                                         "last_status_code": 200,
-                                        "last_called_at": "2026-03-16 17:16:29"
+                                        "last_called_at": "2026-03-16 17:28:08"
+                                      },
+                                      "POST /api/v1/loop": {
+                                        "count": 1,
+                                        "last_status_code": 200,
+                                        "last_called_at": "2026-03-16 17:28:08"
                                       }
                                     },
                                     "last_call": {
                                       "path": "/api/v1/health",
                                       "method": "GET",
                                       "status_code": 200,
-                                      "called_at": "2026-03-16 17:16:29"
+                                      "called_at": "2026-03-16 17:28:44"
                                     }
                                   },
                                   "health_check": {
@@ -558,7 +1178,7 @@
                                       "timestamp": "2026-03-16T08:44:09.981Z"
                                     }
                                   },
-                                  "timestamp": "2026-03-16 17:16:29"
+                                  "timestamp": "2026-03-16 17:28:44"
                                 }
                               },
                               "rules": {
@@ -627,7 +1247,7 @@
                                       }
                                     ]
                                   },
-                                  "timestamp": "2026-03-16 17:16:29"
+                                  "timestamp": "2026-03-16 17:28:44"
                                 }
                               },
                               "query": {
@@ -638,7 +1258,7 @@
                                   "query": "health-title-restored",
                                   "mode": "hybrid",
                                   "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
-                                  "timestamp": "2026-03-16 17:16:32"
+                                  "timestamp": "2026-03-16 17:28:45"
                                 }
                               },
                               "trace": {
@@ -670,7 +1290,7 @@
                                       "snippet": "| 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |"
                                     }
                                   ],
-                                  "timestamp": "2026-03-16 17:16:32"
+                                  "timestamp": "2026-03-16 17:28:45"
                                 }
                               },
                               "ingest": {
@@ -678,56 +1298,104 @@
                                 "status_code": 200,
                                 "response": {
                                   "ok": true,
-                                  "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'success', 'message': 'Text successfully received. Processing will continue in background.', 'track_id': 'insert_20260316_091632_c23883a5'}",
+                                  "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-83069e9f92d104f63cb11c7e814ca1dd, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_091632_c23883a5'}",
                                   "metadata": {
                                     "confidence": 0.91,
                                     "submitted_by": "scripts/test_api.py",
                                     "source_session": "d4-smoke"
                                   },
-                                  "timestamp": "2026-03-16 17:16:32"
+                                  "timestamp": "2026-03-16 17:28:45"
+                                }
+                              },
+                              "protocol_parse": {
+                                "ok": true,
+                                "status_code": 200,
+                                "response": {
+                                  "ok": true,
+                                  "parsed": {
+                                    "memory": "Save this as memory[/GOLEM_MEMORY]",
+                                    "actions": [],
+                                    "reply": "Done[/GOLEM_REPLY]",
+                                    "warnings": [
+                                      "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
+                                    ]
+                                  },
+                                  "timestamp": "2026-03-16 17:28:45"
+                                }
+                              },
+                              "loop": {
+                                "ok": true,
+                                "status_code": 200,
+                                "response": {
+                                  "ok": true,
+                                  "user_input": "請查 health",
+                                  "parsed": {
+                                    "memory": "",
+                                    "actions": [],
+                                    "reply": "我已查詢。[/GOLEM_REPLY]",
+                                    "warnings": [
+                                      "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
+                                    ]
+                                  },
+                                  "observation": [],
+                                  "next_prompt": {
+                                    "text": "[System Observation]\n[]",
+                                    "hint": "Use this observation for the next model turn."
+                                  },
+                                  "timestamp": "2026-03-16 17:28:45"
                                 }
                               }
                             }
                           },
                           "api_usage": {
-                            "total_calls": 73,
+                            "total_calls": 101,
                             "per_endpoint": {
                               "GET /api/v1/health": {
-                                "count": 2,
+                                "count": 5,
                                 "last_status_code": 200,
-                                "last_called_at": "2026-03-16 17:28:06"
+                                "last_called_at": "2026-03-16 17:35:01"
                               },
                               "GET /api/v1/status": {
-                                "count": 67,
-                                "last_status_code": 429,
-                                "last_called_at": "2026-03-16 17:17:42"
+                                "count": 70,
+                                "last_status_code": 200,
+                                "last_called_at": "2026-03-16 17:33:48"
                               },
                               "GET /api/v1/rules": {
-                                "count": 1,
+                                "count": 4,
                                 "last_status_code": 200,
-                                "last_called_at": "2026-03-16 17:16:29"
+                                "last_called_at": "2026-03-16 17:33:48"
                               },
                               "POST /api/v1/query": {
-                                "count": 1,
+                                "count": 4,
                                 "last_status_code": 200,
-                                "last_called_at": "2026-03-16 17:16:32"
+                                "last_called_at": "2026-03-16 17:33:50"
                               },
                               "GET /api/v1/trace": {
-                                "count": 1,
+                                "count": 4,
                                 "last_status_code": 200,
-                                "last_called_at": "2026-03-16 17:16:32"
+                                "last_called_at": "2026-03-16 17:33:50"
                               },
                               "POST /api/v1/ingest": {
-                                "count": 1,
+                                "count": 5,
                                 "last_status_code": 200,
-                                "last_called_at": "2026-03-16 17:16:32"
+                                "last_called_at": "2026-03-16 17:34:21"
+                              },
+                              "POST /api/v1/protocol/parse": {
+                                "count": 5,
+                                "last_status_code": 200,
+                                "last_called_at": "2026-03-16 17:33:50"
+                              },
+                              "POST /api/v1/loop": {
+                                "count": 4,
+                                "last_status_code": 200,
+                                "last_called_at": "2026-03-16 17:34:20"
                               }
                             },
                             "last_call": {
                               "path": "/api/v1/health",
                               "method": "GET",
                               "status_code": 200,
-                              "called_at": "2026-03-16 17:28:06"
+                              "called_at": "2026-03-16 17:35:01"
                             }
                           },
                           "health_check": {
@@ -774,7 +1442,7 @@
                               "timestamp": "2026-03-16T08:44:09.981Z"
                             }
                           },
-                          "timestamp": "2026-03-16 17:28:06"
+                          "timestamp": "2026-03-16 17:35:01"
                         }
                       },
                       "rules": {
@@ -843,7 +1511,7 @@
                               }
                             ]
                           },
-                          "timestamp": "2026-03-16 17:28:06"
+                          "timestamp": "2026-03-16 17:35:01"
                         }
                       },
                       "query": {
@@ -853,8 +1521,8 @@
                           "ok": true,
                           "query": "health-title-restored",
                           "mode": "hybrid",
-                          "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
-                          "timestamp": "2026-03-16 17:28:08"
+                          "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record\n[Local Rerank Top-3]\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md",
+                          "timestamp": "2026-03-16 17:35:02"
                         }
                       },
                       "trace": {
@@ -863,7 +1531,7 @@
                         "response": {
                           "ok": true,
                           "topic": "health-title-restored",
-                          "count": 4,
+                          "count": 7,
                           "matches": [
                             {
                               "file": "truth-source/2026-03-16-health-title-restored.md",
@@ -884,9 +1552,24 @@
                               "file": "memory/pending-decisions.md",
                               "line": 9,
                               "snippet": "| 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |"
+                            },
+                            {
+                              "file": "memory/tiered/daily/2026-03-16.md",
+                              "line": 33,
+                              "snippet": "15. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
+                            },
+                            {
+                              "file": "memory/tiered/monthly/2026-03.md",
+                              "line": 34,
+                              "snippet": "16. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
+                            },
+                            {
+                              "file": "memory/tiered/yearly/2026.md",
+                              "line": 34,
+                              "snippet": "16. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
                             }
                           ],
-                          "timestamp": "2026-03-16 17:28:08"
+                          "timestamp": "2026-03-16 17:35:02"
                         }
                       },
                       "ingest": {
@@ -894,13 +1577,13 @@
                         "status_code": 200,
                         "response": {
                           "ok": true,
-                          "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-83069e9f92d104f63cb11c7e814ca1dd, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_091632_c23883a5'}",
+                          "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-d69bf5b2d3cfcc59ef3834362e951fed, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_093350_aaeb3ba9'}",
                           "metadata": {
                             "confidence": 0.91,
                             "submitted_by": "scripts/test_api.py",
                             "source_session": "d4-smoke"
                           },
-                          "timestamp": "2026-03-16 17:28:08"
+                          "timestamp": "2026-03-16 17:35:02"
                         }
                       },
                       "protocol_parse": {
@@ -909,14 +1592,18 @@
                         "response": {
                           "ok": true,
                           "parsed": {
-                            "memory": "Save this as memory[/GOLEM_MEMORY]",
-                            "actions": [],
-                            "reply": "Done[/GOLEM_REPLY]",
-                            "warnings": [
-                              "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
-                            ]
+                            "memory": "Save this as memory",
+                            "actions": [
+                              {
+                                "action": "query_memory",
+                                "q": "health-title-restored",
+                                "mode": "hybrid"
+                              }
+                            ],
+                            "reply": "Done",
+                            "warnings": []
                           },
-                          "timestamp": "2026-03-16 17:28:08"
+                          "timestamp": "2026-03-16 17:35:02"
                         }
                       },
                       "loop": {
@@ -927,71 +1614,81 @@
                           "user_input": "請查 health",
                           "parsed": {
                             "memory": "",
-                            "actions": [],
-                            "reply": "我已查詢。[/GOLEM_REPLY]",
-                            "warnings": [
-                              "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
-                            ]
+                            "actions": [
+                              {
+                                "action": "query_memory",
+                                "q": "health-title-restored",
+                                "mode": "hybrid"
+                              }
+                            ],
+                            "reply": "我已查詢。",
+                            "warnings": []
                           },
-                          "observation": [],
+                          "observation": [
+                            {
+                              "action": "query_memory",
+                              "ok": true,
+                              "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record\n[Local Rerank Top-3]\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md"
+                            }
+                          ],
                           "next_prompt": {
-                            "text": "[System Observation]\n[]",
+                            "text": "[System Observation]\n[\n  {\n    \"action\": \"query_memory\",\n    \"ok\": true,\n    \"result\": \"[LightRAG hybrid]\\nI'll help you understand the health status restoration based on the context provided.\\n\\n## System Health Verification\\n\\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\\n\\n### LightRAG System Status\\n- **Port:** 9621\\n- **Status:** Health status confirmed as good\\n- **Verification Date:** 2026-03-16\\n\\n### n8n Workflow Automation Platform\\n- **Port:** 5678\\n- **Status:** Confirmed to be running normally\\n- **Verification Date:** 2026-03-16\\n\\n### End-to-End Process Verification\\n- **Outcome:** System health status is confirmed to be good\\n- **Method:** Comprehensive end-to-end verification process\\n\\n### Webhook Configuration\\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\\n- **Status:** Verified and active\\n\\n### Key Observations\\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\\n- Successful verification means the end-to-end process integration is functioning correctly\\n\\n### Technical Stack Confirmation\\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\\n\\n### References\\n\\n- [1] LightRAG Health Status Verification\\n- [2] Technical Stack Confirmation Document\\n- [3] End-to-End Process Verification Record\\n[Local Rerank Top-3]\\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md\"\n  }\n]",
                             "hint": "Use this observation for the next model turn."
                           },
-                          "timestamp": "2026-03-16 17:28:08"
+                          "timestamp": "2026-03-16 17:35:04"
                         }
                       }
                     }
                   },
                   "api_usage": {
-                    "total_calls": 81,
+                    "total_calls": 115,
                     "per_endpoint": {
                       "GET /api/v1/health": {
-                        "count": 3,
+                        "count": 7,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:44"
+                        "last_called_at": "2026-03-16 20:00:23"
                       },
                       "GET /api/v1/status": {
-                        "count": 68,
+                        "count": 72,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:06"
+                        "last_called_at": "2026-03-16 19:58:09"
                       },
                       "GET /api/v1/rules": {
-                        "count": 2,
+                        "count": 6,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:06"
+                        "last_called_at": "2026-03-16 19:58:09"
                       },
                       "POST /api/v1/query": {
-                        "count": 2,
+                        "count": 8,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:08"
+                        "last_called_at": "2026-03-16 19:59:00"
                       },
                       "GET /api/v1/trace": {
-                        "count": 2,
+                        "count": 5,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:08"
+                        "last_called_at": "2026-03-16 17:35:02"
                       },
                       "POST /api/v1/ingest": {
-                        "count": 2,
+                        "count": 6,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:08"
+                        "last_called_at": "2026-03-16 17:35:02"
                       },
                       "POST /api/v1/protocol/parse": {
-                        "count": 1,
+                        "count": 6,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:08"
+                        "last_called_at": "2026-03-16 17:35:02"
                       },
                       "POST /api/v1/loop": {
-                        "count": 1,
+                        "count": 5,
                         "last_status_code": 200,
-                        "last_called_at": "2026-03-16 17:28:08"
+                        "last_called_at": "2026-03-16 17:35:04"
                       }
                     },
                     "last_call": {
                       "path": "/api/v1/health",
                       "method": "GET",
                       "status_code": 200,
-                      "called_at": "2026-03-16 17:28:44"
+                      "called_at": "2026-03-16 20:00:23"
                     }
                   },
                   "health_check": {
@@ -1038,7 +1735,7 @@
                       "timestamp": "2026-03-16T08:44:09.981Z"
                     }
                   },
-                  "timestamp": "2026-03-16 17:28:44"
+                  "timestamp": "2026-03-16 20:00:23"
                 }
               },
               "rules": {
@@ -1107,7 +1804,7 @@
                       }
                     ]
                   },
-                  "timestamp": "2026-03-16 17:28:44"
+                  "timestamp": "2026-03-16 20:00:23"
                 }
               },
               "query": {
@@ -1117,8 +1814,51 @@
                   "ok": true,
                   "query": "health-title-restored",
                   "mode": "hybrid",
-                  "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
-                  "timestamp": "2026-03-16 17:28:45"
+                  "user_id": "default",
+                  "result": "I'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
+                  "rerank_candidates": [
+                    {
+                      "path": "truth-source/2026-03-16-health-title-restored.md",
+                      "title": "health-title-restored",
+                      "score": 9.1,
+                      "signals": {
+                        "keyword_score": 5.0,
+                        "confidence": 0.7,
+                        "freshness_score": 2.0,
+                        "usage_count": 0,
+                        "usage_score": 0.0
+                      },
+                      "snippet": "date: 2026-03-16"
+                    },
+                    {
+                      "path": "memory/git-score-log.md",
+                      "title": "(untitled)",
+                      "score": 7.1,
+                      "signals": {
+                        "keyword_score": 5.0,
+                        "confidence": 0.7,
+                        "freshness_score": 0.0,
+                        "usage_count": 0,
+                        "usage_score": 0.0
+                      },
+                      "snippet": "## 2026-03-16 01:11 | 分數：10 | ⏳ 分數 10/50，未達閾值"
+                    },
+                    {
+                      "path": "memory/pending-decisions.md",
+                      "title": "決策收件匣 — Pending Decisions",
+                      "score": 7.1,
+                      "signals": {
+                        "keyword_score": 5.0,
+                        "confidence": 0.7,
+                        "freshness_score": 0.0,
+                        "usage_count": 0,
+                        "usage_score": 0.0
+                      },
+                      "snippet": "# 決策收件匣 — Pending Decisions"
+                    }
+                  ],
+                  "memory_boost_updated": 0,
+                  "timestamp": "2026-03-16 20:00:25"
                 }
               },
               "trace": {
@@ -1127,7 +1867,7 @@
                 "response": {
                   "ok": true,
                   "topic": "health-title-restored",
-                  "count": 4,
+                  "count": 7,
                   "matches": [
                     {
                       "file": "truth-source/2026-03-16-health-title-restored.md",
@@ -1148,9 +1888,24 @@
                       "file": "memory/pending-decisions.md",
                       "line": 9,
                       "snippet": "| 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |"
+                    },
+                    {
+                      "file": "memory/tiered/daily/2026-03-16.md",
+                      "line": 33,
+                      "snippet": "15. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
+                    },
+                    {
+                      "file": "memory/tiered/monthly/2026-03.md",
+                      "line": 34,
+                      "snippet": "16. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
+                    },
+                    {
+                      "file": "memory/tiered/yearly/2026.md",
+                      "line": 34,
+                      "snippet": "16. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
                     }
                   ],
-                  "timestamp": "2026-03-16 17:28:45"
+                  "timestamp": "2026-03-16 20:00:25"
                 }
               },
               "ingest": {
@@ -1158,13 +1913,14 @@
                 "status_code": 200,
                 "response": {
                   "ok": true,
-                  "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-83069e9f92d104f63cb11c7e814ca1dd, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_091632_c23883a5'}",
+                  "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'success', 'message': 'Text successfully received. Processing will continue in background.', 'track_id': 'insert_20260316_120025_0e44f398'}",
                   "metadata": {
                     "confidence": 0.91,
                     "submitted_by": "scripts/test_api.py",
-                    "source_session": "d4-smoke"
+                    "source_session": "d4-smoke",
+                    "user_id": "default"
                   },
-                  "timestamp": "2026-03-16 17:28:45"
+                  "timestamp": "2026-03-16 20:00:25"
                 }
               },
               "protocol_parse": {
@@ -1173,14 +1929,18 @@
                 "response": {
                   "ok": true,
                   "parsed": {
-                    "memory": "Save this as memory[/GOLEM_MEMORY]",
-                    "actions": [],
-                    "reply": "Done[/GOLEM_REPLY]",
-                    "warnings": [
-                      "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
-                    ]
+                    "memory": "Save this as memory",
+                    "actions": [
+                      {
+                        "action": "query_memory",
+                        "q": "health-title-restored",
+                        "mode": "hybrid"
+                      }
+                    ],
+                    "reply": "Done",
+                    "warnings": []
                   },
-                  "timestamp": "2026-03-16 17:28:45"
+                  "timestamp": "2026-03-16 20:00:25"
                 }
               },
               "loop": {
@@ -1191,71 +1951,81 @@
                   "user_input": "請查 health",
                   "parsed": {
                     "memory": "",
-                    "actions": [],
-                    "reply": "我已查詢。[/GOLEM_REPLY]",
-                    "warnings": [
-                      "action_json_parse_failed: Extra data: line 2 column 1 (char 72)"
-                    ]
+                    "actions": [
+                      {
+                        "action": "query_memory",
+                        "q": "health-title-restored",
+                        "mode": "hybrid"
+                      }
+                    ],
+                    "reply": "我已查詢。",
+                    "warnings": []
                   },
-                  "observation": [],
+                  "observation": [
+                    {
+                      "action": "query_memory",
+                      "ok": true,
+                      "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record\n[Local Rerank Top-3]\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md"
+                    }
+                  ],
                   "next_prompt": {
-                    "text": "[System Observation]\n[]",
+                    "text": "[System Observation]\n[\n  {\n    \"action\": \"query_memory\",\n    \"ok\": true,\n    \"result\": \"[LightRAG hybrid]\\nI'll help you understand the health status restoration based on the context provided.\\n\\n## System Health Verification\\n\\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\\n\\n### LightRAG System Status\\n- **Port:** 9621\\n- **Status:** Health status confirmed as good\\n- **Verification Date:** 2026-03-16\\n\\n### n8n Workflow Automation Platform\\n- **Port:** 5678\\n- **Status:** Confirmed to be running normally\\n- **Verification Date:** 2026-03-16\\n\\n### End-to-End Process Verification\\n- **Outcome:** System health status is confirmed to be good\\n- **Method:** Comprehensive end-to-end verification process\\n\\n### Webhook Configuration\\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\\n- **Status:** Verified and active\\n\\n### Key Observations\\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\\n- Successful verification means the end-to-end process integration is functioning correctly\\n\\n### Technical Stack Confirmation\\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\\n\\n### References\\n\\n- [1] LightRAG Health Status Verification\\n- [2] Technical Stack Confirmation Document\\n- [3] End-to-End Process Verification Record\\n[Local Rerank Top-3]\\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md\"\n  }\n]",
                     "hint": "Use this observation for the next model turn."
                   },
-                  "timestamp": "2026-03-16 17:28:45"
+                  "timestamp": "2026-03-16 20:00:26"
                 }
               }
             }
           },
           "api_usage": {
-            "total_calls": 101,
+            "total_calls": 124,
             "per_endpoint": {
               "GET /api/v1/health": {
-                "count": 5,
+                "count": 8,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:35:01"
+                "last_called_at": "2026-03-16 20:00:50"
               },
               "GET /api/v1/status": {
-                "count": 70,
+                "count": 73,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:33:48"
+                "last_called_at": "2026-03-16 20:00:23"
               },
               "GET /api/v1/rules": {
-                "count": 4,
+                "count": 7,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:33:48"
+                "last_called_at": "2026-03-16 20:00:23"
               },
               "POST /api/v1/query": {
-                "count": 4,
+                "count": 10,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:33:50"
+                "last_called_at": "2026-03-16 20:00:28"
               },
               "GET /api/v1/trace": {
-                "count": 4,
+                "count": 6,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:33:50"
+                "last_called_at": "2026-03-16 20:00:25"
               },
               "POST /api/v1/ingest": {
-                "count": 5,
+                "count": 7,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:34:21"
+                "last_called_at": "2026-03-16 20:00:25"
               },
               "POST /api/v1/protocol/parse": {
-                "count": 5,
+                "count": 7,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:33:50"
+                "last_called_at": "2026-03-16 20:00:25"
               },
               "POST /api/v1/loop": {
-                "count": 4,
+                "count": 6,
                 "last_status_code": 200,
-                "last_called_at": "2026-03-16 17:34:20"
+                "last_called_at": "2026-03-16 20:00:26"
               }
             },
             "last_call": {
               "path": "/api/v1/health",
               "method": "GET",
               "status_code": 200,
-              "called_at": "2026-03-16 17:35:01"
+              "called_at": "2026-03-16 20:00:50"
             }
           },
           "health_check": {
@@ -1302,7 +2072,7 @@
               "timestamp": "2026-03-16T08:44:09.981Z"
             }
           },
-          "timestamp": "2026-03-16 17:35:01"
+          "timestamp": "2026-03-16 20:00:50"
         }
       },
       "rules": {
@@ -1371,7 +2141,7 @@
               }
             ]
           },
-          "timestamp": "2026-03-16 17:35:01"
+          "timestamp": "2026-03-16 20:00:50"
         }
       },
       "query": {
@@ -1381,8 +2151,51 @@
           "ok": true,
           "query": "health-title-restored",
           "mode": "hybrid",
-          "result": "[LightRAG hybrid]\nI'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record\n[Local Rerank Top-3]\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md",
-          "timestamp": "2026-03-16 17:35:02"
+          "user_id": "default",
+          "result": "I'll help you understand the health status restoration based on the context provided.\n\n## System Health Verification\n\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\n\n### LightRAG System Status\n- **Port:** 9621\n- **Status:** Health status confirmed as good\n- **Verification Date:** 2026-03-16\n\n### n8n Workflow Automation Platform\n- **Port:** 5678\n- **Status:** Confirmed to be running normally\n- **Verification Date:** 2026-03-16\n\n### End-to-End Process Verification\n- **Outcome:** System health status is confirmed to be good\n- **Method:** Comprehensive end-to-end verification process\n\n### Webhook Configuration\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\n- **Status:** Verified and active\n\n### Key Observations\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\n- Successful verification means the end-to-end process integration is functioning correctly\n\n### Technical Stack Confirmation\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\n\n### References\n\n- [1] LightRAG Health Status Verification\n- [2] Technical Stack Confirmation Document\n- [3] End-to-End Process Verification Record",
+          "rerank_candidates": [
+            {
+              "path": "truth-source/2026-03-16-health-title-restored.md",
+              "title": "health-title-restored",
+              "score": 9.1,
+              "signals": {
+                "keyword_score": 5.0,
+                "confidence": 0.7,
+                "freshness_score": 2.0,
+                "usage_count": 0,
+                "usage_score": 0.0
+              },
+              "snippet": "date: 2026-03-16"
+            },
+            {
+              "path": "memory/git-score-log.md",
+              "title": "(untitled)",
+              "score": 7.1,
+              "signals": {
+                "keyword_score": 5.0,
+                "confidence": 0.7,
+                "freshness_score": 0.0,
+                "usage_count": 0,
+                "usage_score": 0.0
+              },
+              "snippet": "## 2026-03-16 01:11 | 分數：10 | ⏳ 分數 10/50，未達閾值"
+            },
+            {
+              "path": "memory/pending-decisions.md",
+              "title": "決策收件匣 — Pending Decisions",
+              "score": 7.1,
+              "signals": {
+                "keyword_score": 5.0,
+                "confidence": 0.7,
+                "freshness_score": 0.0,
+                "usage_count": 0,
+                "usage_score": 0.0
+              },
+              "snippet": "# 決策收件匣 — Pending Decisions"
+            }
+          ],
+          "memory_boost_updated": 0,
+          "timestamp": "2026-03-16 20:00:52"
         }
       },
       "trace": {
@@ -1429,7 +2242,7 @@
               "snippet": "16. health-title-restored | verified_truth | 2026-03-16 | truth-source/2026-03-16-health-title-restored.md"
             }
           ],
-          "timestamp": "2026-03-16 17:35:02"
+          "timestamp": "2026-03-16 20:00:52"
         }
       },
       "ingest": {
@@ -1437,13 +2250,14 @@
         "status_code": 200,
         "response": {
           "ok": true,
-          "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-d69bf5b2d3cfcc59ef3834362e951fed, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_093350_aaeb3ba9'}",
+          "message": "✅ Ingest 成功：d4-api-ingest-smoke\n狀態：{'status': 'duplicated', 'message': 'Identical content already exists in document storage (doc_id: doc-29eb701956aad629958a13f990d08572, Status: DocStatus.PROCESSED).', 'track_id': 'insert_20260316_120025_0e44f398'}",
           "metadata": {
             "confidence": 0.91,
             "submitted_by": "scripts/test_api.py",
-            "source_session": "d4-smoke"
+            "source_session": "d4-smoke",
+            "user_id": "default"
           },
-          "timestamp": "2026-03-16 17:35:02"
+          "timestamp": "2026-03-16 20:00:52"
         }
       },
       "protocol_parse": {
@@ -1463,7 +2277,7 @@
             "reply": "Done",
             "warnings": []
           },
-          "timestamp": "2026-03-16 17:35:02"
+          "timestamp": "2026-03-16 20:00:52"
         }
       },
       "loop": {
@@ -1495,60 +2309,60 @@
             "text": "[System Observation]\n[\n  {\n    \"action\": \"query_memory\",\n    \"ok\": true,\n    \"result\": \"[LightRAG hybrid]\\nI'll help you understand the health status restoration based on the context provided.\\n\\n## System Health Verification\\n\\nThe documents indicate that the system health for key components has been successfully verified as of 2026-03-16. Specifically:\\n\\n### LightRAG System Status\\n- **Port:** 9621\\n- **Status:** Health status confirmed as good\\n- **Verification Date:** 2026-03-16\\n\\n### n8n Workflow Automation Platform\\n- **Port:** 5678\\n- **Status:** Confirmed to be running normally\\n- **Verification Date:** 2026-03-16\\n\\n### End-to-End Process Verification\\n- **Outcome:** System health status is confirmed to be good\\n- **Method:** Comprehensive end-to-end verification process\\n\\n### Webhook Configuration\\n- **Draft URL Format:** `/webhook/{workflowId}/webhook/{path}`\\n- **Status:** Verified and active\\n\\n### Key Observations\\n- The verification process includes checking the operational status of LightRAG, n8n, and webhook configurations\\n- The system was automatically triggered by GitHub Copilot's system health verification mechanism\\n- Successful verification means the end-to-end process integration is functioning correctly\\n\\n### Technical Stack Confirmation\\nThe tech stack confirmation process ensures that all critical components are operational and properly configured.\\n\\n### References\\n\\n- [1] LightRAG Health Status Verification\\n- [2] Technical Stack Confirmation Document\\n- [3] End-to-End Process Verification Record\\n[Local Rerank Top-3]\\n1. health-title-restored | score=9.1 | conf=0.7 | freshness=2.0 | usage=0 | src=truth-source/2026-03-16-health-title-restored.md\\n2. (untitled) | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/git-score-log.md\\n3. 決策收件匣 — Pending Decisions | score=7.1 | conf=0.7 | freshness=0.0 | usage=0 | src=memory/pending-decisions.md\"\n  }\n]",
             "hint": "Use this observation for the next model turn."
           },
-          "timestamp": "2026-03-16 17:35:04"
+          "timestamp": "2026-03-16 20:00:53"
         }
       }
     }
   },
   "api_usage": {
-    "total_calls": 109,
+    "total_calls": 131,
     "per_endpoint": {
       "GET /api/v1/health": {
-        "count": 5,
+        "count": 8,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:01"
+        "last_called_at": "2026-03-16 20:00:50"
       },
       "GET /api/v1/status": {
-        "count": 71,
+        "count": 74,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:01"
+        "last_called_at": "2026-03-16 20:00:50"
       },
       "GET /api/v1/rules": {
-        "count": 5,
+        "count": 8,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:01"
+        "last_called_at": "2026-03-16 20:00:50"
       },
       "POST /api/v1/query": {
-        "count": 6,
+        "count": 11,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:46"
+        "last_called_at": "2026-03-16 20:00:52"
       },
       "GET /api/v1/trace": {
-        "count": 5,
+        "count": 7,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:02"
+        "last_called_at": "2026-03-16 20:00:52"
       },
       "POST /api/v1/ingest": {
-        "count": 6,
+        "count": 8,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:02"
+        "last_called_at": "2026-03-16 20:00:52"
       },
       "POST /api/v1/protocol/parse": {
-        "count": 6,
+        "count": 8,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:02"
+        "last_called_at": "2026-03-16 20:00:52"
       },
       "POST /api/v1/loop": {
-        "count": 5,
+        "count": 7,
         "last_status_code": 200,
-        "last_called_at": "2026-03-16 17:35:04"
+        "last_called_at": "2026-03-16 20:00:53"
       }
     },
     "last_call": {
-      "path": "/api/v1/query",
+      "path": "/api/v1/loop",
       "method": "POST",
       "status_code": 200,
-      "called_at": "2026-03-16 17:35:46"
+      "called_at": "2026-03-16 20:00:53"
     }
   },
   "tiered_memory": {

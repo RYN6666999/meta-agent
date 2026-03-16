@@ -134,3 +134,13 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+📊 評分結果：10/50
+  memory 變更 (memory/turn-count.txt) +10
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：30/50
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/system-status.json) +10
+  memory 變更 (memory/turn-count.txt) +10
+
+⏳ 分數未達 50，暫不 commit
