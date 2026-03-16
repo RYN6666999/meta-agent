@@ -15,6 +15,7 @@ import os
 import re
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -25,6 +26,110 @@ LAW_JSON = Path("/Users/ryan/meta-agent/law.json")
 ERROR_LOG_DIR = Path("/Users/ryan/meta-agent/error-log")
 META_AGENT_DIR = Path("/Users/ryan/meta-agent")
 TODAY = date.today().isoformat
+
+# P3-B：觸發強化 — 更新 last_triggered + score_boost
+MEMORY_SCAN_DIRS = [
+    META_AGENT_DIR / "error-log",
+    META_AGENT_DIR / "truth-source",
+    META_AGENT_DIR / "memory",
+]
+BOOST_MULTIPLIER = 1.2
+MAX_BASE_SCORE = 150.0
+
+
+def _update_last_triggered(query: str) -> int:
+    """
+    P3-B：掃描本地記憶檔案，更新與 query 相關的 last_triggered + score_boost。
+    回傳更新的檔案數量。
+    """
+    today = date.today().isoformat()
+    # 提取關鍵詞（最多 8 個）
+    keywords = [kw.lower() for kw in re.split(r"[\s，。？！、]+", query) if len(kw) >= 2][:8]
+    if not keywords:
+        return 0
+
+    updated = 0
+    for scan_dir in MEMORY_SCAN_DIRS:
+        if not scan_dir.exists():
+            continue
+        for md_file in scan_dir.rglob("*.md"):
+            try:
+                text = md_file.read_text(encoding="utf-8")
+                text_lower = text.lower()
+                # 至少 2 個關鍵詞匹配才更新
+                matches = sum(1 for kw in keywords if kw in text_lower)
+                if matches < 2:
+                    continue
+
+                # 更新 last_triggered
+                if "last_triggered:" in text:
+                    text = re.sub(
+                        r"last_triggered:\s*\S+",
+                        f"last_triggered: {today}",
+                        text,
+                    )
+
+                # 更新 score_boost（base_score × 1.2，上限 150）
+                boost_match = re.search(r"base_score:\s*([\d.]+)", text)
+                if boost_match:
+                    old_score = float(boost_match.group(1))
+                    new_score = min(old_score * BOOST_MULTIPLIER, MAX_BASE_SCORE)
+                    text = re.sub(
+                        r"base_score:\s*[\d.]+",
+                        f"base_score: {new_score:.1f}",
+                        text,
+                    )
+                else:
+                    # 沒有 base_score 欄位 → 在 last_triggered 後插入（初始 100 × 1.2 = 120）
+                    text = re.sub(
+                        r"(last_triggered:\s*\S+)",
+                        r"\1\nbase_score: 120.0",
+                        text,
+                        count=1,
+                    )
+
+                md_file.write_text(text, encoding="utf-8")
+                updated += 1
+
+            except Exception:
+                continue
+
+    return updated
+
+
+def _check_conflicts(content: str, title: str) -> Optional[str]:
+    """
+    P4-A：矛盾檢查（同步版本，用於 ingest_memory 呼叫前）。
+    掃描本地 error-log/ 和 truth-source/ 找關鍵詞重疊的文件。
+    回傳警告字串，若無衝突回傳 None。
+    """
+    keywords = [kw.lower() for kw in re.split(r"[\s，。？！、]+", title + " " + content[:200])
+                if len(kw) >= 3][:10]
+    if not keywords:
+        return None
+
+    conflicts = []
+    check_dirs = [META_AGENT_DIR / "error-log", META_AGENT_DIR / "truth-source"]
+    for scan_dir in check_dirs:
+        if not scan_dir.exists():
+            continue
+        for md_file in scan_dir.rglob("*.md"):
+            try:
+                text_lower = md_file.read_text(encoding="utf-8").lower()
+                matches = sum(1 for kw in keywords if kw in text_lower)
+                if matches >= 3:
+                    conflicts.append(md_file.name)
+            except Exception:
+                continue
+
+    if conflicts:
+        return (
+            f"⚠️  矛盾檢查：找到 {len(conflicts)} 個可能衝突的現有文件：\n"
+            + "\n".join(f"  - {c}" for c in conflicts[:5])
+            + "\n\n請確認新內容不與現有知識矛盾。若確定要 ingest，"
+            "請在 content 開頭加入 `[CONFIRMED]` 標記。"
+        )
+    return None
 
 VALID_TYPES = {"error_fix", "tech_decision", "verified_truth", "rule", "deprecated"}
 
@@ -64,7 +169,12 @@ async def query_memory(q: str, mode: str = "hybrid") -> str:
         data = resp.json()
 
     result = data.get("response") or data.get("result") or str(data)
-    return f"[LightRAG {mode}]\n{result}"
+
+    # P3-B：觸發強化 — 更新本地相關記憶的 last_triggered + score_boost
+    updated = _update_last_triggered(q)
+    boost_note = f"\n[記憶強化：{updated} 個相關文件 last_triggered 已更新]" if updated > 0 else ""
+
+    return f"[LightRAG {mode}]\n{result}{boost_note}"
 
 
 # ── 工具 2：ingest_memory ─────────────────────────────────────────────
@@ -90,6 +200,13 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
 
     if mem_type not in VALID_TYPES:
         mem_type = "verified_truth"
+
+    # P4-A：矛盾檢查 — ingest 前先驗證
+    # [CONFIRMED] 標記可跳過檢查（使用者已確認）
+    if not content.startswith("[CONFIRMED]"):
+        conflict_warning = _check_conflicts(content, title or content[:80])
+        if conflict_warning:
+            return conflict_warning
 
     today = date.today().isoformat()
     title = title or content[:40].replace("\n", " ")

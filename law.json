@@ -147,6 +147,63 @@
     "cleaning_log": "memory/cleaning-log.md"
   },
 
+  "search_decision_tree": {
+    "description": "P2-B：搜尋工具選擇規則（降低 Claude Sonnet 成本）",
+    "rules": [
+      {
+        "task": "技術文件查詢（API 語法、框架用法）",
+        "tool": "brave MCP",
+        "reason": "最新文件，避免 LLM 幻覺過期 API",
+        "cost": "cheap"
+      },
+      {
+        "task": "本地記憶 / 錯誤歷史 / 決策查詢",
+        "tool": "memory-mcp query_memory",
+        "reason": "先查圖譜再行動，觸發 P3-B 強化",
+        "cost": "free",
+        "priority": "MUST_DO_FIRST"
+      },
+      {
+        "task": "最新版本確認 / 套件更新",
+        "tool": "brave MCP",
+        "reason": "即時資料",
+        "cost": "cheap"
+      },
+      {
+        "task": "記憶萃取 / 格式化 / 清洗",
+        "tool": "Groq API（llama-3.1-8b-instant）",
+        "reason": "免費額度高，速度快（P2-C）",
+        "cost": "free",
+        "model": "llama-3.1-8b-instant",
+        "endpoint": "https://api.groq.com/openai/v1/chat/completions"
+      },
+      {
+        "task": "複雜推理 / 架構決策 / 最終整合",
+        "tool": "Claude Sonnet（最後手段）",
+        "reason": "其他工具無法處理時才用",
+        "cost": "expensive",
+        "note": "先窮盡免費工具"
+      }
+    ],
+    "golden_rule": "按順序嘗試：memory-mcp → brave → Groq → Claude Sonnet"
+  },
+
+  "groq_architecture": {
+    "description": "P2-C：Groq 替代昂貴操作架構",
+    "use_cases": [
+      "對話記憶萃取（從原始對話提取知識點）",
+      "記憶清洗（deprecated 決策是否保留）",
+      "frontmatter 格式化（補全缺失欄位）",
+      "實體去重（判斷兩個概念是否相同）",
+      "錯誤分類（error_fix / tech_decision / rule）"
+    ],
+    "model": "llama-3.1-8b-instant",
+    "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+    "env_var": "GROQ_API_KEY",
+    "free_tier": "每天 14400 req，每分鐘 30 req",
+    "limit": "禁止用 Groq 做最終決策（只做清洗/萃取/格式化）"
+  },
+
   "git_score": {
     "threshold": 50,
     "weights": {

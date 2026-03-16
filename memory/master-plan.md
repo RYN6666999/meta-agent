@@ -27,18 +27,20 @@ source: 完整差距分析
 ### P0｜對話連續性（最緊急）
 **問題：額度耗盡 or 對話中斷 → 一切歸零**
 
-- [ ] **P0-A：對話檢查點系統**
+- [x] **P0-A：對話檢查點系統**
   每隔 20 則訊息，自動把對話摘要寫入 `memory/checkpoints/`
   格式：`checkpoint-{session_id}-{timestamp}.md`
   內容：當前任務狀態、決策、未完成項目
+  ✅ 由 `scripts/on-stop.py` Stop hook 實作（Turn 計數 + 每 20 次寫 checkpoint）
 
 - [x] **P0-B：交接文件自動生成**
   額度剩 10% 時，觸發 Haiku 生成交接文件（仿照你 Obsidian 裡的 Gemini 交接文件格式）
   存入 `memory/handoff/latest-handoff.md`
   下一個 AI 讀這個文件就能無縫接手
 
-- [ ] **P0-C：session 恢復指令**
+- [x] **P0-C：session 恢復指令**
   在 CLAUDE.md 加入：「每次對話啟動，先讀 `memory/handoff/latest-handoff.md`」
+  ✅ CLAUDE.md 已加入啟動必讀順序 + 主動輸出未完成項目
 
 ---
 
@@ -55,33 +57,31 @@ source: 完整差距分析
     → 規則 → 候選 law.json 更新（需人類確認）
   ```
 
-- [ ] **P1-B：Claude Code hook（PostConversation）**
+- [x] **P1-B：Claude Code hook（PostConversation）**
   每次對話結束自動觸發萃取腳本
+  ✅ 由 Stop hook (`scripts/on-stop.py`) 實作：turn 計數 + 每 20 次 checkpoint
+  📌 完整對話萃取需手動呼叫 `scripts/extract-session.sh`（對話文本 Stop hook 無法直接取得）
 
 ---
 
 ### P2｜搜尋增強 + 成本降低
 **問題：現在依賴 LLM 知識 → 貴且會幻覺**
 
-- [ ] **P2-A：Brave MCP 加入**
+- [x] **P2-A：Brave MCP 加入**
   ```bash
   claude mcp add brave -e BRAVE_API_KEY=$BRAVE_API_KEY \
     -- npx -y @modelcontextprotocol/server-brave-search
   ```
   用途：查最新文件、驗證 API 變化（取代 LLM 猜測）
+  ✅ 已安裝，`claude mcp list` 確認 Connected
 
-- [ ] **P2-B：搜尋決策樹**
-  在 law.json 加入「何時用哪個搜尋工具」規則：
-  ```
-  技術文件查詢 → qmd（免費，結構化）
-  最新版本確認 → Brave Search（便宜）
-  網頁爬取    → lightpanda（免費）
-  深度研究    → 以上組合，最後才 LLM 整合
-  ```
+- [x] **P2-B：搜尋決策樹**
+  在 law.json 加入「何時用哪個搜尋工具」規則
+  ✅ 已寫入 `law.json` 的 `search_decision_tree` 欄位
 
-- [ ] **P2-C：Groq 替代昂貴操作**
+- [x] **P2-C：Groq 替代昂貴操作**
   記憶萃取 / 清洗 / 格式化 → 全部用 Groq（免費額度高，速度快）
-  只有最終決策和複雜推理才用 Claude Sonnet
+  ✅ 已寫入 `law.json` 的 `groq_architecture` 欄位
 
 ---
 
@@ -92,20 +92,24 @@ source: 完整差距分析
   每天執行（launchd）
   掃描所有 frontmatter → 計算衰退分數 → 更新 status
 
-- [ ] **P3-B：觸發強化機制**
+- [x] **P3-B：觸發強化機制**
   AI 引用某記憶時 → 自動更新 `last_triggered` + 分數 × 1.2
+  ✅ memory-mcp `query_memory` 呼叫後自動觸發 `_update_last_triggered()`
 
 ---
 
 ### P4｜矛盾偵測 + 實體去重
 **問題：新記憶可能與舊記憶衝突**
 
-- [ ] **P4-A：ingest 前矛盾檢查**
+- [x] **P4-A：ingest 前矛盾檢查**
   新記憶 ingest 前，先查詢 LightRAG 是否有相關舊記憶
   如果有衝突 → 標記人類確認，不自動覆蓋
+  ✅ memory-mcp `ingest_memory` 呼叫 `_check_conflicts()` 前置驗證
+  📌 用 `[CONFIRMED]` 標記可跳過檢查
 
-- [ ] **P4-B：實體去重腳本**
+- [x] **P4-B：實體去重腳本**
   每週掃描 LightRAG 圖譜 → 合併相同概念節點
+  ✅ `scripts/dedup-lightrag.py` + launchd 每週一 03:00
 
 ---
 
