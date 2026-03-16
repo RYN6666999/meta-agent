@@ -19,6 +19,7 @@
     "rag_cloud": "Dify Cloud（API: https://api.dify.ai/v1）",
     "memory_source": "/Users/ryan/meta-agent/ + Git",
     "human_interface": "Obsidian（iCloud sync）",
+    "obsidian_mcp": "@modelcontextprotocol/server-filesystem，vault=/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun，設定在 /Users/ryan/meta-agent/.mcp.json",
     "llm_primary": "claude-sonnet（Anthropic API）",
     "llm_fast": "claude-haiku / gemini-flash（量大用，走 OpenRouter）",
     "embedding": "text-embedding-3-small（OpenRouter）",
