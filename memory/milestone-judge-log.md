@@ -85,3 +85,13 @@
   truth-source 新增驗證決策 truth-source/2026-03-16-health-title-restored.md +60
 
 ---
+
+## 2026-03-16 16:48 | auto-git-score | 分數 180 | ✅ 重大里程碑 → 建立分支 `decision/auto-git-score-2026-03-16`
+
+**描述：** git-score 自動 commit（score=55），含重要變更 [commit:HEAD~1..HEAD]
+
+**評分明細：**
+其他變更 memory/handoff/latest-handoff.md +10
+其他變更 memory/milestone-judge-log.md +10
+
+---
