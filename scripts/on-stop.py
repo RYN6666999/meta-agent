@@ -74,15 +74,23 @@ type: checkpoint
     cp_file.write_text(cp_content)
     sys.stderr.write(f"[checkpoint] Turn {turn} → {cp_file.name}\n")
 
-# ── 每 50 次送 n8n 萃取（需要對話內容，此處跳過自動觸發）──
-# ── 每 50 次自動萃取 session JSONL → n8n ──────────────────────────
-if turn % 50 == 0:
+# ── 每 10 次自動萃取 session JSONL → n8n ──────────────────────────
+# Bug 修復：
+#   1. 路徑動態搜尋，不再寫死 -Users-ryan（meta-agent 實際在 -Users-ryan-meta-agent）
+#   2. assistant content 為 list[{type, text/thinking}]，只取 type==text 區塊
+if turn % 10 == 0:
     try:
         import urllib.request as _urllib_req
-        claude_project_dir = Path.home() / ".claude" / "projects" / "-Users-ryan"
-        jsonl_file = claude_project_dir / f"{session_id}.jsonl"
+        # 動態搜尋：掃描所有 project dirs 找符合 session_id 的 JSONL
+        claude_projects_root = Path.home() / ".claude" / "projects"
+        jsonl_file = None
+        for proj_dir in claude_projects_root.iterdir():
+            candidate = proj_dir / f"{session_id}.jsonl"
+            if candidate.exists():
+                jsonl_file = candidate
+                break
         turns_texts = []
-        if jsonl_file.exists():
+        if jsonl_file and jsonl_file.exists():
             with open(jsonl_file, encoding="utf-8") as jf:
                 for line in jf:
                     try:
@@ -92,6 +100,7 @@ if turn % 50 == 0:
                         msg = row.get("message", {})
                         role = msg.get("role", row.get("type", "?"))
                         content = msg.get("content", "")
+                        # assistant content 是 [{type: thinking/text, text: ...}]
                         if isinstance(content, list):
                             text = " ".join(
                                 c.get("text", "") for c in content
@@ -103,7 +112,9 @@ if turn % 50 == 0:
                             turns_texts.append(f"[{role}] {text[:800]}")
                     except Exception:
                         continue
-        if len(turns_texts) >= 5:
+        else:
+            sys.stderr.write(f"[on-stop] JSONL not found for session {session_id[:8]}\n")
+        if len(turns_texts) >= 3:
             excerpt = "\n---\n".join(turns_texts[-30:])
             payload_bytes = json.dumps({
                 "conversation": excerpt,
@@ -119,10 +130,11 @@ if turn % 50 == 0:
             )
             with _urllib_req.urlopen(req, timeout=30) as resp:
                 sys.stderr.write(
-                    f"[on-stop] auto-extract sent (turn={turn}, turns={len(turns_texts)}), status={resp.status}\n"
+                    f"[on-stop] auto-extract sent (turn={turn}, turns={len(turns_texts)})"
+                    f" from {jsonl_file.name if jsonl_file else '?'}, status={resp.status}\n"
                 )
         else:
-            sys.stderr.write(f"[on-stop] auto-extract skip: {len(turns_texts)} turns < 5\n")
+            sys.stderr.write(f"[on-stop] auto-extract skip: {len(turns_texts)} turns < 3\n")
     except Exception as e:
         sys.stderr.write(f"[on-stop] auto-extract error: {e}\n")
 

@@ -65,8 +65,9 @@ last_updated: 2026-03-16 17:10
 
 - [x] **P1-B：Claude Code hook（PostConversation）**
   每次對話結束自動觸發萃取腳本
-  ✅ 由 Stop hook (`scripts/on-stop.py`) 實作：turn 計數 + 每 20 次 checkpoint
-  📌 完整對話萃取需手動呼叫 `scripts/extract-session.sh`（對話文本 Stop hook 無法直接取得）
+  ✅ Stop hook (`scripts/on-stop.py`) 每 10 次自動掃 JSONL → n8n webhook
+  ✅ Bug 修復（2026-03-16）：JSONL 路徑動態搜尋 + assistant content list 正確解析
+  ✅ 驗證：turn=50 測試，找到 205 個片段，HTTP 200 送出成功
 
 ---
 
@@ -191,6 +192,18 @@ last_updated: 2026-03-16 17:10
 - [x] **D8-2：尖端工程師技術雷達腳本** — `scripts/persona_tech_radar.py`（Brave 搜尋 → 清洗報告 → ingest 人格庫）
 - [x] **D8-3：每日定時排程** — `com.meta-agent.persona-tech-radar`（每日 09:30）
 - [x] **D8-4：機器可讀狀態** — `system-status.json` 寫入 `persona_tech_radar` 執行結果
+
+---
+
+### D9｜自動觸發機制強化（2026-03-16 完成 ✅）
+**目標：補齊 P1 對話萃取可靠度 + Obsidian 多來源自動 ingest**
+
+- [x] **D9-1：on-stop.py Bug 修復** — JSONL 路徑由寫死 `-Users-ryan` 改為動態搜尋所有 project dirs；assistant content list 解析修正（過濾 thinking 區塊，只取 text）
+- [x] **D9-2：萃取 threshold 降低** — 從每 50 次降至每 10 次觸發（catch 更高比例的對話片段）
+- [x] **D9-3：Obsidian → LightRAG 自動同步** — `scripts/obsidian-ingest.py`，每 30 分鐘 launchd，掃描 mtime 新增/修改的 .md 文件
+- [x] **D9-4：增量同步狀態管理** — `memory/obsidian-sync.json` 追蹤 `last_synced_ts`，僅 ingest 新文件
+- [x] **D9-5：launchd 排程** — `com.meta-agent.obsidian-ingest`（`StartInterval=1800`）已載入
+- [x] **D9-6：驗證** — TikTok_Notes 8 份文件全部 ingest 成功（首次執行，含「零幻覺迭代元代理模組 meta-agent 計畫」）
 
 ---
 
