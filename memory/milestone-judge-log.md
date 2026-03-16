@@ -70,3 +70,18 @@
 其他變更 memory/git-score.log +10
 
 ---
+
+## 2026-03-16 16:44 | auto-git-score | 分數 180 | 📥 達到閾值（180/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=55），含重要變更
+
+**評分明細：**
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/system-status.json +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/health_check.py +40
+  truth-source 新增驗證決策 truth-source/2026-03-16-health-title-restored.md +60
+
+---

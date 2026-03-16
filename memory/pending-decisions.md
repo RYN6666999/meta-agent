@@ -7,5 +7,6 @@
 |------|-------|-------------|-------|---------|--------|
 | 2026-03-16 | pdca-causal-chain | commit後里程碑裁判寫入決策匣，驗證前後節點閉環 [commit:HEAD~1..HEAD] | 100 | 其他變更 memory/handoff/latest-handoff.md +10; 其他變更 memory/system-status.json +10 | done:decision/pdca-causal-chain-2026-03-16 |
 | 2026-03-16 | health-title-restored | D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree] | 180 | 其他變更 memory/git-score-log.md +10; 其他變更 memory/git-score.log +10 | done:decision/health-title-restored-2026-03-16 |
+| 2026-03-16 | auto-git-score | git-score 自動 commit（score=55），含重要變更 [commit:HEAD~1..HEAD] | 180 | 其他變更 memory/handoff/latest-handoff.md +10; 其他變更 memory/milestone-judge-log.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 

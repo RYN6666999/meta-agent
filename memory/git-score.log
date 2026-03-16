@@ -92,3 +92,31 @@
   error_fix 變更 (error-log/2026-03-16-d1-fix-verification.md) +30
 
 ⏳ 分數未達 50，暫不 commit
+
+🔍 里程碑裁判啟動
+   主題：auto-git-score
+   描述：git-score 自動 commit（score=55），含重要變更
+   閾值：60 分
+
+📊 評分結果：180 / 60
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/system-status.json +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/health_check.py +40
+  truth-source 新增驗證決策 truth-source/2026-03-16-health-title-restored.md +60
+
+🚨 達到閾值！偵測到重大里程碑
+📥 已寫入 memory/pending-decisions.md
+   說 'approve auto-git-score' 確認後由 AI 建立 decision/ 分支
+📊 評分結果：55/50
+  memory 變更 (memory/milestone-judge-log.md) +10
+  memory 變更 (memory/pending-decisions.md) +10
+  memory 變更 (memory/system-status.json) +10
+  其他變更 (scripts/e2e_test.py) +5
+  其他變更 (scripts/health_check.py) +5
+  verified_truth 變更 (truth-source/2026-03-16-health-title-restored.md) +15
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成
