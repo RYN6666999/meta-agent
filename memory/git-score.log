@@ -120,3 +120,17 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+📊 評分結果：70/50
+  其他變更 (api/server.py) +5
+  其他變更 (memory-mcp/server.py) +5
+  memory 變更 (memory/handoff/latest-handoff.md) +10
+  memory 變更 (memory/master-plan.md) +10
+  memory 變更 (memory/system-status.json) +10
+  其他變更 (scripts/test_api.py) +5
+  其他變更 (task_plan.md) +5
+  其他變更 (api/agent_loop.py) +5
+  memory 變更 (memory/tiered/) +10
+  其他變更 (scripts/memory-tier-summary.py) +5
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成
