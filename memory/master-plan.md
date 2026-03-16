@@ -173,6 +173,15 @@ last_updated: 2026-03-16 17:10
 
 ---
 
+### D6｜商業級缺口補全（2026-03-16 完成 ✅）
+**目標：補齊量化分析中前3高槓桿缺口（-80%/-100%/-40%）**
+
+- [x] **D6-1：tiered summary launchd 排程** — `com.meta-agent.tiered-summary` 每日 02:15 自動執行（-40% → 收斂）
+- [x] **D6-2：多租戶 user_id 軟隔離** — `query/ingest` 支援 user_id，非預設用戶本地 `memory/users/{id}/` 獨立存儲，rerank 僅掃個人空間（-100% → 架構已建立）
+- [x] **D6-3：自動記憶萃取** — `on-stop.py` 每 50 輪讀取 `~/.claude/projects/*.jsonl`，自動送 n8n memory-extract webhook（-80% → 半自動化）
+
+---
+
 ## 執行順序（按緊急度）
 
 ```
