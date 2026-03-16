@@ -26,6 +26,8 @@ LAW_JSON = Path("/Users/ryan/meta-agent/law.json")
 ERROR_LOG_DIR = Path("/Users/ryan/meta-agent/error-log")
 META_AGENT_DIR = Path("/Users/ryan/meta-agent")
 TODAY = date.today().isoformat
+# Workflow C：錯誤歸檔 webhook（fire-and-forget，不阻塞主流程）
+ERROR_ARCHIVE_WEBHOOK = "http://localhost:5678/webhook/3E3yP5pGX1GepMuu/webhook/error-archive"
 
 # P3-B：觸發強化 — 更新 last_triggered + score_boost
 MEMORY_SCAN_DIRS = [
@@ -307,14 +309,30 @@ async def log_error(root_cause: str, solution: str, topic: str = "", context: st
     ERROR_LOG_DIR.mkdir(parents=True, exist_ok=True)
     filepath.write_text(content, encoding="utf-8")
 
-    # ingest 到 LightRAG
+    # ingest 到 LightRAG（原始版本）
     ingest_result = await ingest_memory(
         content=f"根因：{root_cause}\n解法：{solution}\n{context}",
         mem_type="error_fix",
         title=f"Error Fix: {root_cause[:50]}",
     )
 
-    return f"✅ 已寫入 {filepath}\n{ingest_result}"
+    # Workflow C：fire-and-forget → Groq 結構化 + ingest 豐富版（不等回應）
+    try:
+        async with httpx.AsyncClient(timeout=3) as client:
+            await client.post(
+                ERROR_ARCHIVE_WEBHOOK,
+                json={
+                    "root_cause": root_cause,
+                    "solution": solution,
+                    "topic": safe_topic,
+                    "context": context,
+                    "filepath": str(filepath),
+                },
+            )
+    except Exception:
+        pass  # fire-and-forget，失敗不影響主流程
+
+    return f"✅ 已寫入 {filepath}\n{ingest_result}\n[Workflow C 已觸發]"
 
 
 # ── 入口 ──────────────────────────────────────────────────────────────

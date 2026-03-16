@@ -29,6 +29,7 @@
 | memory webhook | `http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract` |
 | Obsidian vault | `/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun` |
 | n8n compose | `/Users/ryan/Projects/n8n/docker-compose.yml` |
+| 人機對話| `/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun/TikTok_Notes/零幻覺迭代元代理模組meta-agent計畫.md` |
 
 ---
 
