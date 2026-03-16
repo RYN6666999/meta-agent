@@ -5,6 +5,7 @@ status: active
 last_triggered: 2026-03-16
 expires_after_days: 365
 source: 完整差距分析
+last_updated: 2026-03-16 17:10
 ---
 
 # meta-agent 完整建設計劃
@@ -21,6 +22,7 @@ source: 完整差距分析
 - obsidian-mcp（`.mcp.json` 設定完成，重啟生效）
 - brave-mcp（已安裝）
 - memory-mcp（Claude Code + nanoclaw 共用）
+- **外掛大腦 HTTP API**（`api/server.py`，port 9901，Bearer auth）✅ D3 完成
 
 ---
 
@@ -129,7 +131,45 @@ source: 完整差距分析
   所有工具共用同一個記憶後端
   ✅ nanoclaw: `/Users/ryan/nanoclaw/src/memory.ts` 直接打 LightRAG HTTP API
   ✅ Claude Code: memory-mcp global scope 已設定
-  📌 project-golem: `claude mcp add --scope project memory-mcp python3 /Users/ryan/meta-agent/memory-mcp/server.py`（待執行）
+  📌 project-golem: `claude mcp add --scope project memory-mcp python3 /Users/ryan/meta-agent/memory-mcp/server.py`（**待執行 — 下次開 golem 專案時補上**）
+
+---
+---
+
+### D3｜外掛大腦 MVP ✅（2026-03-16 完成）
+**目標：讓任何外部工具可直接透過 HTTP 使用記憶能力**
+
+- [x] **D3-1：能力落差分析** — `docs/domain/commercial-memory-gap.md`
+- [x] **D3-2：MVP 規格定義** — `docs/interfaces/external-brain-mvp.md`
+- [x] **D3-3：HTTP API 實作** — `api/server.py`（FastAPI + Bearer auth）
+  - `POST /api/v1/query` — LightRAG 語意搜尋
+  - `POST /api/v1/ingest` — 存入圖譜（含矛盾檢查）
+  - `GET  /api/v1/rules` — law.json 規則查詢
+  - `POST /api/v1/log-error` — 寫 error-log + ingest
+  - `GET  /api/v1/health` — 全服務健康狀態
+  - `GET  /api/v1/trace` — 本地文件溯源
+- [x] **D3-4：驗證** — `scripts/test_api.py` 全端點 HTTP 200 ✅
+
+---
+
+### D4｜商業級收斂（進行中 🚧）
+**目標：補齊 rate limiting / 使用計數 / ingest metadata，讓 API 可對外正式接入**
+
+- [x] **D4-1：ingest 補記憶品質 metadata** — `confidence`, `submitted_by`, `source_session`
+- [x] **D4-2：usage 計數中間件** — 每次呼叫寫入 `system-status.json`
+- [x] **D4-3：Rate limiting** — slowapi，防誤用
+- [x] **D4-4：`GET /api/v1/status` 端點** — 外部可直接 polling 的 dashboard
+- [ ] **D4-5：project-golem MCP 掛載** — `claude mcp add --scope project`
+
+---
+
+### D5｜記憶治理強化（進行中 🚧）
+**目標：借鑑 golem 記憶引擎優勢，補齊重排訊號、寫入安全閘、分層摘要**
+
+- [x] **D5-1：query rerank 訊號** — `confidence/freshness/usage_count` 本地重排附加
+- [x] **D5-2：ingest 安全閘** — 高風險內容需 `[APPROVED]` 才允許寫入
+- [x] **D5-3：tiered summary 腳本** — `scripts/memory-tier-summary.py` 生成 daily/monthly/yearly
+- [ ] **D5-4：rerank 結構化輸出** — 從文字附註改為 API 獨立 JSON 欄位
 
 ---
 

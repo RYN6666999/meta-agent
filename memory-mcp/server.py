@@ -13,7 +13,7 @@ memory-mcp/server.py — 記憶黑盒 MCP 伺服器
 import json
 import os
 import re
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -37,6 +37,135 @@ MEMORY_SCAN_DIRS = [
 ]
 BOOST_MULTIPLIER = 1.2
 MAX_BASE_SCORE = 150.0
+
+RISKY_TYPES = {"rule", "tech_decision"}
+RISKY_KEYWORDS = {
+    "delete",
+    "drop",
+    "truncate",
+    "override",
+    "forbidden",
+    "law",
+    "policy",
+    "api_key",
+    "token",
+    "secret",
+}
+
+
+def _parse_frontmatter_value(text: str, key: str) -> str:
+    match = re.search(rf"^{re.escape(key)}:\s*(.+)$", text, flags=re.MULTILINE)
+    return match.group(1).strip() if match else ""
+
+
+def _extract_title(text: str) -> str:
+    title_match = re.search(r"^#\s+(.+)$", text, flags=re.MULTILINE)
+    return title_match.group(1).strip() if title_match else "(untitled)"
+
+
+def _compute_rerank_score(text: str, keywords: list[str]) -> tuple[float, dict]:
+    lowered = text.lower()
+    hit_count = sum(1 for kw in keywords if kw in lowered)
+    keyword_score = (hit_count / max(len(keywords), 1)) * 5.0
+
+    confidence_raw = _parse_frontmatter_value(text, "confidence")
+    try:
+        confidence = float(confidence_raw) if confidence_raw else 0.7
+    except ValueError:
+        confidence = 0.7
+
+    usage_raw = _parse_frontmatter_value(text, "usage_count")
+    try:
+        usage_count = max(int(float(usage_raw)), 0) if usage_raw else 0
+    except ValueError:
+        usage_count = 0
+
+    last_triggered = _parse_frontmatter_value(text, "last_triggered")
+    freshness_score = 0.0
+    if last_triggered:
+        try:
+            delta_days = (date.today() - datetime.strptime(last_triggered, "%Y-%m-%d").date()).days
+            freshness_score = max(0.0, 2.0 - (delta_days * 0.05))
+        except ValueError:
+            freshness_score = 0.0
+
+    usage_score = min(2.0, usage_count * 0.1)
+    confidence_score = max(0.0, min(confidence, 1.0)) * 3.0
+    total = keyword_score + confidence_score + freshness_score + usage_score
+
+    return total, {
+        "keyword_score": round(keyword_score, 2),
+        "confidence": round(confidence, 2),
+        "freshness_score": round(freshness_score, 2),
+        "usage_count": usage_count,
+        "usage_score": round(usage_score, 2),
+    }
+
+
+def _local_rerank_candidates(query: str, limit: int = 3, max_scan_files: int = 220) -> list[dict]:
+    keywords = [kw.lower() for kw in re.split(r"[\s，。？！、]+", query) if len(kw) >= 2][:8]
+    if not keywords:
+        return []
+
+    candidates = []
+    scanned = 0
+    for scan_dir in MEMORY_SCAN_DIRS:
+        if not scan_dir.exists() or scanned >= max_scan_files:
+            continue
+        for md_file in scan_dir.rglob("*.md"):
+            if scanned >= max_scan_files:
+                break
+            scanned += 1
+
+            try:
+                if md_file.stat().st_size > 300_000:
+                    continue
+                rel = md_file.relative_to(META_AGENT_DIR)
+                if str(rel).startswith("memory/tiered/"):
+                    continue
+                text = md_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+
+            score, signals = _compute_rerank_score(text, keywords)
+            if signals["keyword_score"] <= 0:
+                continue
+
+            lines = [line.strip() for line in text.splitlines() if line.strip() and not line.startswith("---")]
+            snippet = lines[0][:120] if lines else ""
+            candidates.append(
+                {
+                    "path": str(rel),
+                    "title": _extract_title(text),
+                    "score": round(score, 2),
+                    "signals": signals,
+                    "snippet": snippet,
+                }
+            )
+
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    return candidates[:limit]
+
+
+def _assess_ingest_risk(content: str, mem_type: str, title: str) -> dict:
+    lowered = f"{title}\n{content}".lower()
+    matched_keywords = sorted([kw for kw in RISKY_KEYWORDS if kw in lowered])
+
+    reasons = []
+    if mem_type in RISKY_TYPES:
+        reasons.append(f"mem_type={mem_type}")
+    if matched_keywords:
+        reasons.append(f"keywords={','.join(matched_keywords[:6])}")
+    if len(content) > 2500:
+        reasons.append("large_payload")
+
+    requires_approval = bool(reasons)
+    risk_level = "high" if requires_approval else "low"
+    return {
+        "risk_level": risk_level,
+        "requires_approval": requires_approval,
+        "reasons": reasons,
+    }
 
 
 def _update_last_triggered(query: str) -> int:
@@ -69,6 +198,19 @@ def _update_last_triggered(query: str) -> int:
                         r"last_triggered:\s*\S+",
                         f"last_triggered: {today}",
                         text,
+                    )
+
+                # 更新 usage_count（每次命中 +1）
+                usage_match = re.search(r"usage_count:\s*(\d+)", text)
+                if usage_match:
+                    old_usage = int(usage_match.group(1))
+                    text = re.sub(r"usage_count:\s*\d+", f"usage_count: {old_usage + 1}", text)
+                elif "last_triggered:" in text:
+                    text = re.sub(
+                        r"(last_triggered:\s*\S+)",
+                        r"\1\nusage_count: 1",
+                        text,
+                        count=1,
                     )
 
                 # 更新 score_boost（base_score × 1.2，上限 150）
@@ -172,11 +314,24 @@ async def query_memory(q: str, mode: str = "hybrid") -> str:
 
     result = data.get("response") or data.get("result") or str(data)
 
-    # P3-B：觸發強化 — 更新本地相關記憶的 last_triggered + score_boost
+    # P3-B：觸發強化 — 更新本地相關記憶的 last_triggered + score_boost/usage_count
     updated = _update_last_triggered(q)
-    boost_note = f"\n[記憶強化：{updated} 個相關文件 last_triggered 已更新]" if updated > 0 else ""
+    boost_note = f"\n[記憶強化：{updated} 個相關文件 last_triggered/usage_count 已更新]" if updated > 0 else ""
 
-    return f"[LightRAG {mode}]\n{result}{boost_note}"
+    # D5：本地 rerank 訊號（confidence/freshness/usage_count）
+    reranked = _local_rerank_candidates(q, limit=3)
+    rerank_note = ""
+    if reranked:
+        lines = ["", "[Local Rerank Top-3]"]
+        for idx, item in enumerate(reranked, start=1):
+            lines.append(
+                f"{idx}. {item['title']} | score={item['score']} | conf={item['signals']['confidence']}"
+                f" | freshness={item['signals']['freshness_score']} | usage={item['signals']['usage_count']}"
+                f" | src={item['path']}"
+            )
+        rerank_note = "\n".join(lines)
+
+    return f"[LightRAG {mode}]\n{result}{boost_note}{rerank_note}"
 
 
 # ── 工具 2：ingest_memory ─────────────────────────────────────────────
@@ -203,15 +358,28 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
     if mem_type not in VALID_TYPES:
         mem_type = "verified_truth"
 
+    approved = content.startswith("[APPROVED]")
+    confirmed = content.startswith("[CONFIRMED]") or approved
+
+    # D5：寫入安全閘（高風險類型/關鍵詞需先審批）
+    risk = _assess_ingest_risk(content=content, mem_type=mem_type, title=title)
+    if risk["requires_approval"] and not approved:
+        return (
+            "⏳ ingest 需審批（risk=high）\n"
+            f"原因：{'; '.join(risk['reasons'])}\n"
+            "請在 content 開頭加入 [APPROVED] 後重試。"
+        )
+
     # P4-A：矛盾檢查 — ingest 前先驗證
-    # [CONFIRMED] 標記可跳過檢查（使用者已確認）
-    if not content.startswith("[CONFIRMED]"):
+    # [CONFIRMED]/[APPROVED] 標記可跳過檢查（使用者已確認）
+    if not confirmed:
         conflict_warning = _check_conflicts(content, title or content[:80])
         if conflict_warning:
             return conflict_warning
 
     today = date.today().isoformat()
-    title = title or content[:40].replace("\n", " ")
+    content_clean = re.sub(r"^\[(CONFIRMED|APPROVED)\]", "", content).strip()
+    title = title or content_clean[:40].replace("\n", " ")
     expires = {"error_fix": 365, "tech_decision": 730, "rule": 180}.get(mem_type, 365)
 
     doc = (
@@ -220,10 +388,12 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
         f"type: {mem_type}\n"
         f"status: active\n"
         f"last_triggered: {today}\n"
+        f"usage_count: 0\n"
+        f"confidence: 0.85\n"
         f"expires_after_days: {expires}\n"
         f"---\n\n"
         f"# {title}\n\n"
-        f"{content}\n"
+        f"{content_clean}\n"
     )
 
     async with httpx.AsyncClient(timeout=60) as client:
@@ -309,9 +479,9 @@ async def log_error(root_cause: str, solution: str, topic: str = "", context: st
     ERROR_LOG_DIR.mkdir(parents=True, exist_ok=True)
     filepath.write_text(content, encoding="utf-8")
 
-    # ingest 到 LightRAG（原始版本）—— [CONFIRMED] 跳過矛盾檢查（log_error 永遠是蓄意的）
+    # ingest 到 LightRAG（原始版本）—— [APPROVED] 跳過安全閘 + 矛盾檢查（log_error 永遠是蓄意的）
     ingest_result = await ingest_memory(
-        content=f"[CONFIRMED]根因：{root_cause}\n解法：{solution}\n{context}",
+        content=f"[APPROVED]根因：{root_cause}\n解法：{solution}\n{context}",
         mem_type="error_fix",
         title=f"Error Fix: {root_cause[:50]}",
     )

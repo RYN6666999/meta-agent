@@ -56,13 +56,43 @@ def main() -> int:
     headers = {"Authorization": f"Bearer {api_key}"}
     endpoints = {
         "health": ("GET", "/api/v1/health", None),
+        "status": ("GET", "/api/v1/status", None),
         "rules": ("GET", "/api/v1/rules?category=forbidden", None),
         "query": ("POST", "/api/v1/query", {"q": args.topic, "mode": "hybrid"}),
         "trace": ("GET", f"/api/v1/trace?topic={args.topic}", None),
+        "ingest": (
+            "POST",
+            "/api/v1/ingest",
+            {
+                "content": "[CONFIRMED] D4 smoke test memory payload for external brain metadata verification, including enough content to pass validation and remain traceable.",
+                "mem_type": "verified_truth",
+                "title": "d4-api-ingest-smoke",
+                "confidence": 0.91,
+                "submitted_by": "scripts/test_api.py",
+                "source_session": "d4-smoke",
+            },
+        ),
+        "protocol_parse": (
+            "POST",
+            "/api/v1/protocol/parse",
+            {
+                "raw_response": "[GOLEM_MEMORY]Save this as memory[/GOLEM_MEMORY]\n[GOLEM_ACTION]```json\n[{\"action\":\"query_memory\",\"q\":\"health-title-restored\",\"mode\":\"hybrid\"}]\n```[/GOLEM_ACTION]\n[GOLEM_REPLY]Done[/GOLEM_REPLY]"
+            },
+        ),
+        "loop": (
+            "POST",
+            "/api/v1/loop",
+            {
+                "user_input": "請查 health",
+                "raw_response": "[GOLEM_ACTION]```json\n[{\"action\":\"query_memory\",\"q\":\"health-title-restored\",\"mode\":\"hybrid\"}]\n```[/GOLEM_ACTION]\n[GOLEM_REPLY]我已查詢。[/GOLEM_REPLY]",
+                "persist_memory": False,
+                "execute_actions": True,
+            },
+        ),
     }
     results: dict[str, dict] = {}
 
-    with httpx.Client(base_url=args.base_url, headers=headers, timeout=30) as client:
+    with httpx.Client(base_url=args.base_url, headers=headers, timeout=90) as client:
         for name, (method, path, payload) in endpoints.items():
             if method == "GET":
                 resp = client.get(path)
