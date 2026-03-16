@@ -50,3 +50,13 @@
   核心腳本變更 scripts/generate-handoff.py +40
 
 ---
+
+## 2026-03-16 15:26 | pdca-causal-chain | 分數 100 | ✅ 重大里程碑 → 建立分支 `decision/pdca-causal-chain-2026-03-16`
+
+**描述：** commit後里程碑裁判寫入決策匣，驗證前後節點閉環 [commit:HEAD~1..HEAD]
+
+**評分明細：**
+其他變更 memory/handoff/latest-handoff.md +10
+其他變更 memory/system-status.json +10
+
+---
