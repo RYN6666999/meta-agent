@@ -304,25 +304,12 @@ async def query_memory(q: str, mode: str = "hybrid", user_id: str = "default") -
     Returns:
         搜尋結果文字
     """
-    if mode not in ("hybrid", "local", "global", "naive"):
-        mode = "hybrid"
+    payload = await query_memory_structured(q=q, mode=mode, user_id=user_id)
+    result = payload["result"]
+    updated = int(payload.get("memory_boost_updated", 0))
+    reranked = payload.get("rerank_candidates", [])
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{LIGHTRAG_API}/query",
-            json={"query": q, "mode": mode},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-    result = data.get("response") or data.get("result") or str(data)
-
-    # P3-B：觸發強化 — 更新本地相關記憶的 last_triggered + score_boost/usage_count
-    updated = _update_last_triggered(q)
     boost_note = f"\n[記憶強化：{updated} 個相關文件 last_triggered/usage_count 已更新]" if updated > 0 else ""
-
-    # D5：本地 rerank 訊號（confidence/freshness/usage_count）
-    reranked = _local_rerank_candidates(q, limit=3, user_id=user_id)
     rerank_note = ""
     if reranked:
         lines = ["", "[Local Rerank Top-3]"]
@@ -334,7 +321,33 @@ async def query_memory(q: str, mode: str = "hybrid", user_id: str = "default") -
             )
         rerank_note = "\n".join(lines)
 
-    return f"[LightRAG {mode}]\n{result}{boost_note}{rerank_note}"
+    return f"[LightRAG {payload['mode']}]\n{result}{boost_note}{rerank_note}"
+
+
+async def query_memory_structured(q: str, mode: str = "hybrid", user_id: str = "default") -> dict:
+    """D5-4: 結構化查詢結果，提供 rerank_candidates 供 HTTP API 直接輸出 JSON 欄位。"""
+    if mode not in ("hybrid", "local", "global", "naive"):
+        mode = "hybrid"
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            f"{LIGHTRAG_API}/query",
+            json={"query": q, "mode": mode},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    result = data.get("response") or data.get("result") or str(data)
+    updated = _update_last_triggered(q)
+    reranked = _local_rerank_candidates(q, limit=3, user_id=user_id)
+    return {
+        "result": result,
+        "mode": mode,
+        "query": q,
+        "user_id": user_id,
+        "memory_boost_updated": updated,
+        "rerank_candidates": reranked,
+    }
 
 
 # ── 工具 2：ingest_memory ─────────────────────────────────────────────

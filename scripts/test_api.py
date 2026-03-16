@@ -104,6 +104,11 @@ def main() -> int:
             }
             try:
                 results[name]["response"] = resp.json()
+                if name == "query" and resp.status_code == 200:
+                    qdata = results[name]["response"]
+                    has_rerank = isinstance(qdata.get("rerank_candidates"), list)
+                    has_boost = isinstance(qdata.get("memory_boost_updated"), int)
+                    results[name]["ok"] = results[name]["ok"] and has_rerank and has_boost
             except Exception:
                 results[name]["response"] = resp.text[:300]
             print(f"[{name}] HTTP {resp.status_code}")

@@ -1,38 +1,35 @@
-# D5 Memory Governance Plan
+# D7 Hardening Execution Plan
 
 ## Goal
-把 golem 可借鑑的記憶治理能力落地到 meta-agent：重排訊號、寫入安全閘、分層摘要。
+補齊商業化剩餘缺口：`D5-4` 結構化 query 輸出 + `D4-5` project-golem 掛載驗證。
 
 ## Phases
 | Phase | Status | Outcome |
 |------|--------|---------|
-| 1. Query rerank signals | completed | `memory-mcp` 查詢結果附加 confidence/freshness/usage 訊號 |
-| 2. Ingest risk guardrail | completed | 高風險 ingest 需 `[APPROVED]` 才能寫入 |
-| 3. Tiered memory summaries | completed | 生成 daily/monthly/yearly 摘要並寫入狀態檔 |
-| 4. End-to-end verification | completed | `health/status/rules/query/trace/ingest/protocol_parse/loop` 全部 HTTP 200 |
+| 1. D5-4 結構化 query | completed | `query_memory_structured()` + `/api/v1/query` JSON 欄位 |
+| 2. 向下相容保留 | completed | MCP `query_memory` 仍維持文字輸出，不破壞既有流程 |
+| 3. D4-5 golem MCP 掛載 | completed | `project-golem` 的 `memory-mcp` 已 `✓ Connected` |
+| 4. 驗證與同步計畫 | in_progress | 靜態檢查通過，待完成 smoke 與 handoff 同步 |
 
 ## Decisions
-- Rerank 先走本地訊號重排，不動 LightRAG 核心檢索。
-- 寫入閘門採「高風險拒寫 + `[APPROVED]` 明示審批」策略。
-- 分層摘要先做 deterministic 壓縮，不依賴額外 LLM 成本。
+- API 端優先讀結構化 payload；若 backend 舊版則 fallback 文字模式。
+- 維持 `memory-mcp` 工具介面穩定，避免外部 MCP 客戶端破壞性升級。
+- 對 `project-golem` 直接做 project-scope MCP 掛載，先打通共享後端路徑。
 
 ## Risks
-- rerank 屬本地啟發式，仍需後續與 LightRAG 原生排序做融合。
-- 高風險關鍵詞可能有誤報，需持續調整白名單/關鍵字集。
-- project-golem 尚未接上 memory-mcp，跨工具共享仍有最後一段缺口。
+- `rerank_candidates` 目前仍是本地 heuristic，非 cross-encoder。
+- 多租戶目前屬軟隔離，仍需 namespace-level hard isolation。
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| smoke test 在 `loop` 端點 ReadTimeout | 1 | 限制 rerank 掃描檔數 + `scripts/test_api.py` timeout 提升到 90 秒 |
+| 無阻塞錯誤 | 1 | 直接落地 D5-4 與 D4-5，靜態檢查先通過 |
 
 ## Verification
-- `.venv/bin/python -m uvicorn api.server:app --host 127.0.0.1 --port 9901` 啟動成功。
-- `scripts/test_api.py` 驗證 `health`、`status`、`rules`、`query`、`trace`、`ingest`、`protocol_parse`、`loop` 全部 HTTP 200。
-- `/api/v1/query` 已附加 `[Local Rerank Top-3]`，包含 score/confidence/freshness/usage。
-- 風險閘驗證：`mem_type=rule` 且含 `law` 關鍵字時，未批准會返回「需審批」訊息。
-- `scripts/memory-tier-summary.py` 產生 `memory/tiered/daily|monthly|yearly` 並寫入 `system-status.json`。
+- `get_errors`：`api/server.py`、`memory-mcp/server.py`、`scripts/test_api.py` 無錯。
+- `claude mcp list`（在 project-golem）顯示 `memory-mcp ... ✓ Connected`。
+- 待執行：`scripts/test_api.py` 重新驗證 `query` 結構化欄位。
 
 ## Next Actions
-- 完成 project-golem memory-mcp 掛載（P5-B 最後殘項）。
-- 將 rerank 訊號同步到 API `query` 結構化欄位（目前仍在 response 文字中）。
+- 補跑完整 smoke test，確認 `query` 一定回傳 `rerank_candidates`/`memory_boost_updated`。
+- 將 D7 結果回寫最新 handoff，確保中斷可續跑。

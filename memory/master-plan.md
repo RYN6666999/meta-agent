@@ -159,7 +159,7 @@ last_updated: 2026-03-16 17:10
 - [x] **D4-2：usage 計數中間件** — 每次呼叫寫入 `system-status.json`
 - [x] **D4-3：Rate limiting** — slowapi，防誤用
 - [x] **D4-4：`GET /api/v1/status` 端點** — 外部可直接 polling 的 dashboard
-- [ ] **D4-5：project-golem MCP 掛載** — `claude mcp add --scope project`
+- [x] **D4-5：project-golem MCP 掛載** — `claude mcp add --scope project`（2026-03-16 已完成）
 
 ---
 
@@ -169,7 +169,7 @@ last_updated: 2026-03-16 17:10
 - [x] **D5-1：query rerank 訊號** — `confidence/freshness/usage_count` 本地重排附加
 - [x] **D5-2：ingest 安全閘** — 高風險內容需 `[APPROVED]` 才允許寫入
 - [x] **D5-3：tiered summary 腳本** — `scripts/memory-tier-summary.py` 生成 daily/monthly/yearly
-- [ ] **D5-4：rerank 結構化輸出** — 從文字附註改為 API 獨立 JSON 欄位
+- [x] **D5-4：rerank 結構化輸出** — `/api/v1/query` 新增 `rerank_candidates` + `memory_boost_updated` JSON 欄位
 
 ---
 

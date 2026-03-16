@@ -200,13 +200,24 @@ async def health(request: Request, _: None = Depends(require_auth)) -> dict[str,
 @app.post("/api/v1/query")
 @limiter.limit("120/minute")
 async def query_memory(payload: QueryRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
-    result = await backend.query_memory(payload.q, payload.mode, payload.user_id)
+    if hasattr(backend, "query_memory_structured"):
+        data = await backend.query_memory_structured(payload.q, payload.mode, payload.user_id)
+        result = data.get("result", "")
+        rerank_candidates = data.get("rerank_candidates", [])
+        memory_boost_updated = int(data.get("memory_boost_updated", 0))
+    else:
+        # 向下相容：舊 backend 仍回傳文字
+        result = await backend.query_memory(payload.q, payload.mode, payload.user_id)
+        rerank_candidates = []
+        memory_boost_updated = 0
     return {
         "ok": True,
         "query": payload.q,
         "mode": payload.mode,
         "user_id": payload.user_id,
         "result": result,
+        "rerank_candidates": rerank_candidates,
+        "memory_boost_updated": memory_boost_updated,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
