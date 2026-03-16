@@ -26,3 +26,27 @@
   核心腳本變更 scripts/pre-tool-memory-check.py +40
 
 ---
+
+## 2026-03-16 15:24 | causal-check | 分數 100 | ⏳ 未達閾值（100/60）→ 不建分支，dry-run
+
+**描述：** 驗證 commit 後裁判因果鏈
+
+**評分明細：**
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/system-status.json +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/generate-handoff.py +40
+
+---
+
+## 2026-03-16 15:24 | pdca-causal-chain | 分數 100 | ⏳ 未達閾值（100/60）→ 不建分支，pending human approval (commit:HEAD~1..HEAD)
+
+**描述：** commit後里程碑裁判寫入決策匣，驗證前後節點閉環
+
+**評分明細：**
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/system-status.json +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/generate-handoff.py +40
+
+---

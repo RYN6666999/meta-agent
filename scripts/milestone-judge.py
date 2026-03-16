@@ -2,22 +2,21 @@
 """
 里程碑裁判 (Milestone Judge)
 
-觸發時機：Phase 3 Exit 0 — 工序驗證通過後由 Claude 主動呼叫
-職責：判斷此次里程碑是否屬於「重大決策/突破」
-- 分數 >= 60 → 建立 decision/ 分支，commit，寫 truth-source log
-- 分數 <  60 → 僅記錄日誌，不建分支（交給 git-score.py 日常備份）
+觸發時機：Phase 3 Exit 0 — 工序驗證通過後由 Claude 主動呼叫。
+職責：判斷此次里程碑是否屬於「重大決策/突破」。
 
-用法：
-  python3 scripts/milestone-judge.py --topic "memory-decay-engine" --description "實作遺忘曲線引擎，驗證通過"
-  python3 scripts/milestone-judge.py --topic "replace-lightrag" --description "以 Chroma 取代 LightRAG，效能提升 3x"
+核心模式：
+- 預設：評分未提交變更（commit 前）
+- --from-commit A..B：評分已提交變更（commit 後），補齊觸發因果鏈
+
+評分達標後：寫入 pending-decisions（等待人類 approve）
 """
 
+import argparse
+import os
 import re
 import subprocess
 import sys
-import os
-import json
-import argparse
 from datetime import datetime
 from pathlib import Path
 
@@ -25,25 +24,24 @@ REPO_DIR = Path("/Users/ryan/meta-agent")
 BRANCH_THRESHOLD = 60
 JUDGE_LOG = REPO_DIR / "memory" / "milestone-judge-log.md"
 
-# 質量評分權重（以「影響未來決策的不可逆程度」為標準）
 MAJOR_WEIGHTS = {
-    "law_forbidden":  80,   # law.json forbidden 新增/修改 → 血淚規則
-    "law_other":      40,   # law.json 其他欄位修改
-    "tech_stack_new": 70,   # tech-stack/ 新增文件 → 技術棧改變
-    "tech_stack_mod": 50,   # tech-stack/ 修改現有文件
-    "truth_source":   60,   # truth-source/ 新增驗證決策
-    "error_log_new":  50,   # error-log/ 新增系統性根因
-    "scripts_core":   40,   # scripts/ 核心腳本變更
-    "other":          10,   # 其他
+    "law_forbidden": 80,
+    "law_other": 40,
+    "tech_stack_new": 70,
+    "tech_stack_mod": 50,
+    "truth_source": 60,
+    "error_log_new": 50,
+    "scripts_core": 40,
+    "other": 10,
 }
 
 
-def run_git(args, check=False):
+def run_git(args):
     result = subprocess.run(
         ["git"] + args,
         cwd=REPO_DIR,
         capture_output=True,
-        text=True
+        text=True,
     )
     return result.stdout.strip(), result.returncode
 
@@ -54,16 +52,37 @@ def get_uncommitted_files():
         return []
     files = []
     for line in stdout.splitlines():
-        m = re.match(r'^(.{2}) (.+)$', line)
-        if m:
-            status = m.group(1).strip()
-            filepath = m.group(2)
-            files.append((status, filepath))
+        m = re.match(r"^(.{2}) (.+)$", line)
+        if not m:
+            continue
+        status = m.group(1).strip()
+        filepath = m.group(2)
+        files.append((status, filepath))
     return files
 
 
-def get_diff_content():
-    """取得完整 diff 內容以分析 law.json 的具體變動"""
+def get_files_from_commit_range(commit_range):
+    stdout, code = run_git(["diff", "--name-status", commit_range])
+    if code != 0 or not stdout:
+        return []
+
+    files = []
+    for line in stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        raw_status = parts[0].strip()
+        status = raw_status[0]
+        filepath = parts[-1].strip()
+        files.append((status, filepath))
+    return files
+
+
+def get_diff_content(commit_range=None):
+    if commit_range:
+        stdout, _ = run_git(["diff", commit_range])
+        return stdout
+
     stdout, _ = run_git(["diff", "--cached", "HEAD"])
     if not stdout:
         stdout, _ = run_git(["diff", "HEAD"])
@@ -71,40 +90,37 @@ def get_diff_content():
 
 
 def score_file(status, filepath, diff_content):
-    """對單一檔案計算分數，回傳 (分數, 說明)"""
-
-    # law.json — 細分 forbidden vs 其他
     if "law.json" in filepath:
-        # 檢查 diff 是否涉及 forbidden 陣列
         if '"forbidden"' in diff_content or ('"rule"' in diff_content and '"reason"' in diff_content):
-            return MAJOR_WEIGHTS["law_forbidden"], f"law.json forbidden規則變更 +{MAJOR_WEIGHTS['law_forbidden']}"
-        else:
-            return MAJOR_WEIGHTS["law_other"], f"law.json 其他修改 +{MAJOR_WEIGHTS['law_other']}"
+            pts = MAJOR_WEIGHTS["law_forbidden"]
+            return pts, f"law.json forbidden規則變更 +{pts}"
+        pts = MAJOR_WEIGHTS["law_other"]
+        return pts, f"law.json 其他修改 +{pts}"
 
-    # tech-stack/ — 新增 vs 修改
     if filepath.startswith("tech-stack/"):
-        if status == "A":
-            return MAJOR_WEIGHTS["tech_stack_new"], f"tech-stack 新增 {filepath} +{MAJOR_WEIGHTS['tech_stack_new']}"
-        else:
-            return MAJOR_WEIGHTS["tech_stack_mod"], f"tech-stack 修改 {filepath} +{MAJOR_WEIGHTS['tech_stack_mod']}"
+        key = "tech_stack_new" if status == "A" else "tech_stack_mod"
+        pts = MAJOR_WEIGHTS[key]
+        verb = "新增" if status == "A" else "修改"
+        return pts, f"tech-stack {verb} {filepath} +{pts}"
 
-    # truth-source/ 新增驗證決策
     if filepath.startswith("truth-source/") and status == "A":
-        return MAJOR_WEIGHTS["truth_source"], f"truth-source 新增驗證決策 {filepath} +{MAJOR_WEIGHTS['truth_source']}"
+        pts = MAJOR_WEIGHTS["truth_source"]
+        return pts, f"truth-source 新增驗證決策 {filepath} +{pts}"
 
-    # error-log/ 新增系統性根因
     if filepath.startswith("error-log/") and status == "A":
-        return MAJOR_WEIGHTS["error_log_new"], f"error-log 新增根因 {filepath} +{MAJOR_WEIGHTS['error_log_new']}"
+        pts = MAJOR_WEIGHTS["error_log_new"]
+        return pts, f"error-log 新增根因 {filepath} +{pts}"
 
-    # scripts/ 核心腳本
     if filepath.startswith("scripts/"):
-        return MAJOR_WEIGHTS["scripts_core"], f"核心腳本變更 {filepath} +{MAJOR_WEIGHTS['scripts_core']}"
+        pts = MAJOR_WEIGHTS["scripts_core"]
+        return pts, f"核心腳本變更 {filepath} +{pts}"
 
-    return MAJOR_WEIGHTS["other"], f"其他變更 {filepath} +{MAJOR_WEIGHTS['other']}"
+    pts = MAJOR_WEIGHTS["other"]
+    return pts, f"其他變更 {filepath} +{pts}"
 
 
-def calculate_score(files):
-    diff_content = get_diff_content()
+def calculate_score(files, commit_range=None):
+    diff_content = get_diff_content(commit_range)
     total = 0
     signals = []
     for status, filepath in files:
@@ -176,27 +192,27 @@ score: {score}
     filename.write_text(content, encoding="utf-8")
 
 
-def append_pending_decision(topic, description, score, signals):
+def append_pending_decision(topic, description, score, signals, source="working-tree"):
     """寫入決策收件匣 memory/pending-decisions.md，等待人類判斷"""
     pending_file = REPO_DIR / "memory" / "pending-decisions.md"
     date_str = datetime.now().strftime("%Y-%m-%d")
-    signals_summary = "; ".join(s.strip() for s in signals[:3])
-    entry = f'| {date_str} | {topic} | {description[:60]} | {score} | {signals_summary} | pending |\n'
+    signals_summary = "; ".join(s.strip() for s in signals[:2])
+    desc = f"{description[:48]} [{source}]"
+    entry = f"| {date_str} | {topic} | {desc} | {score} | {signals_summary} | pending |\n"
     if pending_file.exists():
-        content = pending_file.read_text()
-        # 插在 comment 行之前（保持表格結構）
-        marker = '<!-- AI 偵測到重大決策時，自動在此插入列 -->'
+        content = pending_file.read_text(encoding="utf-8")
+        marker = "<!-- AI 偵測到重大決策時，自動在此插入列 -->"
         if marker in content:
             content = content.replace(marker, entry + marker)
         else:
             content += entry
-        pending_file.write_text(content)
+        pending_file.write_text(content, encoding="utf-8")
     else:
         pending_file.parent.mkdir(parents=True, exist_ok=True)
         pending_file.write_text(
             "# 決策收件匣\n\n| date | topic | description | score | signals | status |\n"
             "|------|-------|-------------|-------|---------|--------|\n" + entry
-        )
+        , encoding="utf-8")
 
 
 def execute_approved(topic):
@@ -206,14 +222,20 @@ def execute_approved(topic):
         print(f"❌ pending-decisions.md 不存在")
         return 1
 
-    content = pending_file.read_text()
+    content = pending_file.read_text(encoding="utf-8")
     found = None
+    target_line = None
     for line in content.splitlines():
-        if f'| {topic} |' in line and '| approved |' in line:
-            parts = [p.strip() for p in line.split('|')]
-            # | date | topic | description | score | signals | status |
-            found = {'date': parts[1], 'topic': parts[2], 'description': parts[3],
-                     'score': int(parts[4]) if parts[4].isdigit() else 0, 'signals': parts[5].split('; ')}
+        if f"| {topic} |" in line and "| approved |" in line:
+            parts = [p.strip() for p in line.split("|")]
+            found = {
+                "date": parts[1],
+                "topic": parts[2],
+                "description": parts[3],
+                "score": int(parts[4]) if parts[4].isdigit() else 0,
+                "signals": parts[5].split("; "),
+            }
+            target_line = line
             break
 
     if not found:
@@ -223,23 +245,13 @@ def execute_approved(topic):
 
     print(f"✅ 執行核准決策：{topic} (score={found['score']})")
     success, branch_name, msg = create_decision_branch(
-        found['topic'], found['description'], found['score'],
-        [f"  {s}" for s in found['signals']]
+        found["topic"], found["description"], found["score"],
+        [f"  {s}" for s in found["signals"]]
     )
     if success:
-        # 更新 pending-decisions.md status → done
-        content = content.replace(
-            f"| {found['topic']} | {found['description'][:60]}", ""
-        )
-        new_row = f"| {found['date']} | {found['topic']} | {found['description'][:60]} | {found['score']} | {'; '.join(found['signals'])} | ✅ done ({branch_name}) |"
-        content = content.replace(
-            f"| {found['date']} | {found['topic']} |", new_row.split('|')[0]
-        )
-        # 直接標記整列
-        old_line = next((l for l in content.splitlines() if f'| {topic} |' in l), None)
-        if old_line:
-            content = content.replace(old_line, old_line.replace('| approved |', f'| ✅ done ({branch_name}) |'))
-        pending_file.write_text(content)
+        done_line = target_line.replace("| approved |", f"| done:{branch_name} |")
+        content = content.replace(target_line, done_line)
+        pending_file.write_text(content, encoding="utf-8")
         log_result(topic, found['description'], found['score'], found['signals'], True, branch_name)
         print(f"   分支：{branch_name}")
         print(f"   pending-decisions.md 已更新為 done")
@@ -248,14 +260,15 @@ def execute_approved(topic):
         return 1
     return 0
 
-
-
+def log_result(topic, description, score, signals, branched, branch_name="", reason=""):
     """寫入裁判日誌"""
     JUDGE_LOG.parent.mkdir(parents=True, exist_ok=True)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     if branched:
         verdict = f"✅ 重大里程碑 → 建立分支 `{branch_name}`"
+    elif reason.startswith("pending human approval"):
+        verdict = f"📥 達到閾值（{score}/{BRANCH_THRESHOLD}）→ 已送決策匣，待人類核准"
     else:
         verdict = f"⏳ 未達閾值（{score}/{BRANCH_THRESHOLD}）→ 不建分支{f'，{reason}' if reason else ''}"
 
@@ -279,6 +292,7 @@ def main():
     parser.add_argument("--description", help="完成了什麼？驗證了什麼？")
     parser.add_argument("--dry-run", action="store_true", help="只評分，不寫收件匣")
     parser.add_argument("--approve", metavar="TOPIC", help="執行已核准的決策（建立 decision/ 分支）")
+    parser.add_argument("--from-commit", metavar="RANGE", help="用 commit 區間評分，例如 HEAD~1..HEAD")
     args = parser.parse_args()
 
     os.chdir(REPO_DIR)
@@ -295,14 +309,24 @@ def main():
     print(f"   描述：{args.description}")
     print(f"   閾值：{BRANCH_THRESHOLD} 分\n")
 
-    files = get_uncommitted_files()
+    source = "working-tree"
+    if args.from_commit:
+        files = get_files_from_commit_range(args.from_commit)
+        source = f"commit:{args.from_commit}"
+    else:
+        files = get_uncommitted_files()
+
     if not files:
-        print("⚠️  無未提交變更，無法評分")
-        print("   提示：請在工序完成後、commit 前呼叫裁判")
-        log_result(args.topic, args.description, 0, [], False, reason="無未提交變更")
+        if args.from_commit:
+            print(f"⚠️  commit 區間 {args.from_commit} 無變更，無法評分")
+            log_result(args.topic, args.description, 0, [], False, reason=f"無變更 ({args.from_commit})")
+        else:
+            print("⚠️  無未提交變更，無法評分")
+            print("   提示：請在工序完成後、commit 前呼叫裁判，或使用 --from-commit")
+            log_result(args.topic, args.description, 0, [], False, reason="無未提交變更")
         return 1
 
-    score, signals = calculate_score(files)
+    score, signals = calculate_score(files, commit_range=args.from_commit)
 
     print(f"📊 評分結果：{score} / {BRANCH_THRESHOLD}")
     for s in signals:
@@ -315,8 +339,8 @@ def main():
             log_result(args.topic, args.description, score, signals, False, reason="dry-run")
         else:
             # ⬇ 哲學變更：不自動建分支，送交人類判斷
-            append_pending_decision(args.topic, args.description, score, signals)
-            log_result(args.topic, args.description, score, signals, False, reason="pending human approval")
+            append_pending_decision(args.topic, args.description, score, signals, source=source)
+            log_result(args.topic, args.description, score, signals, False, reason=f"pending human approval ({source})")
             print(f"📥 已寫入 memory/pending-decisions.md")
             print(f"   說 'approve {args.topic}' 確認後由 AI 建立 decision/ 分支")
     else:

@@ -176,7 +176,8 @@ def main():
             _sp.run([
                 "python3", str(REPO_DIR / "scripts" / "milestone-judge.py"),
                 "--topic", "auto-git-score",
-                "--description", f"git-score 自動 commit（score={score}），含重要變更"
+                "--description", f"git-score 自動 commit（score={score}），含重要變更",
+                "--from-commit", "HEAD~1..HEAD"
             ], cwd=REPO_DIR)
         return 0 if success else 1
     else:
