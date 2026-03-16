@@ -7,6 +7,7 @@ generate-handoff.py — 自動生成交接文件（P0-B）
 """
 
 import re
+import json
 import subprocess
 import urllib.request
 from datetime import date, datetime
@@ -17,6 +18,7 @@ MASTER_PLAN = META / "memory" / "master-plan.md"
 HANDOFF_FILE = META / "memory" / "handoff" / "latest-handoff.md"
 ERROR_LOG_DIR = META / "error-log"
 TURN_COUNT_FILE = META / "memory" / "turn-count.txt"
+STATUS_FILE = META / "memory" / "system-status.json"
 TODAY = date.today().isoformat()
 
 
@@ -53,6 +55,26 @@ def get_turn_count() -> int:
         return int(TURN_COUNT_FILE.read_text().strip())
     except Exception:
         return 0
+
+
+def load_system_status() -> dict:
+    if not STATUS_FILE.exists():
+        return {}
+    try:
+        return json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def is_recent_success(event: dict, days: int = 2) -> bool:
+    if not event or not event.get("ok"):
+        return False
+    checked_at = event.get("checked_at", "")
+    try:
+        dt = datetime.strptime(checked_at, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return False
+    return (datetime.now() - dt).days <= days
 
 
 def get_session_number() -> int:
@@ -106,6 +128,8 @@ def main():
     turn_count = get_turn_count()
     services = check_services()
     launchd = get_launchd_status()
+    system_status = load_system_status()
+    e2e_event = system_status.get("e2e_memory_extract", {})
 
     # 未完成項目
     if incomplete:
@@ -121,18 +145,26 @@ def main():
         status_text = "建設中"
     else:
         pending_text = "✅ 所有計劃項目已完成"
-        next_steps = (
-            "1. 驗證各組件端對端功能（n8n webhook → LightRAG ingest）\n"
-            "2. 觀察 launchd 夜間任務結果（memory-decay / generate-handoff）\n"
-            "3. 使用 extract-session.sh 把重要對話 ingest 進 LightRAG\n"
-            "4. project-golem 確認 memory-mcp 已加入（.claude/mcp.json 已建立）"
-        )
+        dynamic_steps = []
+        if not is_recent_success(e2e_event):
+            dynamic_steps.append("驗證各組件端對端功能（n8n webhook → LightRAG ingest）")
+        dynamic_steps.append("觀察 launchd 夜間任務結果（memory-decay / generate-handoff）")
+        dynamic_steps.append("使用 extract-session.sh 把重要對話 ingest 進 LightRAG")
+
+        if dynamic_steps:
+            next_steps = "\n".join(f"{i+1}. {s}" for i, s in enumerate(dynamic_steps[:4]))
+        else:
+            next_steps = "1. 無待辦，維持日常巡檢（health-check + handoff）"
         status_text = "穩定運行"
 
     service_lines = "\n".join(f"| {k} | {v} |" for k, v in services.items())
     launchd_lines = " | ".join(launchd) if launchd else "（查詢失敗）"
     git_lines = "\n".join(f"- `{line}`" for line in git_log) if git_log else "（無記錄）"
     error_lines = "\n".join(f"- {f}" for f in recent_errors) if recent_errors else "（無）"
+    e2e_line = "（無記錄）"
+    if e2e_event:
+        icon = "✅" if e2e_event.get("ok") else "❌"
+        e2e_line = f"{icon} {e2e_event.get('checked_at', '-')}: {e2e_event.get('detail', '-') }"
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     handoff = f"""---
@@ -168,6 +200,9 @@ generated: {ts}
 
 ## 最近 Error Log
 {error_lines}
+
+## 最近驗證
+- E2E memory-extract：{e2e_line}
 
 ---
 

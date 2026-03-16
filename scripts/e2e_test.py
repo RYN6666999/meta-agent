@@ -1,10 +1,48 @@
 #!/usr/bin/env python3
-"""端對端完整測試：送長文本到 memory webhook"""
-import json, urllib.request, urllib.error, time
+"""端對端完整測試：送長文本到 memory webhook，成功時回寫 system-status。"""
+import json
+import urllib.request
+import urllib.error
+from datetime import datetime
+from pathlib import Path
 
-url = 'http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract'
+META = Path('/Users/ryan/meta-agent')
+STATUS_FILE = META / 'memory' / 'system-status.json'
+URL = 'http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract'
 
-test_text = """
+
+def load_status() -> dict:
+    if not STATUS_FILE.exists():
+        return {}
+    try:
+        return json.loads(STATUS_FILE.read_text(encoding='utf-8'))
+    except Exception:
+        return {}
+
+
+def save_status(data: dict) -> None:
+    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATUS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+
+
+def update_e2e_status(ok: bool, detail: str, response: dict | None = None) -> None:
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    status = load_status()
+    status['e2e_memory_extract'] = {
+        'ok': ok,
+        'checked_at': now,
+        'detail': detail,
+    }
+    if response is not None:
+        status['e2e_memory_extract']['response'] = response
+    save_status(status)
+
+
+def main() -> int:
+    test_text = """
 [端對端測試 2026-03-16 完整流程驗證]
 
 本次驗證 meta-agent 完整記憶萃取流程：
@@ -20,23 +58,44 @@ test_text = """
 
 此次測試由 GitHub Copilot 自動觸發，作為系統健康驗證。
 如果此筆記出現在 LightRAG 圖譜中，代表端對端流程成功。
-"""
+""".strip()
 
-payload = json.dumps({'conversation': test_text.strip(), 'session_id': 'e2e-test-2026-03-16'}).encode('utf-8')
-req = urllib.request.Request(url, data=payload,
-    headers={'Content-Type': 'application/json'}, method='POST')
+    payload = json.dumps({
+        'conversation': test_text,
+        'session_id': 'e2e-test-2026-03-16'
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        URL,
+        data=payload,
+        headers={'Content-Type': 'application/json'},
+        method='POST'
+    )
 
-print(f'發送請求... ({len(test_text)} 字)')
-try:
-    with urllib.request.urlopen(req, timeout=90) as r:
-        body = r.read().decode()
-        print(f'HTTP {r.status}')
-        try:
-            d = json.loads(body)
-            print(json.dumps(d, indent=2, ensure_ascii=False))
-        except:
-            print(f'response: {body[:500]}')
-except urllib.error.HTTPError as e:
-    print(f'HTTP Error {e.code}: {e.read().decode()[:500]}')
-except Exception as e:
-    print(f'Error: {e}')
+    print(f'發送請求... ({len(test_text)} 字)')
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            body = r.read().decode()
+            print(f'HTTP {r.status}')
+            try:
+                data = json.loads(body)
+                print(json.dumps(data, indent=2, ensure_ascii=False))
+            except Exception:
+                data = None
+                print(f'response: {body[:500]}')
+
+            ok = r.status == 200
+            detail = f'HTTP {r.status}'
+            update_e2e_status(ok=ok, detail=detail, response=data)
+            return 0 if ok else 1
+    except urllib.error.HTTPError as e:
+        msg = e.read().decode()[:500]
+        print(f'HTTP Error {e.code}: {msg}')
+        update_e2e_status(ok=False, detail=f'HTTP {e.code}: {msg}')
+    except Exception as e:
+        print(f'Error: {e}')
+        update_e2e_status(ok=False, detail=str(e))
+    return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
