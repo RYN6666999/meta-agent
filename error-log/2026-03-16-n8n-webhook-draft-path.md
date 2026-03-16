@@ -3,6 +3,7 @@ date: 2026-03-16
 type: error_fix
 status: active
 last_triggered: 2026-03-16
+base_score: 144.0
 expires_after_days: 365
 topic: n8n-webhook-draft-path
 ---

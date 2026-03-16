@@ -25,7 +25,7 @@ LIGHTRAG_API = "http://localhost:9621"
 LAW_JSON = Path("/Users/ryan/meta-agent/law.json")
 ERROR_LOG_DIR = Path("/Users/ryan/meta-agent/error-log")
 META_AGENT_DIR = Path("/Users/ryan/meta-agent")
-TODAY = date.today().isoformat
+TODAY = date.today().isoformat()
 # Workflow C：錯誤歸檔 webhook（fire-and-forget，不阻塞主流程）
 ERROR_ARCHIVE_WEBHOOK = "http://localhost:5678/webhook/3E3yP5pGX1GepMuu/webhook/error-archive"
 
@@ -309,9 +309,9 @@ async def log_error(root_cause: str, solution: str, topic: str = "", context: st
     ERROR_LOG_DIR.mkdir(parents=True, exist_ok=True)
     filepath.write_text(content, encoding="utf-8")
 
-    # ingest 到 LightRAG（原始版本）
+    # ingest 到 LightRAG（原始版本）—— [CONFIRMED] 跳過矛盾檢查（log_error 永遠是蓄意的）
     ingest_result = await ingest_memory(
-        content=f"根因：{root_cause}\n解法：{solution}\n{context}",
+        content=f"[CONFIRMED]根因：{root_cause}\n解法：{solution}\n{context}",
         mem_type="error_fix",
         title=f"Error Fix: {root_cause[:50]}",
     )

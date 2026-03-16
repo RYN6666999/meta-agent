@@ -3,6 +3,7 @@ date: 2026-03-16
 type: error_fix
 status: active
 last_triggered: 2026-03-16
+base_score: 120.0
 expires_after_days: 365
 topic: workflow-c-groq-proxy-dns
 ---

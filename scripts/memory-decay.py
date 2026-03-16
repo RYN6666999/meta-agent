@@ -12,8 +12,13 @@ import math
 from datetime import datetime, date
 from pathlib import Path
 
-MEMORY_DIR = Path("/Users/ryan/meta-agent/memory")
-LOG_FILE = Path("/Users/ryan/meta-agent/memory/git-score-log.md")
+META_DIR = Path("/Users/ryan/meta-agent")
+SCAN_DIRS = [
+    META_DIR / "memory",
+    META_DIR / "error-log",
+    META_DIR / "truth-source",
+]
+DECAY_LOG = META_DIR / "memory" / "decay-log.md"
 TODAY = date.today()
 DECAY_RATE = 0.9
 DEPRECATE_THRESHOLD = 20
@@ -117,22 +122,24 @@ def process_file(filepath: Path) -> dict | None:
 
 
 def scan_memory_dir() -> list[dict]:
-    """掃描整個 memory/ 目錄"""
+    """掃描 memory/ + error-log/ + truth-source/ 目錄"""
+    SKIP_DIRS = {"handoff", "checkpoints", "archive"}
     results = []
-    for md_file in MEMORY_DIR.rglob("*.md"):
-        # 跳過 handoff / checkpoints 目錄（系統文件）
-        parts = md_file.parts
-        if any(skip in parts for skip in ["handoff", "checkpoints"]):
+    for scan_dir in SCAN_DIRS:
+        if not scan_dir.exists():
             continue
-        result = process_file(md_file)
-        if result:
-            results.append(result)
+        for md_file in scan_dir.rglob("*.md"):
+            if any(skip in md_file.parts for skip in SKIP_DIRS):
+                continue
+            result = process_file(md_file)
+            if result:
+                results.append(result)
     return results
 
 
 def write_decay_log(results: list[dict]):
     """追加寫入衰退日誌"""
-    log_path = Path("/Users/ryan/meta-agent/memory/decay-log.md")
+    log_path = DECAY_LOG
     deprecated = [r for r in results if r["action"] == "deprecated"]
     kept = [r for r in results if r["action"] == "keep"]
 
@@ -154,7 +161,7 @@ def write_decay_log(results: list[dict]):
 
 
 def main():
-    print(f"[memory-decay] {TODAY} 開始掃描 {MEMORY_DIR}")
+    print(f"[memory-decay] {TODAY} 開始掃描 {[str(d) for d in SCAN_DIRS]}")
     results = scan_memory_dir()
     write_decay_log(results)
     deprecated_count = sum(1 for r in results if r["action"] == "deprecated")

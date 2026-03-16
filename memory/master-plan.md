@@ -18,7 +18,9 @@ source: 完整差距分析
 - 記憶 frontmatter 生命週期
 - Git 評分自動提交（launchd 每小時）
 - decision/ branch 技術備份
-- filesystem-mcp / obsidian-mcp / lightrag-mcp / qmd-mcp
+- obsidian-mcp（`.mcp.json` 設定完成，重啟生效）
+- brave-mcp（已安裝）
+- memory-mcp（Claude Code + nanoclaw 共用）
 
 ---
 

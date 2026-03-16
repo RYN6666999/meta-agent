@@ -3,8 +3,10 @@
 on-stop.py — Claude Code Stop hook
 每次 Claude 回應結束時執行：
 1. 計數器 +1，存到 memory/turn-count.txt
-2. 每 20 次 → 寫入 checkpoint
-3. 每 50 次 → 呼叫 n8n webhook 送記憶萃取
+2. 每 20 次 → 寫入 checkpoint（讀 master-plan 未完成項目）
+
+注意：完整對話萃取需手動呼叫 scripts/extract-session.sh
+（Stop hook 無法取得對話文本，n8n P1-A webhook 靠手動觸發）
 
 此腳本從 stdin 讀取 hook JSON（Claude Code 規範）
 """
