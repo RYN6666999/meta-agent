@@ -123,8 +123,11 @@ source: 完整差距分析
   - `get_rules()` → 讀 law.json
   - `log_error(root_cause, solution)` → 寫 error-log + ingest
 
-- [ ] **P5-B：加入 claude mcp + golem + nanoclaw**
+- [x] **P5-B：加入 claude mcp + golem + nanoclaw**
   所有工具共用同一個記憶後端
+  ✅ nanoclaw: `/Users/ryan/nanoclaw/src/memory.ts` 直接打 LightRAG HTTP API
+  ✅ Claude Code: memory-mcp global scope 已設定
+  📌 project-golem: `claude mcp add --scope project memory-mcp python3 /Users/ryan/meta-agent/memory-mcp/server.py`（待執行）
 
 ---
 
