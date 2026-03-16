@@ -20,6 +20,7 @@ BASE_DIR = Path("/Users/ryan/meta-agent")
 ENV_FILE = BASE_DIR / ".env"
 STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
 BACKEND_FILE = BASE_DIR / "memory-mcp" / "server.py"
+USERS_DIR = BASE_DIR / "memory" / "users"
 TRACE_DIRS = [
     BASE_DIR / "truth-source",
     BASE_DIR / "error-log",
@@ -68,7 +69,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 class QueryRequest(BaseModel):
     q: str = Field(..., min_length=2)
     mode: str = Field(default="hybrid")
-    user_id: str = Field(default="default", max_length=64)
+    user_id: str = Field(default="", max_length=64)
 
 
 class IngestRequest(BaseModel):
@@ -78,7 +79,11 @@ class IngestRequest(BaseModel):
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
     submitted_by: str = Field(default="external-client", min_length=2, max_length=120)
     source_session: str = Field(default="", max_length=120)
-    user_id: str = Field(default="default", max_length=64)
+    user_id: str = Field(default="", max_length=64)
+
+
+class PersonaSwitchRequest(BaseModel):
+    persona_id: str = Field(..., min_length=1, max_length=64)
 
 
 class LogErrorRequest(BaseModel):
@@ -147,6 +152,44 @@ def update_usage(path: str, method: str, status_code: int) -> None:
     save_status(status)
 
 
+def _sanitize_persona_id(raw: str) -> str:
+    safe = "".join(ch for ch in (raw or "") if ch.isalnum() or ch in "_-").strip("_-")
+    return safe[:64] if safe else "default"
+
+
+def get_active_persona() -> str:
+    status = load_status()
+    persona = status.get("persona", {})
+    return _sanitize_persona_id(str(persona.get("active", "default")))
+
+
+def set_active_persona(persona_id: str) -> str:
+    status = load_status()
+    safe = _sanitize_persona_id(persona_id)
+    persona = status.get("persona", {})
+    persona["active"] = safe
+    persona["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    status["persona"] = persona
+    save_status(status)
+    return safe
+
+
+def resolve_persona_id(request_user_id: str) -> str:
+    candidate = (request_user_id or "").strip()
+    if not candidate:
+        return get_active_persona()
+    return _sanitize_persona_id(candidate)
+
+
+def list_available_personas() -> list[str]:
+    personas = {"default", get_active_persona()}
+    if USERS_DIR.exists():
+        for child in USERS_DIR.iterdir():
+            if child.is_dir():
+                personas.add(_sanitize_persona_id(child.name))
+    return sorted(personas)
+
+
 def find_trace_matches(topic: str, limit: int = 8) -> list[dict[str, Any]]:
     topic_lower = topic.lower()
     matches: list[dict[str, Any]] = []
@@ -200,21 +243,23 @@ async def health(request: Request, _: None = Depends(require_auth)) -> dict[str,
 @app.post("/api/v1/query")
 @limiter.limit("120/minute")
 async def query_memory(payload: QueryRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
+    persona_id = resolve_persona_id(payload.user_id)
     if hasattr(backend, "query_memory_structured"):
-        data = await backend.query_memory_structured(payload.q, payload.mode, payload.user_id)
+        data = await backend.query_memory_structured(payload.q, payload.mode, persona_id)
         result = data.get("result", "")
         rerank_candidates = data.get("rerank_candidates", [])
         memory_boost_updated = int(data.get("memory_boost_updated", 0))
     else:
         # 向下相容：舊 backend 仍回傳文字
-        result = await backend.query_memory(payload.q, payload.mode, payload.user_id)
+        result = await backend.query_memory(payload.q, payload.mode, persona_id)
         rerank_candidates = []
         memory_boost_updated = 0
     return {
         "ok": True,
         "query": payload.q,
         "mode": payload.mode,
-        "user_id": payload.user_id,
+        "user_id": persona_id,
+        "persona_id": persona_id,
         "result": result,
         "rerank_candidates": rerank_candidates,
         "memory_boost_updated": memory_boost_updated,
@@ -225,6 +270,7 @@ async def query_memory(payload: QueryRequest, request: Request, _: None = Depend
 @app.post("/api/v1/ingest")
 @limiter.limit("30/minute")
 async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
+    persona_id = resolve_persona_id(payload.user_id)
     metadata_block = (
         "[META]\n"
         f"confidence: {payload.confidence:.2f}\n"
@@ -233,7 +279,7 @@ async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depe
         "[/META]\n"
     )
     enriched_content = metadata_block + payload.content
-    result = await backend.ingest_memory(enriched_content, payload.mem_type, payload.title, payload.user_id)
+    result = await backend.ingest_memory(enriched_content, payload.mem_type, payload.title, persona_id)
     return {
         "ok": result.startswith("✅"),
         "message": result,
@@ -241,8 +287,33 @@ async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depe
             "confidence": payload.confidence,
             "submitted_by": payload.submitted_by,
             "source_session": payload.source_session,
-            "user_id": payload.user_id,
+            "user_id": persona_id,
+            "persona_id": persona_id,
         },
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@app.get("/api/v1/persona/current")
+@limiter.limit("120/minute")
+async def persona_current(request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
+    active = get_active_persona()
+    return {
+        "ok": True,
+        "active_persona": active,
+        "available_personas": list_available_personas(),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@app.post("/api/v1/persona/switch")
+@limiter.limit("30/minute")
+async def persona_switch(payload: PersonaSwitchRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
+    active = set_active_persona(payload.persona_id)
+    return {
+        "ok": True,
+        "active_persona": active,
+        "available_personas": list_available_personas(),
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
@@ -305,6 +376,10 @@ async def status_dashboard(request: Request, _: None = Depends(require_auth)) ->
     return {
         "ok": True,
         "api": {"ok": True, "version": app.version},
+        "persona": {
+            "active": get_active_persona(),
+            "available": list_available_personas(),
+        },
         "api_health": status.get("api_health", {}),
         "api_usage": status.get("api_usage", {}),
         "health_check": status.get("health_check", {}),

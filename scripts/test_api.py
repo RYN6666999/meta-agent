@@ -58,6 +58,7 @@ def main() -> int:
         "health": ("GET", "/api/v1/health", None),
         "status": ("GET", "/api/v1/status", None),
         "rules": ("GET", "/api/v1/rules?category=forbidden", None),
+        "persona_current": ("GET", "/api/v1/persona/current", None),
         "query": ("POST", "/api/v1/query", {"q": args.topic, "mode": "hybrid"}),
         "trace": ("GET", f"/api/v1/trace?topic={args.topic}", None),
         "ingest": (
@@ -89,6 +90,7 @@ def main() -> int:
                 "execute_actions": True,
             },
         ),
+        "persona_switch": ("POST", "/api/v1/persona/switch", {"persona_id": "builder"}),
     }
     results: dict[str, dict] = {}
 
@@ -109,6 +111,11 @@ def main() -> int:
                     has_rerank = isinstance(qdata.get("rerank_candidates"), list)
                     has_boost = isinstance(qdata.get("memory_boost_updated"), int)
                     results[name]["ok"] = results[name]["ok"] and has_rerank and has_boost
+                if name in ("persona_current", "persona_switch") and resp.status_code == 200:
+                    pdata = results[name]["response"]
+                    has_active = isinstance(pdata.get("active_persona"), str) and len(pdata.get("active_persona", "")) > 0
+                    has_list = isinstance(pdata.get("available_personas"), list)
+                    results[name]["ok"] = results[name]["ok"] and has_active and has_list
             except Exception:
                 results[name]["response"] = resp.text[:300]
             print(f"[{name}] HTTP {resp.status_code}")

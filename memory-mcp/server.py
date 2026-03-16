@@ -54,6 +54,11 @@ RISKY_KEYWORDS = {
 }
 
 
+def _normalize_user_id(user_id: str) -> str:
+    safe = "".join(ch for ch in (user_id or "") if ch.isalnum() or ch in "_-").strip("_-")
+    return safe[:64] if safe else "default"
+
+
 def _parse_frontmatter_value(text: str, key: str) -> str:
     match = re.search(rf"^{re.escape(key)}:\s*(.+)$", text, flags=re.MULTILINE)
     return match.group(1).strip() if match else ""
@@ -104,6 +109,7 @@ def _compute_rerank_score(text: str, keywords: list[str]) -> tuple[float, dict]:
 
 
 def _local_rerank_candidates(query: str, limit: int = 3, max_scan_files: int = 220, user_id: str = "default") -> list[dict]:
+    user_id = _normalize_user_id(user_id)
     keywords = [kw.lower() for kw in re.split(r"[\s，。？！、]+", query) if len(kw) >= 2][:8]
     if not keywords:
         return []
@@ -326,6 +332,7 @@ async def query_memory(q: str, mode: str = "hybrid", user_id: str = "default") -
 
 async def query_memory_structured(q: str, mode: str = "hybrid", user_id: str = "default") -> dict:
     """D5-4: 結構化查詢結果，提供 rerank_candidates 供 HTTP API 直接輸出 JSON 欄位。"""
+    user_id = _normalize_user_id(user_id)
     if mode not in ("hybrid", "local", "global", "naive"):
         mode = "hybrid"
 
@@ -365,6 +372,8 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
     Returns:
         ingest 結果
     """
+    user_id = _normalize_user_id(user_id)
+
     # 法典：禁止 ingest 前不加字數驗證
     if len(content) < 50:
         return "❌ 內容太短（<50字），拒絕 ingest（防止髒資料）"
