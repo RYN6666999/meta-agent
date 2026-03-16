@@ -25,6 +25,7 @@ LIGHTRAG_API = "http://localhost:9621"
 LAW_JSON = Path("/Users/ryan/meta-agent/law.json")
 ERROR_LOG_DIR = Path("/Users/ryan/meta-agent/error-log")
 META_AGENT_DIR = Path("/Users/ryan/meta-agent")
+USERS_DIR = META_AGENT_DIR / "memory" / "users"
 TODAY = date.today().isoformat()
 # Workflow C：錯誤歸檔 webhook（fire-and-forget，不阻塞主流程）
 ERROR_ARCHIVE_WEBHOOK = "http://localhost:5678/webhook/3E3yP5pGX1GepMuu/webhook/error-archive"
@@ -102,14 +103,15 @@ def _compute_rerank_score(text: str, keywords: list[str]) -> tuple[float, dict]:
     }
 
 
-def _local_rerank_candidates(query: str, limit: int = 3, max_scan_files: int = 220) -> list[dict]:
+def _local_rerank_candidates(query: str, limit: int = 3, max_scan_files: int = 220, user_id: str = "default") -> list[dict]:
     keywords = [kw.lower() for kw in re.split(r"[\s，。？！、]+", query) if len(kw) >= 2][:8]
     if not keywords:
         return []
 
     candidates = []
     scanned = 0
-    for scan_dir in MEMORY_SCAN_DIRS:
+    scan_dirs = ([USERS_DIR / user_id] if user_id != "default" else MEMORY_SCAN_DIRS)
+    for scan_dir in scan_dirs:
         if not scan_dir.exists() or scanned >= max_scan_files:
             continue
         for md_file in scan_dir.rglob("*.md"):
@@ -290,13 +292,14 @@ mcp = FastMCP(
 
 # ── 工具 1：query_memory ──────────────────────────────────────────────
 @mcp.tool()
-async def query_memory(q: str, mode: str = "hybrid") -> str:
+async def query_memory(q: str, mode: str = "hybrid", user_id: str = "default") -> str:
     """
     語意搜尋 LightRAG 知識圖譜。
 
     Args:
         q: 搜尋查詢（中英文均可）
         mode: 搜尋模式 hybrid / local / global / naive（預設 hybrid）
+        user_id: 用戶隔離 ID（預設 default = 不隔離）
 
     Returns:
         搜尋結果文字
@@ -319,7 +322,7 @@ async def query_memory(q: str, mode: str = "hybrid") -> str:
     boost_note = f"\n[記憶強化：{updated} 個相關文件 last_triggered/usage_count 已更新]" if updated > 0 else ""
 
     # D5：本地 rerank 訊號（confidence/freshness/usage_count）
-    reranked = _local_rerank_candidates(q, limit=3)
+    reranked = _local_rerank_candidates(q, limit=3, user_id=user_id)
     rerank_note = ""
     if reranked:
         lines = ["", "[Local Rerank Top-3]"]
@@ -336,7 +339,7 @@ async def query_memory(q: str, mode: str = "hybrid") -> str:
 
 # ── 工具 2：ingest_memory ─────────────────────────────────────────────
 @mcp.tool()
-async def ingest_memory(content: str, mem_type: str = "verified_truth", title: str = "") -> str:
+async def ingest_memory(content: str, mem_type: str = "verified_truth", title: str = "", user_id: str = "default") -> str:
     """
     將知識存入 LightRAG 圖譜（附 frontmatter）。
 
@@ -344,6 +347,7 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
         content: 知識內容（<3000字，法典禁止超過 4000）
         mem_type: 類型 error_fix / tech_decision / verified_truth / rule
         title: 簡短標題（選填）
+        user_id: 用戶隔離 ID（預設 default = 共用圖譜，非預設另存本地副本）
 
     Returns:
         ingest 結果
@@ -390,6 +394,7 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
         f"last_triggered: {today}\n"
         f"usage_count: 0\n"
         f"confidence: 0.85\n"
+        f"user_id: {user_id}\n"
         f"expires_after_days: {expires}\n"
         f"---\n\n"
         f"# {title}\n\n"
@@ -403,6 +408,14 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
         )
         resp.raise_for_status()
         data = resp.json()
+
+    # 多租戶：非預設用戶在本地保存隔離副本
+    if user_id != "default":
+        user_dir = USERS_DIR / re.sub(r"[^\w\-]", "_", user_id)
+        user_dir.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r"[^\w\-]", "-", title[:40].lower()).strip("-") or "untitled"
+        local_file = user_dir / f"{today}-{slug}.md"
+        local_file.write_text(doc, encoding="utf-8")
 
     return f"✅ Ingest 成功：{title}\n狀態：{data}"
 

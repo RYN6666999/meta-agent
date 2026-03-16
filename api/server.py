@@ -68,6 +68,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 class QueryRequest(BaseModel):
     q: str = Field(..., min_length=2)
     mode: str = Field(default="hybrid")
+    user_id: str = Field(default="default", max_length=64)
 
 
 class IngestRequest(BaseModel):
@@ -77,6 +78,7 @@ class IngestRequest(BaseModel):
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
     submitted_by: str = Field(default="external-client", min_length=2, max_length=120)
     source_session: str = Field(default="", max_length=120)
+    user_id: str = Field(default="default", max_length=64)
 
 
 class LogErrorRequest(BaseModel):
@@ -198,11 +200,12 @@ async def health(request: Request, _: None = Depends(require_auth)) -> dict[str,
 @app.post("/api/v1/query")
 @limiter.limit("120/minute")
 async def query_memory(payload: QueryRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
-    result = await backend.query_memory(payload.q, payload.mode)
+    result = await backend.query_memory(payload.q, payload.mode, payload.user_id)
     return {
         "ok": True,
         "query": payload.q,
         "mode": payload.mode,
+        "user_id": payload.user_id,
         "result": result,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
@@ -219,7 +222,7 @@ async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depe
         "[/META]\n"
     )
     enriched_content = metadata_block + payload.content
-    result = await backend.ingest_memory(enriched_content, payload.mem_type, payload.title)
+    result = await backend.ingest_memory(enriched_content, payload.mem_type, payload.title, payload.user_id)
     return {
         "ok": result.startswith("✅"),
         "message": result,
@@ -227,6 +230,7 @@ async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depe
             "confidence": payload.confidence,
             "submitted_by": payload.submitted_by,
             "source_session": payload.source_session,
+            "user_id": payload.user_id,
         },
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }

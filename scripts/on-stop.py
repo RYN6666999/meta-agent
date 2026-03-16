@@ -6,9 +6,7 @@ on-stop.py — Claude Code Stop hook
 2. 每 20 次 → 寫入 checkpoint（讀 master-plan 未完成項目）
 3. 每次 → 呼叫 generate-handoff.py 更新 latest-handoff.md（保持中斷恢復最新）
 
-注意：完整對話萃取需手動呼叫 scripts/extract-session.sh
-（Stop hook 無法取得對話文本，n8n P1-A webhook 靠手動觸發）
-
+4. 每 50 次 → 自動讀取 ~/.claude/projects/ JSONL，送 n8n 記憶萃取 webhook
 此腳本從 stdin 讀取 hook JSON（Claude Code 規範）
 """
 
@@ -77,8 +75,56 @@ type: checkpoint
     sys.stderr.write(f"[checkpoint] Turn {turn} → {cp_file.name}\n")
 
 # ── 每 50 次送 n8n 萃取（需要對話內容，此處跳過自動觸發）──
-# 對話文本無法直接從 Stop hook 取得，由使用者手動呼叫
-# /Users/ryan/meta-agent/scripts/extract-conversation.sh
+# ── 每 50 次自動萃取 session JSONL → n8n ──────────────────────────
+if turn % 50 == 0:
+    try:
+        import urllib.request as _urllib_req
+        claude_project_dir = Path.home() / ".claude" / "projects" / "-Users-ryan"
+        jsonl_file = claude_project_dir / f"{session_id}.jsonl"
+        turns_texts = []
+        if jsonl_file.exists():
+            with open(jsonl_file, encoding="utf-8") as jf:
+                for line in jf:
+                    try:
+                        row = json.loads(line)
+                        if row.get("type") not in ("user", "assistant"):
+                            continue
+                        msg = row.get("message", {})
+                        role = msg.get("role", row.get("type", "?"))
+                        content = msg.get("content", "")
+                        if isinstance(content, list):
+                            text = " ".join(
+                                c.get("text", "") for c in content
+                                if isinstance(c, dict) and c.get("type") == "text"
+                            )
+                        else:
+                            text = str(content)
+                        if text.strip():
+                            turns_texts.append(f"[{role}] {text[:800]}")
+                    except Exception:
+                        continue
+        if len(turns_texts) >= 5:
+            excerpt = "\n---\n".join(turns_texts[-30:])
+            payload_bytes = json.dumps({
+                "conversation": excerpt,
+                "session_id": session_id,
+                "turn": turn,
+                "auto": True,
+            }).encode("utf-8")
+            req = _urllib_req.Request(
+                WEBHOOK_URL,
+                data=payload_bytes,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with _urllib_req.urlopen(req, timeout=30) as resp:
+                sys.stderr.write(
+                    f"[on-stop] auto-extract sent (turn={turn}, turns={len(turns_texts)}), status={resp.status}\n"
+                )
+        else:
+            sys.stderr.write(f"[on-stop] auto-extract skip: {len(turns_texts)} turns < 5\n")
+    except Exception as e:
+        sys.stderr.write(f"[on-stop] auto-extract error: {e}\n")
 
 # ── 每次都更新 handoff（確保中斷恢復永遠最新）──────────────
 try:
