@@ -28,6 +28,13 @@
 
   "forbidden": [
     {
+      "rule": "禁止發現 bug 後不立即 log_error，等用戶提醒才補記",
+      "reason": "用戶需要提醒 = 系統失憶。每次修正任何 bug，必須在同一輪立刻呼叫 log_error，不批次、不延後。",
+      "solution": "修完 bug → 立即 mcp__memory-mcp__log_error，然後繼續下一步。這是非可選動作。",
+      "source": "error-log/2026-03-16-claude-bug-log-discipline.md",
+      "added": "2026-03-16"
+    },
+    {
       "rule": "禁止在未窮盡工具前問用戶能查到的問題",
       "reason": "用戶不是搜尋引擎。遇到不認識的名詞/路徑/工具，必須先：1) Grep 本地目錄 2) 搜 Obsidian vault 3) brave/WebSearch GitHub。三者都找不到才能問。",
       "solution": "反射動作：看到不熟悉的名詞 → 立即 Grep /Users/ryan/ + brave search，不問用戶",
