@@ -17,6 +17,9 @@ import os
 import re
 import subprocess
 import sys
+import urllib.request
+import urllib.error
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -159,8 +162,27 @@ def create_decision_branch(topic, description, score, signals):
     return True, branch_name, "成功"
 
 
+def ingest_to_lightrag(title: str, content: str) -> tuple[bool, str]:
+    """直接 POST 到 LightRAG /documents/text（非同步，失敗不中斷主流程）"""
+    payload = json.dumps({
+        "text": content,
+        "description": title
+    }).encode("utf-8")
+    try:
+        req = urllib.request.Request(
+            "http://localhost:9621/documents/text",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.status == 200, f"HTTP {r.status}"
+    except Exception as e:
+        return False, str(e)
+
+
 def write_truth_source(topic, description, score, signals, branch_name, date_str):
-    """在 truth-source/ 留下決策記錄"""
+    """在 truth-source/ 留下決策記錄，並同步 ingest 到 LightRAG"""
     truth_dir = REPO_DIR / "truth-source"
     truth_dir.mkdir(exist_ok=True)
 
@@ -190,6 +212,16 @@ score: {score}
 `{branch_name}` — 此分支為本決策的真理源，供未來對照。
 """
     filename.write_text(content, encoding="utf-8")
+
+    # ── 同步 ingest 到 LightRAG（真理源三角第三邊）──
+    ok, detail = ingest_to_lightrag(
+        f"【決策記錄】{topic} ({date_str})",
+        content
+    )
+    if ok:
+        print(f"   ✅ LightRAG 已同步：{topic}")
+    else:
+        print(f"   ⚠️  LightRAG 同步失敗（非阻斷）：{detail}")
 
 
 def append_pending_decision(topic, description, score, signals, source="working-tree"):

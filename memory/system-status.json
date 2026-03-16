@@ -6880,5 +6880,14 @@
     "persona_id": "domain-business",
     "reason": "workflow disabled",
     "checked_at": "2026-03-16 21:19:04"
+  },
+  "truth_xval": {
+    "ok": true,
+    "checked_at": "2026-03-16 21:40",
+    "total": 4,
+    "ok_count": 3,
+    "warn_count": 1,
+    "error_count": 0,
+    "lightrag_available": true
   }
 }
