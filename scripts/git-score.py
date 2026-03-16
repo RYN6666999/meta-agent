@@ -166,6 +166,18 @@ def main():
         success = auto_commit(files, score)
         log_result(score, breakdown, success, files)
         print("✅ commit 完成" if success else "❌ commit 失敗")
+        # 自動觸發里程碑裁判（只在有 law/tech-stack/truth-source 變更時才有意義）
+        import subprocess as _sp
+        high_value = any(
+            f.startswith(("law.json", "tech-stack/", "truth-source/", "error-log/"))
+            for _, f in files
+        )
+        if high_value:
+            _sp.run([
+                "python3", str(REPO_DIR / "scripts" / "milestone-judge.py"),
+                "--topic", "auto-git-score",
+                "--description", f"git-score 自動 commit（score={score}），含重要變更"
+            ], cwd=REPO_DIR)
         return 0 if success else 1
     else:
         print(f"\n⏳ 分數未達 {THRESHOLD}，暫不 commit")
