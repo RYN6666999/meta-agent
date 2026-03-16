@@ -60,3 +60,13 @@
 其他變更 memory/system-status.json +10
 
 ---
+
+## 2026-03-16 16:41 | health-title-restored | 分數 180 | ✅ 重大里程碑 → 建立分支 `decision/health-title-restored-2026-03-16`
+
+**描述：** D1/D2 修復：Groq 健康檢查誤判消除 + memory-extract 標題品質恢復 7 [working-tree]
+
+**評分明細：**
+其他變更 memory/git-score-log.md +10
+其他變更 memory/git-score.log +10
+
+---

@@ -1,20 +1,46 @@
 {
   "e2e_memory_extract": {
     "ok": true,
-    "checked_at": "2026-03-16 15:20:16",
+    "checked_at": "2026-03-16 16:44:09",
     "detail": "HTTP 200",
+    "quality_ok": true,
+    "titles_total": 5,
+    "titles_valid": 5,
+    "titles_invalid": 0,
+    "quality_failure_count": 0,
     "response": {
       "success": true,
       "summary": "✅ Ingest 5 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
       "ingested_count": 5,
       "memories_titles": [
-        "?",
-        "?",
-        "?",
-        "?",
-        "?"
+        "n8n webhook 接收對話文本",
+        "Groq llama-3.1-8b-instant 進行記憶萃取與結構化",
+        "LightRAG API 接收 ingest 請求",
+        "端對端流程驗證",
+        "技術棧確認"
       ],
-      "timestamp": "2026-03-16T07:20:16.844Z"
+      "timestamp": "2026-03-16T08:44:09.981Z"
+    }
+  },
+  "health_check": {
+    "ok": true,
+    "checked_at": "2026-03-16 16:44:07",
+    "services": {
+      "lightrag": {
+        "ok": true,
+        "detail": "HTTP 200"
+      },
+      "n8n": {
+        "ok": true,
+        "detail": "HTTP 200"
+      },
+      "groq": {
+        "transport_ok": true,
+        "classification": "ok",
+        "working_key": true,
+        "model": "llama-3.1-8b-instant",
+        "detail": "HTTP 200"
+      }
     }
   }
 }

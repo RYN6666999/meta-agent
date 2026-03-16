@@ -31,10 +31,25 @@ def save_status(data: dict) -> None:
 def update_e2e_status(ok: bool, detail: str, response: dict | None = None) -> None:
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     status = load_status()
+    titles = []
+    if isinstance(response, dict):
+        raw_titles = response.get('memories_titles', [])
+        if isinstance(raw_titles, list):
+            titles = raw_titles
+    titles_total = len(titles)
+    titles_valid = sum(1 for t in titles if isinstance(t, str) and t.strip() and t.strip() != '?')
+    titles_invalid = titles_total - titles_valid
+    quality_ok = titles_total > 0 and titles_invalid == 0
+
     status['e2e_memory_extract'] = {
-        'ok': ok,
+        'ok': ok and quality_ok,
         'checked_at': now,
-        'detail': detail,
+        'detail': detail if quality_ok else f'{detail} | title_quality_failed',
+        'quality_ok': quality_ok,
+        'titles_total': titles_total,
+        'titles_valid': titles_valid,
+        'titles_invalid': titles_invalid,
+        'quality_failure_count': titles_invalid,
     }
     if response is not None:
         status['e2e_memory_extract']['response'] = response
@@ -86,7 +101,12 @@ def main() -> int:
             ok = r.status == 200
             detail = f'HTTP {r.status}'
             update_e2e_status(ok=ok, detail=detail, response=data)
-            return 0 if ok else 1
+            final_ok = False
+            if isinstance(data, dict):
+                titles = data.get('memories_titles', [])
+                if isinstance(titles, list) and titles:
+                    final_ok = all(isinstance(t, str) and t.strip() and t.strip() != '?' for t in titles)
+            return 0 if ok and final_ok else 1
     except urllib.error.HTTPError as e:
         msg = e.read().decode()[:500]
         print(f'HTTP Error {e.code}: {msg}')
