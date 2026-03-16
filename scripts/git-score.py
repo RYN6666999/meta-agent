@@ -15,6 +15,7 @@ meta-agent Git 評分自動提交器
 閾值：50 分 → 自動 commit
 """
 
+import re
 import subprocess
 import sys
 import os
@@ -51,10 +52,12 @@ def get_uncommitted_files():
     if not stdout:
         return []
     files = []
-    for line in stdout.split("\n"):
-        if line.strip():
-            status = line[:2].strip()
-            filepath = line[3:].strip()
+    for line in stdout.splitlines():
+        # porcelain 格式：XY<space>filepath（XY 固定 2 字元）
+        m = re.match(r'^(.{2}) (.+)$', line)
+        if m:
+            status = m.group(1).strip()
+            filepath = m.group(2)
             files.append((status, filepath))
     return files
 

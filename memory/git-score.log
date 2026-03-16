@@ -31,3 +31,54 @@
   其他變更 (scripts/memory-decay.py) +5
 
 ⏳ 分數未達 50，暫不 commit
+📊 評分結果：60/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/handoff/latest-handoff.md) +10
+  其他變更 (memory-mcp/) +5
+  其他變更 (scripts/generate-handoff.py) +5
+  其他變更 (scripts/memory-decay.py) +5
+  未提交 4.4h (>4h) +20
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成
+📊 評分結果：15/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：15/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：15/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：35/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+  未提交 4.0h (>4h) +20
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：15/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：35/50
+  其他變更 (LAUDE.md) +5
+  memory 變更 (memory/git-score-log.md) +10
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/turn-count.txt) +10
+
+⏳ 分數未達 50，暫不 commit
+📊 評分結果：35/50
+  其他變更 (emory/git-score-log.md) +5
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/handoff/latest-handoff.md) +10
+  memory 變更 (memory/turn-count.txt) +10
+
+⏳ 分數未達 50，暫不 commit

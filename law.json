@@ -243,10 +243,30 @@
       "decision/dify-cloud-vs-selfhost-2026-03-15",
       "decision/v2-simplify-2026-03-16"
     ],
-    "when_to_branch": "任何影響技術棧的重大選擇前，開 decision/ branch 記錄比較",
+    "when_to_branch": "由 milestone-judge.py 自動判斷，禁止人工隨意建立 decision/ 分支",
     "merge_policy": "決策確認後 merge 回 main，branch 永久保留（考古用）",
     "comparison_dir": "tech-stack/alternatives/",
     "comparison_naming": "{topic}-comparison-{YYYY-MM-DD}.md",
     "decision_template": "truth-source/decision-template.md"
+  },
+
+  "milestone_judge": {
+    "description": "里程碑裁判 — 工序驗證通過（Phase 3 Exit 0）後由 Claude 主動呼叫",
+    "script": "scripts/milestone-judge.py",
+    "trigger": "Phase 3 Exit 0：工序完成且驗證為真時",
+    "threshold": 60,
+    "invoke": "python3 scripts/milestone-judge.py --topic {kebab-topic} --description {說明}",
+    "scoring": {
+      "law.json forbidden 新增/修改":  80,
+      "tech-stack/ 新增文件":          70,
+      "truth-source/ 新增驗證決策":    60,
+      "error-log/ 新增系統性根因":     50,
+      "scripts/ 核心腳本變更":         40,
+      "law.json 其他修改":             40,
+      "其他":                          10
+    },
+    "on_pass": "建立 decision/{topic}-{date} 分支 + commit + 寫 truth-source 記錄",
+    "on_fail": "記錄日誌，不建分支，變更交由 git-score.py 日常備份",
+    "log": "memory/milestone-judge-log.md"
   }
 }
