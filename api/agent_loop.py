@@ -50,7 +50,7 @@ def _extract_actions(action_block: str) -> tuple[list[dict[str, Any]], list[str]
                 warnings.append("action_json_recovered_by_fallback")
                 return [item for item in parsed if isinstance(item, dict)], warnings
         except Exception:
-            pass
+            warnings.append("action_json_fallback_parse_failed")
 
     return [], warnings
 

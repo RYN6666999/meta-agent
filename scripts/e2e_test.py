@@ -1,31 +1,20 @@
 #!/usr/bin/env python3
 """端對端完整測試：送長文本到 memory webhook，成功時回寫 system-status。"""
 import json
+import sys
 import urllib.request
 import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-META = Path('/Users/ryan/meta-agent')
-STATUS_FILE = META / 'memory' / 'system-status.json'
-URL = 'http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract'
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
+from common.config import N8N_API
+from common.status_store import load_status, save_status
 
-def load_status() -> dict:
-    if not STATUS_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATUS_FILE.read_text(encoding='utf-8'))
-    except Exception:
-        return {}
-
-
-def save_status(data: dict) -> None:
-    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATUS_FILE.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
+URL = f'{N8N_API}/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract'
 
 
 def update_e2e_status(ok: bool, detail: str, response: dict | None = None) -> None:

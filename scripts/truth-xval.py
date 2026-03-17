@@ -18,18 +18,22 @@
 
 import json
 import re
-import subprocess
 import sys
+import subprocess
 import urllib.request
 import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-REPO_DIR = Path("/Users/ryan/meta-agent")
-STATUS_FILE = REPO_DIR / "memory" / "system-status.json"
-TRUTH_DIR = REPO_DIR / "truth-source"
-ERROR_LOG_DIR = REPO_DIR / "error-log"
-LIGHTRAG_API = "http://localhost:9621"
+REPO_DIR = Path(__file__).resolve().parents[1]
+if str(REPO_DIR) not in sys.path:
+    sys.path.insert(0, str(REPO_DIR))
+
+from common.config import BASE_DIR, ERROR_LOG_DIR, LIGHTRAG_API, STATUS_FILE, TRUTH_SOURCE_DIR
+from common.status_store import load_status, save_status
+
+REPO_DIR = BASE_DIR
+TRUTH_DIR = TRUTH_SOURCE_DIR
 
 
 # ── 工具函式 ────────────────────────────────────────────────────
@@ -42,20 +46,6 @@ def run_git(args):
         text=True,
     )
     return result.stdout.strip(), result.returncode
-
-
-def load_status() -> dict:
-    if not STATUS_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def save_status(data: dict) -> None:
-    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def lightrag_health() -> bool:
@@ -92,7 +82,8 @@ def lightrag_query(query: str) -> tuple[bool, int]:
             if not response_text or "no relevant" in response_text.lower():
                 return False, 0
             return True, 1
-    except Exception:
+    except Exception as exc:
+        print(f"[truth-xval][warn] lightrag query failed: {exc}", file=sys.stderr)
         return False, 0
 
 
@@ -238,8 +229,9 @@ def repair_missing_lightrag(details: list) -> list:
                 if r.status == 200:
                     repaired.append(item["topic"])
                     item["repaired"] = True
-        except Exception:
-            pass
+        except Exception as exc:
+            item["repair_error"] = str(exc)[:200]
+            print(f"[truth-xval][warn] repair ingest failed for {item['topic']}: {exc}", file=sys.stderr)
     return repaired
 
 

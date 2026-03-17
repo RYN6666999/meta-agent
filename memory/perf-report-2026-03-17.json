@@ -1,0 +1,62 @@
+{
+  "date": "2026-03-17",
+  "scope": "phase1-first-batch",
+  "commands": [
+    "python3 scripts/health_check.py",
+    "python3 scripts/truth-xval.py"
+  ],
+  "before": {
+    "python3 scripts/health_check.py": {
+      "runs": 3,
+      "p50_ms": 5611.05,
+      "p95_ms": 5628.57,
+      "min_ms": 942.25,
+      "max_ms": 5628.57
+    },
+    "python3 scripts/truth-xval.py": {
+      "runs": 3,
+      "p50_ms": 5252.16,
+      "p95_ms": 140358.19,
+      "min_ms": 5171.68,
+      "max_ms": 140358.19
+    }
+  },
+  "after": {
+    "python3 scripts/health_check.py": {
+      "runs": 3,
+      "p50_ms": 5516.03,
+      "p95_ms": 5540.6,
+      "min_ms": 5453.43,
+      "max_ms": 5540.6
+    },
+    "python3 scripts/truth-xval.py": {
+      "runs": 3,
+      "p50_ms": 5157.83,
+      "p95_ms": 5160.08,
+      "min_ms": 5150.1,
+      "max_ms": 5160.08
+    }
+  },
+  "delta": {
+    "python3 scripts/health_check.py": {
+      "p50_ms": -95.02,
+      "p95_ms": -87.97,
+      "p50_pct": -1.69,
+      "p95_pct": -1.56
+    },
+    "python3 scripts/truth-xval.py": {
+      "p50_ms": -94.33,
+      "p95_ms": -135198.11,
+      "p50_pct": -1.8,
+      "p95_pct": -96.58
+    }
+  },
+  "assessment": {
+    "tail_latency_improved": true,
+    "median_improved": true,
+    "notes": [
+      "truth-xval tail latency outlier removed in current run",
+      "health_check median/p95 slightly improved"
+    ]
+  }
+}

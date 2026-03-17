@@ -13,6 +13,7 @@ memory-mcp/server.py — 記憶黑盒 MCP 伺服器
 import json
 import os
 import re
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
@@ -565,7 +566,7 @@ async def log_error(root_cause: str, solution: str, topic: str = "", context: st
                 },
             )
     except Exception:
-        pass  # fire-and-forget，失敗不影響主流程
+        print("[memory-mcp][warn] Workflow C webhook trigger failed", file=sys.stderr)
 
     return f"✅ 已寫入 {filepath}\n{ingest_result}\n[Workflow C 已觸發]"
 

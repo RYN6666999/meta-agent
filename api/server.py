@@ -15,14 +15,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from api.agent_loop import parse_golem_protocol, run_protocol_loop
+from common.config import BASE_DIR, ENV_FILE, PERSONA_REPORTS_DIR, STATUS_FILE, USERS_DIR
+from common.status_store import load_status as shared_load_status
+from common.status_store import save_status as shared_save_status
 
-BASE_DIR = Path("/Users/ryan/meta-agent")
-ENV_FILE = BASE_DIR / ".env"
-STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
 REGISTRY_FILE = BASE_DIR / "memory" / "persona-registry.json"
 BACKEND_FILE = BASE_DIR / "memory-mcp" / "server.py"
-USERS_DIR = BASE_DIR / "memory" / "users"
-PERSONA_REPORTS_DIR = BASE_DIR / "memory" / "persona-reports"
 TRACE_DIRS = [
     BASE_DIR / "truth-source",
     BASE_DIR / "error-log",
@@ -117,17 +115,11 @@ def require_auth(authorization: str | None = Header(default=None)) -> None:
 
 
 def load_status() -> dict[str, Any]:
-    if not STATUS_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    return shared_load_status()
 
 
 def save_status(data: dict[str, Any]) -> None:
-    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    shared_save_status(data)
 
 
 def update_usage(path: str, method: str, status_code: int) -> None:

@@ -27,12 +27,17 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from common.config import BASE_DIR, LIGHTRAG_API
+from common.jsonio import load_json, save_json
+
 # ── 路徑設定 ─────────────────────────────────────────────────────
-META_DIR = Path("/Users/ryan/meta-agent")
 OBSIDIAN_VAULT = Path("/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun")
-SYNC_STATE = META_DIR / "memory" / "obsidian-sync.json"
-STATUS_FILE = META_DIR / "memory" / "system-status.json"
-LIGHTRAG_API = "http://localhost:9621"
+SYNC_STATE = BASE_DIR / "memory" / "obsidian-sync.json"
+STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
 
 # ── 跳過清單（系統文件/緩存/不需 ingest 的目錄）────────────────────
 IGNORE_DIRS = {".obsidian", ".trash", "Extras", "templates", "Templates"}
@@ -42,20 +47,6 @@ MAX_CHARS = 8000  # 截斷上限（防止 LightRAG token 過載）
 
 
 # ── 工具函式 ─────────────────────────────────────────────────────
-
-def load_json(path: Path) -> dict:
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def save_json(path: Path, data: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
 
 def lightrag_health() -> bool:
     try:
@@ -143,7 +134,7 @@ def main():
         sys.exit(1)
 
     # ── 讀取同步狀態 ──
-    state = load_json(SYNC_STATE)
+    state = load_json(SYNC_STATE, {})
     if args.init:
         since_ts = 0.0
         print("📦 Init 模式：掃全部文件")
@@ -222,7 +213,7 @@ def main():
 
 
 def _write_status(data: dict) -> None:
-    status = load_json(STATUS_FILE)
+    status = load_json(STATUS_FILE, {})
     status["obsidian_ingest"] = data
     save_json(STATUS_FILE, status)
     print(f"💾 狀態已寫入 system-status.json[obsidian_ingest]")

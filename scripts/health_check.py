@@ -15,17 +15,22 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from common.config import BASE_DIR, ENV_FILE
+from common.status_store import load_status, save_status
+
 try:
     httpx = importlib.import_module('httpx')
 except Exception:
     httpx = None
 
-BASE_DIR = Path('/Users/ryan/meta-agent')
 LOG_DIR = BASE_DIR / 'error-log'
-STATUS_FILE = BASE_DIR / 'memory' / 'system-status.json'
 
 env = {}
-with open(BASE_DIR / '.env') as f:
+with open(ENV_FILE) as f:
     for line in f:
         line = line.strip()
         if '=' in line and not line.startswith('#'):
@@ -35,20 +40,6 @@ with open(BASE_DIR / '.env') as f:
 now = datetime.now().strftime('%Y-%m-%d %H:%M')
 date = datetime.now().strftime('%Y-%m-%d')
 model = 'llama-3.1-8b-instant'
-
-
-def load_status() -> dict:
-    if not STATUS_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATUS_FILE.read_text(encoding='utf-8'))
-    except Exception:
-        return {}
-
-
-def save_status(data: dict) -> None:
-    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
 def check_lightrag() -> tuple[bool, str]:
@@ -106,8 +97,8 @@ def check_groq() -> tuple[bool, str]:
         body = ''
         try:
             body = Path('/tmp/groq-health-body.json').read_text(encoding='utf-8')[:160]
-        except Exception:
-            pass
+        except Exception as e:
+            body = f'<body_unavailable: {e}>'
         if code == '200':
             return True, 'HTTP 200'
         return False, f'HTTP {code}: {body}'

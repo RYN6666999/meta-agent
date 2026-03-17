@@ -1,34 +1,21 @@
 {
   "e2e_memory_extract": {
-    "ok": true,
-    "checked_at": "2026-03-16 16:44:09",
-    "detail": "HTTP 200",
-    "quality_ok": true,
-    "titles_total": 5,
-    "titles_valid": 5,
+    "ok": false,
+    "checked_at": "2026-03-17 10:24:41",
+    "detail": "HTTP 500: {\"code\":0,\"message\":\"SQLITE_CORRUPT: database disk image is malformed\",\"stacktrace\":\"QueryFailedError: SQLITE_CORRUPT: database disk image is malformed\\n    at Statement.handler (/usr/local/lib/node_modules/n8n/node_modules/@n8n/typeorm/driver/sqlite-pooled/SqliteLibrary.js:102:39)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\"} | title_quality_failed",
+    "quality_ok": false,
+    "titles_total": 0,
+    "titles_valid": 0,
     "titles_invalid": 0,
-    "quality_failure_count": 0,
-    "response": {
-      "success": true,
-      "summary": "✅ Ingest 5 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
-      "ingested_count": 5,
-      "memories_titles": [
-        "n8n webhook 接收對話文本",
-        "Groq llama-3.1-8b-instant 進行記憶萃取與結構化",
-        "LightRAG API 接收 ingest 請求",
-        "端對端流程驗證",
-        "技術棧確認"
-      ],
-      "timestamp": "2026-03-16T08:44:09.981Z"
-    }
+    "quality_failure_count": 0
   },
   "health_check": {
-    "ok": true,
-    "checked_at": "2026-03-17 08:02:01",
+    "ok": false,
+    "checked_at": "2026-03-17 10:24:46",
     "services": {
       "lightrag": {
-        "ok": true,
-        "detail": "HTTP 200"
+        "ok": false,
+        "detail": "timed out"
       },
       "n8n": {
         "ok": true,
@@ -7366,17 +7353,37 @@
   },
   "truth_xval": {
     "ok": true,
-    "checked_at": "2026-03-17 08:19",
+    "checked_at": "2026-03-17 10:24",
     "total": 4,
     "ok_count": 0,
     "warn_count": 4,
     "error_count": 0,
-    "lightrag_available": true
+    "lightrag_available": false
   },
   "obsidian_ingest": {
+    "ok": false,
+    "checked_at": "2026-03-17 10:22",
+    "error": "LightRAG down"
+  },
+  "benchmark_baseline": {
     "ok": true,
-    "checked_at": "2026-03-17 09:22",
-    "ingested": 0,
-    "skipped": 0
+    "collected_at": "2026-03-17 10:24:08",
+    "file": "memory/perf-baseline-2026-03-17.json",
+    "summary": {
+      "python3 scripts/health_check.py": {
+        "runs": 3,
+        "p50_ms": 5516.03,
+        "p95_ms": 5540.6,
+        "min_ms": 5453.43,
+        "max_ms": 5540.6
+      },
+      "python3 scripts/truth-xval.py": {
+        "runs": 3,
+        "p50_ms": 5157.83,
+        "p95_ms": 5160.08,
+        "min_ms": 5150.1,
+        "max_ms": 5160.08
+      }
+    }
   }
 }

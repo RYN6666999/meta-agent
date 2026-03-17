@@ -176,3 +176,25 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+📊 評分結果：210/50
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/obsidian-ingest.log) +10
+  memory 變更 (memory/obsidian-sync.json) +10
+  memory 變更 (memory/system-status.json) +10
+  memory 變更 (memory/tiered/monthly/2026-03.md) +10
+  memory 變更 (memory/tiered/yearly/2026.md) +10
+  memory 變更 (memory/decay-error.txt) +10
+  memory 變更 (memory/decay-log.txt) +10
+  memory 變更 (memory/health-check.log) +10
+  memory 變更 (memory/persona-reports/builder/2026-03-17-tech-radar.md) +10
+  memory 變更 (memory/persona-tech-radar-error.log) +10
+  memory 變更 (memory/persona-tech-radar.log) +10
+  memory 變更 (memory/tiered-summary-error.log) +10
+  memory 變更 (memory/tiered-summary.log) +10
+  memory 變更 (memory/tiered/daily/2026-03-17.md) +10
+  memory 變更 (memory/truth-xval-error.log) +10
+  memory 變更 (memory/truth-xval.log) +10
+  未提交 8.7h (>8h) +40
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成
