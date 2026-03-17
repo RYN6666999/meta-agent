@@ -1,7 +1,7 @@
 {
   "e2e_memory_extract": {
     "ok": true,
-    "checked_at": "2026-03-17 14:08:29",
+    "checked_at": "2026-03-17 14:17:36",
     "detail": "local-memory-extract",
     "quality_ok": true,
     "titles_total": 1,
@@ -18,12 +18,14 @@
         "對話重點摘要"
       ],
       "errors": [],
-      "timestamp": "2026-03-17T14:08:29.785901"
-    }
+      "timestamp": "2026-03-17T14:17:36.818338"
+    },
+    "consecutive_failures": 0,
+    "last_ok_at": "2026-03-17 14:17:36"
   },
   "health_check": {
     "ok": true,
-    "checked_at": "2026-03-17 14:08:28",
+    "checked_at": "2026-03-17 14:17:34",
     "services": {
       "lightrag": {
         "ok": true,
@@ -40,7 +42,9 @@
         "model": "llama-3.1-8b-instant",
         "detail": "HTTP 200"
       }
-    }
+    },
+    "consecutive_failures": 0,
+    "last_ok_at": "2026-03-17 14:17:34"
   },
   "api_health": {
     "ok": true,
@@ -7424,7 +7428,7 @@
   },
   "degraded_queue": {
     "ok": true,
-    "checked_at": "2026-03-17 14:08:28",
+    "checked_at": "2026-03-17 14:17:34",
     "success_count": 0,
     "remaining_count": 0,
     "detail": "queue empty"

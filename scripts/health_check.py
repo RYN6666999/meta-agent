@@ -21,7 +21,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from common.config import BASE_DIR, ENV_FILE, LIGHTRAG_API
 from common.lightrag_runtime import ensure_lightrag_service
-from common.status_store import load_status, save_status
+from common.status_store import load_status, save_status, update_reliability_metrics
 
 try:
     httpx = importlib.import_module('httpx')
@@ -159,15 +159,22 @@ def write_health_status(lightrag: tuple[bool, str], n8n: tuple[bool, str], groq:
     status = load_status()
     groq_meta = classify_groq(groq[1])
     health_ok = lightrag[0] and n8n[0] and groq_meta['working_key']
-    status['health_check'] = {
+    checked_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    health_section = status.get('health_check', {})
+    if not isinstance(health_section, dict):
+        health_section = {}
+
+    health_section.update({
         'ok': health_ok,
-        'checked_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'checked_at': checked_at,
         'services': {
             'lightrag': {'ok': lightrag[0], 'detail': lightrag[1]},
             'n8n': {'ok': n8n[0], 'detail': n8n[1]},
             'groq': groq_meta,
         },
-    }
+    })
+    update_reliability_metrics(health_section, ok=health_ok, checked_at=checked_at)
+    status['health_check'] = health_section
     save_status(status)
 
 

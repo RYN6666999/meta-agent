@@ -20,3 +20,20 @@
 - API server 已在本機以 uvicorn 成功啟動。
 - smoke test 驗證 `health`、`rules`、`query`、`trace` 全部通過。
 - `trace` 已能把 `truth-source`、`pending-decisions`、`milestone-judge-log` 串成可讀溯源結果。
+
+## Gap Convergence Round (2026-03-17)
+
+### Gap: 驗證可靠度指標缺口
+- Options: A(只保留 ok/fail) / B(在 health+e2e 增加連續失敗與恢復時間) / C(外接 Prometheus 後再做)
+- Score: impact=5, effort=2, risk=1, time=1
+- Decision: 採用 B，先在 `system-status.json` 補齊商業級最小可觀測欄位。
+
+### Gap: 失敗自動恢復鏈缺口
+- Options: A(只寫錯誤日誌) / B(e2e 失敗自動 truth-xval + reactivate_webhooks) / C(人工觸發)
+- Score: impact=5, effort=2, risk=2, time=1
+- Decision: 採用 B，符合 law.json 硬規則，避免故障卡住。
+
+### Gap: 驗證守門缺口
+- Options: A(維持手動執行) / B(建立 pre-merge smoke gate) / C(每次都跑全量回歸)
+- Score: impact=4, effort=2, risk=1, time=2
+- Decision: 下一步採用 B，先上最小守門，再視穩定度擴充。

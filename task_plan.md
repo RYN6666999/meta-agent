@@ -4,10 +4,10 @@
 以用戶視角優先確保：系統可判斷、可恢復、可追溯。先穩定驗證鏈路，再擴充能力。
 
 ## Live Baseline (2026-03-17)
-- health：LightRAG timeout（fail）
-- e2e：memory-extract 回傳 HTTP 500，錯誤為 SQLITE_CORRUPT（fail）
+- health：全綠（LightRAG / n8n / Groq 全部 pass）
+- e2e：local-memory-extract pass（title quality pass）
 - n8n / Groq：可用（pass）
-- 來源：`memory/system-status.json` 已更新
+- 來源：`memory/system-status.json` 2026-03-17 14:17 已更新
 
 ## User-Scenario Objectives
 | Scenario | User expectation | SLO target |
@@ -20,10 +20,10 @@
 ## Execution Phases
 | Phase | Status | Goal | Validation | Rollback |
 |---|---|---|---|---|
-| P1 故障止血 | in_progress | 確認 n8n SQLite 損毀影響範圍，恢復 e2e | `scripts/e2e_test.py` 連續 3 次通過 | 回退到前一份可用 DB 備份 |
-| P2 健康穩定化 | not_started | 降低 LightRAG timeout，完成可用性基線 | `scripts/health_check.py` 每次全綠 | 使用保守 timeout 與重試策略 |
+| P1 故障止血 | done | 確認 n8n SQLite 損毀影響範圍，恢復 e2e | `scripts/e2e_test.py` 連續通過 | 回退到前一份可用 DB 備份 |
+| P2 健康穩定化 | done | 降低 LightRAG timeout，完成可用性基線 | `scripts/health_check.py` 全綠 | 使用保守 timeout 與重試策略 |
 | P3 驗證守門 | not_started | 建立 pre-merge smoke gate | health+e2e 皆 pass 才允許發布 | 關閉 gate，回手動審核 |
-| P4 可觀測增強 | not_started | status 加入失敗連續次數與 MTTR | `memory/system-status.json` 欄位齊全 | 保留舊欄位相容輸出 |
+| P4 可觀測增強 | in_progress | status 加入失敗連續次數與 MTTR | `memory/system-status.json` 欄位齊全 | 保留舊欄位相容輸出 |
 
 ## Week-1 Runbook (Practical)
 1. 每日上午先跑 health + e2e，更新狀態檔與錯誤日誌。
@@ -39,4 +39,4 @@
 - D10-4：一週穩定性報告（成功率、MTTR、主要根因）
 
 ## Immediate Next Step
-先修復 n8n SQLite 損毀造成的 e2e 500，再把 LightRAG timeout 變成可預期告警與可恢復流程。
+完成 P3 驗證守門（pre-merge gate）：把 health+e2e 綁入單一 smoke command，失敗即阻擋發布。

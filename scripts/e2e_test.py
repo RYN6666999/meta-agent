@@ -10,9 +10,11 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from common.status_store import load_status, save_status
+from common.status_store import load_status, save_status, update_reliability_metrics
 
 LOCAL_EXTRACT_SCRIPT = ROOT_DIR / 'scripts' / 'local_memory_extract.py'
+TRUTH_XVAL_SCRIPT = ROOT_DIR / 'scripts' / 'truth-xval.py'
+REACTIVATE_WEBHOOKS_SCRIPT = ROOT_DIR / 'scripts' / 'reactivate_webhooks.py'
 
 
 def update_e2e_status(
@@ -32,8 +34,13 @@ def update_e2e_status(
     titles_invalid = titles_total - titles_valid
     quality_ok = titles_total > 0 and titles_invalid == 0
 
-    status['e2e_memory_extract'] = {
-        'ok': ok and quality_ok,
+    final_ok = ok and quality_ok
+    e2e_section = status.get('e2e_memory_extract', {})
+    if not isinstance(e2e_section, dict):
+        e2e_section = {}
+
+    e2e_section.update({
+        'ok': final_ok,
         'checked_at': now,
         'detail': detail if quality_ok else f'{detail} | title_quality_failed',
         'quality_ok': quality_ok,
@@ -43,9 +50,47 @@ def update_e2e_status(
         'quality_failure_count': titles_invalid,
         'fallback_used': False,
         'fallback_ok': False,
-    }
+    })
     if response is not None:
-        status['e2e_memory_extract']['response'] = response
+        e2e_section['response'] = response
+    update_reliability_metrics(e2e_section, ok=final_ok, checked_at=now)
+    status['e2e_memory_extract'] = e2e_section
+    save_status(status)
+
+
+def run_auto_recovery(detail: str) -> None:
+    now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    status = load_status()
+    recovery = status.get('auto_recovery', {})
+    steps = []
+
+    for step_name, script in [
+        ('truth_xval', TRUTH_XVAL_SCRIPT),
+        ('reactivate_webhooks', REACTIVATE_WEBHOOKS_SCRIPT),
+    ]:
+        try:
+            result = subprocess.run(
+                [sys.executable, str(script)],
+                capture_output=True,
+                text=True,
+                timeout=180,
+                check=False,
+            )
+            steps.append({
+                'step': step_name,
+                'ok': result.returncode == 0,
+                'detail': (result.stdout or result.stderr or '').strip()[:240],
+            })
+        except Exception as exc:
+            steps.append({'step': step_name, 'ok': False, 'detail': str(exc)[:240]})
+
+    recovery['last_trigger'] = {
+        'trigger': 'e2e_failure',
+        'triggered_at': now_ts,
+        'failures': [{'service': 'e2e_memory_extract', 'detail': detail}],
+        'steps': steps,
+    }
+    status['auto_recovery'] = recovery
     save_status(status)
 
 
@@ -90,11 +135,14 @@ def main() -> int:
             titles = data.get('memories_titles', [])
             if isinstance(titles, list) and titles:
                 final_ok = all(isinstance(t, str) and t.strip() and t.strip() != '?' for t in titles)
+        if not (ok and final_ok):
+            run_auto_recovery(detail=detail)
         return 0 if ok and final_ok else 1
     except Exception as e:
         print(f'Error: {e}')
         detail = str(e)
         update_e2e_status(ok=False, detail=detail)
+        run_auto_recovery(detail=detail)
     return 1
 
 

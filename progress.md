@@ -1,4 +1,12 @@
 ## 2026-03-17
+- 接續上一輪執行即時驗證：`scripts/health_check.py`、`scripts/e2e_test.py` 皆 pass。
+- `memory/system-status.json` 已更新最新檢查時間（health: 14:17:34、e2e: 14:17:36）。
+- 完成 D10 可觀測缺口第一階段：
+  - `common/status_store.py` 新增 `update_reliability_metrics()`
+  - `scripts/health_check.py` 寫入 `consecutive_failures / last_ok_at / last_recovered_at / mttr_last_seconds`
+  - `scripts/e2e_test.py` 同步寫入可靠度欄位
+- 補齊硬規則自動恢復鏈：`scripts/e2e_test.py` 失敗時自動執行 `truth-xval.py` + `reactivate_webhooks.py`，並回寫 `system-status.auto_recovery`。
+- `task_plan.md` 已更新：P1/P2 標記 done，P4 標記 in_progress，下一步切到 P3 pre-merge smoke gate。
 - 修復主路徑：建立本地 LightRAG 相容服務 `scripts/lightrag_compat_server.py`，預設 `LIGHTRAG_API` 改走 `http://127.0.0.1:9631`。
 - 修復主路徑：建立本地記憶萃取器 `scripts/local_memory_extract.py`，改由 Groq + memory-mcp 直接完成 conversation → memories → ingest。
 - `scripts/on-stop.py` 與 `scripts/extract-session.sh` 已切換到本地萃取主路徑，不再依賴損毀的 n8n memory webhook。
