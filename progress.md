@@ -1,4 +1,19 @@
 ## 2026-03-17
+- 完成 GitNexus 對標後續落地文件：
+  - `docs/interfaces/gitnexus-integration-plan.md`
+  - `docs/interfaces/code-intelligence-adapter.md`
+- 決策：GitNexus 採 sidecar 模式接入，只負責 code intelligence，不取代現有 memory / status / recovery 主路徑。
+- 定義最小 adapter 契約，後續可用於 failure enrichment、refactor planning、handoff code hotspot 摘要。
+- 實作 `common/code_intelligence.py` 第一版：
+  - `CodeIntelRequest` / `CodeIntelSummary` / `CodeIntelResult`
+  - `NullCodeIntelligenceAdapter`
+  - `GitNexusLocalAdapter`
+  - `get_code_intelligence_adapter()` factory
+- 第一版 GitNexus adapter 採 direct CLI 路徑：`status` → overview、`context`、`impact`、`query`，避免先依賴 MCP 或本地 HTTP server。
+- `common/status_store.py` 預留 `code_intelligence` shard key，供後續 failure enrichment 回寫。
+- 新增 `scripts/test_code_intelligence.py`，可快速檢查 adapter availability 並輸出 overview/impact JSON 結果。
+- `scripts/e2e_test.py` 已接入非阻塞 code-intelligence enrichment：失敗時會額外產生 `code_intelligence` status shard，GitNexus 不可用時只回寫 unavailable，不影響主流程。
+- `scripts/health_check.py` 已接入同樣的非阻塞 code-intelligence enrichment：health 失敗時會寫入 `code_intelligence` shard，供 handoff / 診斷流程引用。
 - 接續上一輪執行即時驗證：`scripts/health_check.py`、`scripts/e2e_test.py` 皆 pass。
 - `memory/system-status.json` 已更新最新檢查時間（health: 14:17:34、e2e: 14:17:36）。
 - 完成 D10 可觀測缺口第一階段：

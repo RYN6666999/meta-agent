@@ -17,6 +17,7 @@ SHARD_KEYS = {
     'api_usage',
     'health_check',
     'e2e_memory_extract',
+    'code_intelligence',
     'truth_xval',
     'degraded_queue',
     'auto_recovery',

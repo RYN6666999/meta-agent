@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.requests import Request
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -292,8 +292,16 @@ def send_telegram_text(chat_id: int, text: str) -> bool:
     )
     try:
         with urllib.request.urlopen(req, timeout=12) as resp:
-            return 200 <= getattr(resp, "status", 200) < 300
-    except (urllib.error.URLError, TimeoutError, OSError):
+            ok = 200 <= getattr(resp, "status", 200) < 300
+            if not ok:
+                print(f"[telegram] sendMessage non-2xx chat_id={chat_id} status={getattr(resp, 'status', 'unknown')}", flush=True)
+            return ok
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "ignore")
+        print(f"[telegram] sendMessage http_error chat_id={chat_id} status={exc.code} body={body}", flush=True)
+        return False
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        print(f"[telegram] sendMessage error chat_id={chat_id} detail={exc}", flush=True)
         return False
 
 
@@ -702,8 +710,8 @@ async def telegram_config(request: Request, _: None = Depends(require_auth)) -> 
 @limiter.limit("120/minute")
 async def telegram_webhook(
     secret: str,
-    payload: TelegramUpdate,
     request: Request,
+    payload: dict[str, Any] = Body(default_factory=dict),
     x_telegram_bot_api_secret_token: str | None = Header(default=None),
 ) -> dict[str, Any]:
     if not telegram_ready():
@@ -716,11 +724,23 @@ async def telegram_webhook(
     if x_telegram_bot_api_secret_token and x_telegram_bot_api_secret_token != TELEGRAM_WEBHOOK_SECRET:
         raise HTTPException(status_code=403, detail="invalid telegram header secret")
 
-    message = payload.message or payload.edited_message
+    if not payload:
+        return {"ok": True, "ignored": True, "reason": "empty-payload"}
+
+    try:
+        update = TelegramUpdate.model_validate(payload)
+    except Exception:
+        return {"ok": True, "ignored": True, "reason": "invalid-payload"}
+
+    message = update.message or update.edited_message
     if message is None:
         return {"ok": True, "ignored": True, "reason": "no-message"}
 
     incoming_text = (message.text or "").strip()
+    print(
+        f"[telegram] incoming update_id={update.update_id} chat_id={message.chat.id} text={incoming_text[:120]!r}",
+        flush=True,
+    )
     if not incoming_text:
         send_telegram_text(message.chat.id, "目前只支援文字訊息。")
         return {"ok": True, "ignored": True, "reason": "no-text"}
@@ -733,6 +753,15 @@ async def telegram_webhook(
         "chat_id": message.chat.id,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+
+@app.get("/api/v1/telegram/webhook/{secret}")
+@app.head("/api/v1/telegram/webhook/{secret}")
+@limiter.limit("120/minute")
+async def telegram_webhook_probe(secret: str, request: Request) -> dict[str, Any]:
+    if secret != TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="invalid webhook secret")
+    return {"ok": True, "ignored": True, "reason": "probe"}
 
 
 @app.post("/api/v1/protocol/parse")

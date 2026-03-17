@@ -11,10 +11,27 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from common.status_store import load_status, save_status, update_reliability_metrics
+from common.code_intelligence import build_failure_enrichment, serialize_code_intel_result
 
 LOCAL_EXTRACT_SCRIPT = ROOT_DIR / 'scripts' / 'local_memory_extract.py'
 TRUTH_XVAL_SCRIPT = ROOT_DIR / 'scripts' / 'truth-xval.py'
 REACTIVATE_WEBHOOKS_SCRIPT = ROOT_DIR / 'scripts' / 'reactivate_webhooks.py'
+
+
+def write_code_intelligence_status(detail: str) -> None:
+    result = build_failure_enrichment(
+        detail,
+        repo='meta-agent',
+        target='scripts/e2e_test.py',
+        working_dir=ROOT_DIR,
+    )
+    status = load_status()
+    status['code_intelligence'] = {
+        **serialize_code_intel_result(result),
+        'trigger': 'e2e_failure',
+        'source_detail': detail[:500],
+    }
+    save_status(status)
 
 
 def update_e2e_status(
@@ -137,12 +154,14 @@ def main() -> int:
                 final_ok = all(isinstance(t, str) and t.strip() and t.strip() != '?' for t in titles)
         if not (ok and final_ok):
             run_auto_recovery(detail=detail)
+            write_code_intelligence_status(detail=detail)
         return 0 if ok and final_ok else 1
     except Exception as e:
         print(f'Error: {e}')
         detail = str(e)
         update_e2e_status(ok=False, detail=detail)
         run_auto_recovery(detail=detail)
+        write_code_intelligence_status(detail=detail)
     return 1
 
 

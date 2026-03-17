@@ -20,6 +20,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from common.config import BASE_DIR, ENV_FILE, LIGHTRAG_API
+from common.code_intelligence import build_failure_enrichment, serialize_code_intel_result
 from common.lightrag_runtime import ensure_lightrag_service
 from common.status_store import load_status, save_status, update_reliability_metrics
 
@@ -178,6 +179,24 @@ def write_health_status(lightrag: tuple[bool, str], n8n: tuple[bool, str], groq:
     save_status(status)
 
 
+def write_code_intelligence_status(failures: list[tuple[str, str]]) -> None:
+    detail = '; '.join(f'{name}: {msg}' for name, msg in failures)[:800]
+    result = build_failure_enrichment(
+        detail,
+        repo='meta-agent',
+        target='scripts/health_check.py',
+        working_dir=ROOT_DIR,
+    )
+    status = load_status()
+    status['code_intelligence'] = {
+        **serialize_code_intel_result(result),
+        'trigger': 'health_check_failure',
+        'source_detail': detail,
+        'failed_services': [name for name, _msg in failures],
+    }
+    save_status(status)
+
+
 def run_auto_recovery(trigger: str, failures: list[tuple[str, str]]) -> None:
     now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     status = load_status()
@@ -241,6 +260,7 @@ def main():
 
     if failures:
         run_auto_recovery(trigger='health_check_failure', failures=failures)
+        write_code_intelligence_status(failures)
         log_path = LOG_DIR / f'{date}-health-check.md'
         lines = [f'# 健康檢查失敗 {now}\n']
         for name, msg in failures:
