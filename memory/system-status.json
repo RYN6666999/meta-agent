@@ -24,7 +24,7 @@
   },
   "health_check": {
     "ok": true,
-    "checked_at": "2026-03-16 21:04:19",
+    "checked_at": "2026-03-17 08:02:01",
     "services": {
       "lightrag": {
         "ok": true,
@@ -7326,22 +7326,22 @@
   },
   "tiered_memory": {
     "ok": true,
-    "generated_at": "2026-03-16 17:34:21",
+    "generated_at": "2026-03-17 02:15:04",
     "outputs": {
       "daily": {
-        "period": "2026-03-16",
-        "path": "memory/tiered/daily/2026-03-16.md",
-        "count": 16
+        "period": "2026-03-17",
+        "path": "memory/tiered/daily/2026-03-17.md",
+        "count": 0
       },
       "monthly": {
         "period": "2026-03",
         "path": "memory/tiered/monthly/2026-03.md",
-        "count": 17
+        "count": 19
       },
       "yearly": {
         "period": "2026",
         "path": "memory/tiered/yearly/2026.md",
-        "count": 17
+        "count": 19
       }
     }
   },
@@ -7350,23 +7350,32 @@
     "updated_at": "2026-03-16 21:45:49"
   },
   "persona_tech_radar": {
-    "ok": false,
-    "persona_id": "domain-business",
-    "reason": "workflow disabled",
-    "checked_at": "2026-03-16 21:19:04"
+    "ok": true,
+    "persona_id": "builder",
+    "persona_name": "尖端工程師",
+    "checked_at": "2026-03-17 09:30:08",
+    "queries": [
+      "FastAPI production patterns 2026",
+      "Model Context Protocol FastMCP best practices 2026",
+      "LightRAG architecture updates 2026",
+      "n8n AI workflow reliability patterns 2026"
+    ],
+    "report_file": "memory/persona-reports/builder/2026-03-17-tech-radar.md",
+    "ingest_ok": false,
+    "ingest_message": "<urlopen error [Errno 61] Connection refused>"
   },
   "truth_xval": {
     "ok": true,
-    "checked_at": "2026-03-16 21:40",
+    "checked_at": "2026-03-17 08:19",
     "total": 4,
-    "ok_count": 3,
-    "warn_count": 1,
+    "ok_count": 0,
+    "warn_count": 4,
     "error_count": 0,
     "lightrag_available": true
   },
   "obsidian_ingest": {
     "ok": true,
-    "checked_at": "2026-03-16 23:54",
+    "checked_at": "2026-03-17 09:22",
     "ingested": 0,
     "skipped": 0
   }

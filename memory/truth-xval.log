@@ -1,0 +1,15 @@
+🔍 三真理源交叉驗證器
+====================================================
+✅ LightRAG 連線正常
+🔧 自動補 ingest 4 筆進 LightRAG：['2026-03-16-auto-git-score', '2026-03-16-bug-fixes-and-automation-loop', '2026-03-16-health-title-restored', '2026-03-16-pdca-causal-chain']
+
+📊 驗證結果（共 4 筆決策）
+   ✅ 三源一致：0 筆
+   ⚠️  警告（LightRAG 查無或不可用）：4 筆
+   ❌ 錯誤（git 分支不存在）：0 筆
+   WARN  | 2026-03-16-auto-git-score.md | git:✅ lightrag:⚡修復
+   WARN  | 2026-03-16-bug-fixes-and-automation-loop.md | git:✅ lightrag:⚡修復
+   WARN  | 2026-03-16-health-title-restored.md | git:✅ lightrag:⚡修復
+   WARN  | 2026-03-16-pdca-causal-chain.md | git:✅ lightrag:⚡修復
+
+💾 狀態已寫入 memory/system-status.json[truth_xval]

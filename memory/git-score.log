@@ -165,3 +165,14 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+📊 評分結果：70/50
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/handoff/latest-handoff.md) +10
+  memory 變更 (memory/obsidian-ingest.log) +10
+  memory 變更 (memory/obsidian-sync.json) +10
+  memory 變更 (memory/system-status.json) +10
+  memory 變更 (memory/handoff/generate-handoff-error.log) +10
+  memory 變更 (memory/handoff/generate-handoff.log) +10
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成

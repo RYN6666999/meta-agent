@@ -1,0 +1,4 @@
+[health_check] ✅ LightRAG: HTTP 200
+[health_check] ✅ n8n: HTTP 200
+[health_check] ✅ Groq API: HTTP 200
+[health_check] 全部正常 2026-03-17 08:02
