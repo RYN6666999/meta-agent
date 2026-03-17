@@ -1,20 +1,20 @@
 ---
 date: 2026-03-17
-session: meta-agent — Session 22
+session: meta-agent — Session 23
 status: 穩定運行
-generated: 2026-03-17 15:07
+generated: 2026-03-18 00:16
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-17 15:07 自動生成）
+## 系統狀態（2026-03-18 00:16 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
-| LightRAG | ✅ |
+| LightRAG | ❌ |
 | n8n | ✅ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | dedup-lightrag(idle) | generate-handoff(33383) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：53
 
 ---
@@ -29,19 +29,19 @@ generated: 2026-03-17 15:07
 ---
 
 ## 最近 Git 提交
+- `4c7c000 auto: [error_fix+misc] score=220 超過閾值 50 自動備份`
+- `f88d46e auto: [misc] score=105 超過閾值 50 自動備份`
 - `490db2d feat: add one-command smoke runner with unified report`
 - `a369c3c chore: ignore runtime memory artifacts and untrack status files`
 - `8b188f8 chore: run memory cleanup and refresh tiered summaries`
 - `314c4ae auto: [misc] score=80 超過閾值 50 自動備份`
-- `e8f57e6 perf: parallelize and deduplicate degraded queue replay`
-- `5a882d3 perf: skip no-op json writes to reduce disk I/O`
 
 ## 最近 Error Log
-- 2026-03-17-health-check.md
-- 2026-03-16-health-check.md
-- 2026-03-16-d1-fix-verification.md
-- 2026-03-16-claude-bug-log-discipline.md
-- douyin-parser-bugs.md
+- 2026-03-17-mobile-bridge-api-down.md
+- 2026-03-17-mobile-bridge-webhook-bind-failed.md
+- 2026-03-17-mobile-bridge-tunnel-down.md
+- 2026-03-17-mobile-bridge-url-missing.md
+- 2026-03-17-mobile-bridge-smoke.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-17 15:06:48: local-memory-extract

@@ -182,3 +182,28 @@
   核心腳本變更 scripts/replay_degraded_queue.py +40
 
 ---
+
+## 2026-03-17 18:11 | auto-git-score | 分數 580 | 📥 達到閾值（580/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=220），含重要變更
+
+**評分明細：**
+  其他變更 api/server.py +10
+  其他變更 docs/interfaces/external-brain-mvp.md +10
+  error-log 新增根因 error-log/2026-03-17-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-17-mobile-bridge-smoke.md +50
+  error-log 新增根因 error-log/2026-03-17-mobile-bridge-tunnel-down.md +50
+  error-log 新增根因 error-log/2026-03-17-mobile-bridge-url-missing.md +50
+  error-log 新增根因 error-log/2026-03-17-mobile-bridge-webhook-bind-failed.md +50
+  其他變更 memory/mem-history.jsonl +10
+  其他變更 memory/persona-registry.json +10
+  其他變更 memory/status/memory-watch-20260317-172358.log +10
+  核心腳本變更 scripts/com.meta-agent.mobile-bridge.plist +40
+  核心腳本變更 scripts/com.meta-agent.mobile-watchdog.plist +40
+  核心腳本變更 scripts/mobile_bridge_acceptance.py +40
+  核心腳本變更 scripts/mobile_bridge_incident.py +40
+  核心腳本變更 scripts/mobile_bridge_watchdog.sh +40
+  核心腳本變更 scripts/start_mobile_bridge.sh +40
+  核心腳本變更 scripts/telegram_poll_bridge.py +40
+
+---
