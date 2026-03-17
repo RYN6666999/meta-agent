@@ -1,7 +1,7 @@
 {
   "e2e_memory_extract": {
     "ok": true,
-    "checked_at": "2026-03-17 14:00:43",
+    "checked_at": "2026-03-17 14:07:06",
     "detail": "local-memory-extract",
     "quality_ok": true,
     "titles_total": 1,
@@ -18,12 +18,12 @@
         "對話重點摘要"
       ],
       "errors": [],
-      "timestamp": "2026-03-17T14:00:43.015111"
+      "timestamp": "2026-03-17T14:07:06.861839"
     }
   },
   "health_check": {
     "ok": true,
-    "checked_at": "2026-03-17 14:00:41",
+    "checked_at": "2026-03-17 14:07:05",
     "services": {
       "lightrag": {
         "ok": true,
@@ -7424,9 +7424,9 @@
   },
   "degraded_queue": {
     "ok": true,
-    "checked_at": "2026-03-17 14:00:41",
-    "success_count": 1,
+    "checked_at": "2026-03-17 14:07:05",
+    "success_count": 0,
     "remaining_count": 0,
-    "detail": "success=1 remain=0 total=1"
+    "detail": "queue empty"
   }
 }

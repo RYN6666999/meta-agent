@@ -12,7 +12,6 @@ on-stop.py — Claude Code Stop hook
 
 import sys
 import json
-import os
 import subprocess
 from datetime import datetime, date
 from pathlib import Path
@@ -20,7 +19,6 @@ from pathlib import Path
 META = Path("/Users/ryan/meta-agent")
 COUNTER_FILE = META / "memory" / "turn-count.txt"
 CHECKPOINT_DIR = META / "memory" / "checkpoints"
-WEBHOOK_URL = "http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract"
 LOCAL_EXTRACT_SCRIPT = META / "scripts" / "local_memory_extract.py"
 
 # 讀取 hook 輸入
@@ -81,7 +79,6 @@ type: checkpoint
 #   2. assistant content 為 list[{type, text/thinking}]，只取 type==text 區塊
 if turn % 10 == 0:
     try:
-        import urllib.request as _urllib_req
         # 動態搜尋：掃描所有 project dirs 找符合 session_id 的 JSONL
         claude_projects_root = Path.home() / ".claude" / "projects"
         jsonl_file = None
