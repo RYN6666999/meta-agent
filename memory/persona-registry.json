@@ -57,6 +57,19 @@
           "report_style": "generic"
         }
       }
+    },
+    "tg_1469326872": {
+      "name": "tg_1469326872",
+      "backend": "lightrag",
+      "memory_namespace": "tg_1469326872",
+      "workflow": {
+        "tech_radar": {
+          "enabled": false,
+          "queries": [],
+          "max_results_per_query": 3,
+          "report_style": "generic"
+        }
+      }
     }
   }
 }

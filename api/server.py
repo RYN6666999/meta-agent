@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import subprocess
+import sys
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -48,6 +50,8 @@ API_KEY = ENV.get("META_AGENT_API_KEY") or ENV.get("API_KEY") or ENV.get("N8N_AP
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or ENV.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET") or ENV.get("TELEGRAM_WEBHOOK_SECRET", "")
 TELEGRAM_MAX_REPLY_CHARS = 3500
+SYNC_SCRIPT_OBSIDIAN = BASE_DIR / "scripts" / "obsidian-ingest.py"
+SYNC_SCRIPT_HEALTH = BASE_DIR / "scripts" / "health_check.py"
 
 
 def load_backend() -> Any:
@@ -293,6 +297,67 @@ def send_telegram_text(chat_id: int, text: str) -> bool:
         return False
 
 
+def run_local_script(script_path: Path, timeout_sec: int = 180) -> tuple[bool, str]:
+    if not script_path.exists():
+        return False, f"missing script: {script_path.name}"
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+        )
+        output = (completed.stdout or completed.stderr or "").strip().replace("\r", "")
+        preview = "\n".join(output.splitlines()[:6])
+        ok = completed.returncode == 0
+        return ok, preview if preview else f"exit={completed.returncode}"
+    except Exception as exc:
+        return False, str(exc)
+
+
+def run_sync_job(mode: str) -> str:
+    mode_clean = mode.strip().lower()
+    if mode_clean in {"", "quick"}:
+        ok, detail = run_local_script(SYNC_SCRIPT_OBSIDIAN, timeout_sec=240)
+        state = "ok" if ok else "failed"
+        return f"[sync:{state}] obsidian-ingest\n{detail}"
+
+    if mode_clean in {"full", "all"}:
+        obs_ok, obs_detail = run_local_script(SYNC_SCRIPT_OBSIDIAN, timeout_sec=240)
+        hc_ok, hc_detail = run_local_script(SYNC_SCRIPT_HEALTH, timeout_sec=180)
+        overall = "ok" if (obs_ok and hc_ok) else "failed"
+        return (
+            f"[sync:{overall}] mode=full\n"
+            f"obsidian-ingest={'ok' if obs_ok else 'failed'}\n{obs_detail}\n\n"
+            f"health-check={'ok' if hc_ok else 'failed'}\n{hc_detail}"
+        )
+
+    return "格式錯誤：/sync 或 /sync full"
+
+
+def render_mobile_status() -> str:
+    status = load_status()
+    health = status.get("health_check", {}) if isinstance(status, dict) else {}
+    e2e = status.get("e2e_memory_extract", {}) if isinstance(status, dict) else {}
+    auto_recovery = status.get("auto_recovery", {}) if isinstance(status, dict) else {}
+
+    health_ok = bool(health.get("ok"))
+    e2e_ok = bool(e2e.get("ok"))
+    h_time = str(health.get("checked_at") or "n/a")
+    e_time = str(e2e.get("checked_at") or "n/a")
+
+    last_trigger = auto_recovery.get("last_trigger", {}) if isinstance(auto_recovery, dict) else {}
+    last_recovery = str(last_trigger.get("triggered_at") or "n/a")
+
+    return (
+        "[mobile status]\n"
+        f"health={'ok' if health_ok else 'fail'} @ {h_time}\n"
+        f"e2e={'ok' if e2e_ok else 'fail'} @ {e_time}\n"
+        f"last_auto_recovery={last_recovery}"
+    )
+
+
 async def handle_telegram_text(text: str, chat_id: int) -> str:
     clean = (text or "").strip()
     if not clean:
@@ -306,7 +371,9 @@ async def handle_telegram_text(text: str, chat_id: int) -> str:
             "可用指令:\n"
             "/q <問題> 查記憶\n"
             "/ingest <內容> 寫入記憶\n"
-            "/protocol <GOLEM 回應區塊> 執行 golem/nanoclaw 風格動作"
+            "/protocol <GOLEM 回應區塊> 執行 golem/nanoclaw 風格動作\n"
+            "/sync 或 /sync full 觸發電腦同步作業\n"
+            "/status 查看系統健康度"
         )
 
     if clean.startswith("/q "):
@@ -347,6 +414,15 @@ async def handle_telegram_text(text: str, chat_id: int) -> str:
         reply = str(parsed.get("reply") or "已執行 protocol。")
         obs_count = len(loop_result.get("observation", []))
         return f"{reply}\n\n[protocol] observations={obs_count}"
+
+    if clean == "/sync":
+        return run_sync_job("quick")
+
+    if clean.startswith("/sync "):
+        return run_sync_job(clean[len("/sync ") :])
+
+    if clean == "/status":
+        return render_mobile_status()
 
     if hasattr(backend, "query_memory_structured"):
         data = await backend.query_memory_structured(clean, "hybrid", persona_id)

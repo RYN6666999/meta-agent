@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.meta-agent.mobile-bridge</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/ryan/meta-agent/scripts/start_mobile_bridge.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/ryan/meta-agent</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>AbandonProcessGroup</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/com.meta-agent.mobile-bridge.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/com.meta-agent.mobile-bridge.err.log</string>
+</dict>
+</plist>
