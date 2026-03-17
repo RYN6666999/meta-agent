@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.requests import Request
@@ -50,6 +52,11 @@ API_KEY = ENV.get("META_AGENT_API_KEY") or ENV.get("API_KEY") or ENV.get("N8N_AP
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or ENV.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET") or ENV.get("TELEGRAM_WEBHOOK_SECRET", "")
 TELEGRAM_MAX_REPLY_CHARS = 3500
+TELEGRAM_TYPING_INTERVAL_SEC = 4
+TELEGRAM_PROGRESS_MIN_INTERVAL_SEC = 3.0
+PERSONA_LOCAL_NO_MATCH = "(no persona-local memory matched)"
+TELEGRAM_QUERY_STRATEGY = (os.environ.get("TELEGRAM_QUERY_STRATEGY") or ENV.get("TELEGRAM_QUERY_STRATEGY", "smart_fallback")).strip().lower()
+TELEGRAM_PROGRESS_STYLE = (os.environ.get("TELEGRAM_PROGRESS_STYLE") or ENV.get("TELEGRAM_PROGRESS_STYLE", "throttled")).strip().lower()
 SYNC_SCRIPT_OBSIDIAN = BASE_DIR / "scripts" / "obsidian-ingest.py"
 SYNC_SCRIPT_HEALTH = BASE_DIR / "scripts" / "health_check.py"
 
@@ -305,6 +312,182 @@ def send_telegram_text(chat_id: int, text: str) -> bool:
         return False
 
 
+async def send_telegram_text_async(chat_id: int, text: str) -> bool:
+    return await asyncio.to_thread(send_telegram_text, chat_id, text)
+
+
+def send_telegram_chat_action(chat_id: int, action: str = "typing") -> bool:
+    if not TELEGRAM_BOT_TOKEN:
+        return False
+
+    payload = {
+        "chat_id": chat_id,
+        "action": action,
+    }
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        _telegram_api_url("sendChatAction"),
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return 200 <= getattr(resp, "status", 200) < 300
+    except Exception:
+        return False
+
+
+async def send_telegram_chat_action_async(chat_id: int, action: str = "typing") -> bool:
+    return await asyncio.to_thread(send_telegram_chat_action, chat_id, action)
+
+
+def _public_progress_text(stage: str) -> str:
+    clean = (stage or "").strip()
+    lower = clean.lower()
+    if "收到" in clean:
+        return "已收到訊息，開始處理"
+    if "protocol" in lower or "解析" in clean or "執行" in clean:
+        return "正在執行流程"
+    if "查詢" in clean or "線索" in clean:
+        return "正在查詢相關內容"
+    if "整理" in clean or "答覆" in clean:
+        return "正在整理可讀回覆"
+    if "同步" in clean:
+        return "正在執行同步作業"
+    if "寫入" in clean:
+        return "正在寫入記憶"
+    if not clean:
+        return "處理中"
+    return clean
+
+
+def _telegram_result_with_memory_hint(result: str, persona_id: str) -> str:
+    if result.strip() != PERSONA_LOCAL_NO_MATCH:
+        return result
+    return (
+        "目前這個記憶命名空間還沒有可匹配內容。\n"
+        f"當前記憶：{persona_id}\n"
+        "你可以：\n"
+        "1) /memory list 查看可用記憶\n"
+        "2) /memory default 切回共享記憶\n"
+        "3) /ingest <內容> 先寫入再查詢"
+    )
+
+
+def _is_persona_local_no_match(result: str) -> bool:
+    normalized = (result or "").strip()
+    if not normalized:
+        return True
+    if normalized == PERSONA_LOCAL_NO_MATCH:
+        return True
+    return normalized.endswith(PERSONA_LOCAL_NO_MATCH)
+
+
+async def _query_memory_with_fallback(
+    query: str,
+    persona_id: str,
+    progress: Callable[[str], Awaitable[None]],
+) -> tuple[str, str, bool]:
+    await progress("正在查詢記憶與相關線索")
+
+    if hasattr(backend, "query_memory_structured"):
+        primary = await backend.query_memory_structured(query, "hybrid", persona_id)
+        result = str(primary.get("result", "")).strip()
+    else:
+        result = str(await backend.query_memory(query, "hybrid", persona_id)).strip()
+
+    strategy = TELEGRAM_QUERY_STRATEGY if TELEGRAM_QUERY_STRATEGY in {"smart_fallback", "strict_persona"} else "smart_fallback"
+    if strategy == "strict_persona":
+        return result, persona_id, False
+
+    if persona_id == "default":
+        return result, persona_id, False
+
+    if not _is_persona_local_no_match(result):
+        return result, persona_id, False
+
+    await progress("目前記憶未命中，改查共享記憶")
+    if hasattr(backend, "query_memory_structured"):
+        fb = await backend.query_memory_structured(query, "hybrid", "default")
+        fb_result = str(fb.get("result", "")).strip()
+    else:
+        fb_result = str(await backend.query_memory(query, "hybrid", "default")).strip()
+    return fb_result, "default", True
+
+
+async def emit_telegram_progress(chat_id: int, stage: str) -> None:
+    await send_telegram_text_async(chat_id, f"[進度] {_public_progress_text(stage)}")
+
+
+def _progress_key(stage: str) -> str:
+    text = _public_progress_text(stage)
+    if "收到" in text:
+        return "received"
+    if "查詢" in text:
+        return "search"
+    if "整理" in text:
+        return "summarize"
+    if "執行" in text:
+        return "execute"
+    if "寫入" in text:
+        return "ingest"
+    if "同步" in text:
+        return "sync"
+    return "other"
+
+
+def build_progress_emitter(chat_id: int) -> Callable[[str], Awaitable[None]]:
+    variants = {
+        "received": ["已收到請求，開始處理", "需求已收下，正在處理"],
+        "search": ["正在查詢相關內容", "正在比對可用記憶"],
+        "summarize": ["正在整理回覆", "正在把資訊整理成可讀版本"],
+        "execute": ["正在執行流程", "正在處理流程步驟"],
+        "ingest": ["正在寫入記憶", "正在保存到記憶庫"],
+        "sync": ["正在執行同步作業", "同步作業進行中"],
+        "other": ["處理中"],
+    }
+    state = {
+        "last_key": "",
+        "last_sent_at": 0.0,
+        "counter": {},
+    }
+
+    async def emit(stage: str) -> None:
+        key = _progress_key(stage)
+        now = time.monotonic()
+        if key == state["last_key"]:
+            return
+        if now - float(state["last_sent_at"]) < TELEGRAM_PROGRESS_MIN_INTERVAL_SEC:
+            return
+
+        counter = int(state["counter"].get(key, 0))
+        choices = variants.get(key, variants["other"])
+        msg = choices[counter % len(choices)]
+        state["counter"][key] = counter + 1
+        state["last_key"] = key
+        state["last_sent_at"] = now
+        await send_telegram_text_async(chat_id, f"[進度] {msg}")
+
+    return emit
+
+
+def build_progress_emitter_by_style(chat_id: int) -> Callable[[str], Awaitable[None]]:
+    style = TELEGRAM_PROGRESS_STYLE if TELEGRAM_PROGRESS_STYLE in {"throttled", "raw"} else "throttled"
+    if style == "raw":
+        return lambda stage: emit_telegram_progress(chat_id, stage)
+    return build_progress_emitter(chat_id)
+
+
+async def telegram_typing_pulse(chat_id: int, stop_event: asyncio.Event) -> None:
+    while not stop_event.is_set():
+        await send_telegram_chat_action_async(chat_id, "typing")
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=TELEGRAM_TYPING_INTERVAL_SEC)
+        except asyncio.TimeoutError:
+            continue
+
+
 def run_local_script(script_path: Path, timeout_sec: int = 180) -> tuple[bool, str]:
     if not script_path.exists():
         return False, f"missing script: {script_path.name}"
@@ -366,17 +549,53 @@ def render_mobile_status() -> str:
     )
 
 
-async def handle_telegram_text(text: str, chat_id: int) -> str:
+async def handle_telegram_text(
+    text: str,
+    chat_id: int,
+    emit_progress: Callable[[str], Awaitable[None]] | None = None,
+) -> str:
     clean = (text or "").strip()
     if not clean:
         return "請輸入文字訊息，我才能幫你查詢。"
 
-    persona_id = _sanitize_persona_id(f"tg_{chat_id}")
+    async def noop(_: str) -> None:
+        return None
+
+    progress = emit_progress or noop
+
+    # 預設跟全域 active persona 對齊，讓 VS Code 與 TG 共用同一份記憶歷史。
+    persona_id = get_active_persona()
     ensure_persona_in_registry(persona_id)
+
+    if clean == "/memory" or clean == "/mem":
+        return (
+            f"目前記憶：{persona_id}\n"
+            f"查詢策略：{TELEGRAM_QUERY_STRATEGY}\n"
+            f"進度模式：{TELEGRAM_PROGRESS_STYLE}\n"
+            "切換方式：/memory <persona_id>\n"
+            "查看列表：/memory list"
+        )
+
+    if clean.startswith("/memory ") or clean.startswith("/mem "):
+        arg = clean.split(" ", 1)[1].strip()
+        if not arg:
+            return "格式錯誤：/memory <persona_id>"
+        if arg in {"list", "ls"}:
+            personas = ", ".join(list_available_personas())
+            return f"可用記憶命名空間：{personas}"
+        if arg in {"current", "now"}:
+            return f"目前記憶：{persona_id}"
+
+        switched = set_active_persona(arg)
+        return f"已切換記憶到：{switched}"
 
     if clean.startswith("/start") or clean.startswith("/help"):
         return (
             "可用指令:\n"
+            "直接輸入自然語言也可以，我會先回進度再補完整答覆。\n"
+            "/memory 顯示目前記憶\n"
+            "/memory <persona_id> 切換記憶\n"
+            "/memory list 列出可用記憶\n"
             "/q <問題> 查記憶\n"
             "/ingest <內容> 寫入記憶\n"
             "/protocol <GOLEM 回應區塊> 執行 golem/nanoclaw 風格動作\n"
@@ -388,17 +607,20 @@ async def handle_telegram_text(text: str, chat_id: int) -> str:
         query = clean[3:].strip()
         if not query:
             return "格式錯誤：/q 後面要帶查詢內容。"
-        if hasattr(backend, "query_memory_structured"):
-            data = await backend.query_memory_structured(query, "hybrid", persona_id)
-            result = str(data.get("result", "")).strip()
-        else:
-            result = str(await backend.query_memory(query, "hybrid", persona_id)).strip()
-        return result or "查無相關記憶。"
+        await progress("已收到問題，正在查詢記憶與關聯內容")
+        result, source_persona, used_fallback = await _query_memory_with_fallback(query, persona_id, progress)
+        await progress("已找到相關內容，正在整理答覆")
+        if not result:
+            return "查無相關記憶。"
+        if used_fallback and result:
+            return f"[來源: 共享記憶 {source_persona}]\n{result}"
+        return _telegram_result_with_memory_hint(result, persona_id)
 
     if clean.startswith("/ingest "):
         content = clean[8:].strip()
         if len(content) < 50:
             return "寫入內容太短，請至少 50 字。"
+        await progress("已收到內容，正在寫入記憶")
         result = await backend.ingest_memory(
             f"[CONFIRMED] {content}",
             "verified_truth",
@@ -411,6 +633,7 @@ async def handle_telegram_text(text: str, chat_id: int) -> str:
         raw = clean[len("/protocol ") :].strip()
         if not raw:
             return "格式錯誤：/protocol 後面要帶 GOLEM 協議內容。"
+        await progress("已收到 protocol，正在解析與執行動作")
         loop_result = await run_protocol_loop(
             user_input="telegram-protocol",
             raw_response=raw,
@@ -424,20 +647,52 @@ async def handle_telegram_text(text: str, chat_id: int) -> str:
         return f"{reply}\n\n[protocol] observations={obs_count}"
 
     if clean == "/sync":
+        await progress("正在觸發快速同步作業")
         return run_sync_job("quick")
 
     if clean.startswith("/sync "):
+        await progress("正在觸發完整同步作業")
         return run_sync_job(clean[len("/sync ") :])
 
     if clean == "/status":
         return render_mobile_status()
 
-    if hasattr(backend, "query_memory_structured"):
-        data = await backend.query_memory_structured(clean, "hybrid", persona_id)
-        result = str(data.get("result", "")).strip()
-    else:
-        result = str(await backend.query_memory(clean, "hybrid", persona_id)).strip()
-    return result or "查無相關記憶。你可以用 /ingest 寫入背景後再查詢。"
+    await progress("已收到訊息，正在分析需求")
+    result, source_persona, used_fallback = await _query_memory_with_fallback(clean, persona_id, progress)
+    await progress("正在整理成你看得懂的回覆")
+    if not result:
+        return "查無相關記憶。你可以用 /ingest 寫入背景後再查詢。"
+    if used_fallback and result:
+        return f"[來源: 共享記憶 {source_persona}]\n{result}"
+    return _telegram_result_with_memory_hint(result, persona_id)
+
+
+async def process_telegram_message(chat_id: int, incoming_text: str, update_id: int) -> None:
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(telegram_typing_pulse(chat_id, stop_typing))
+    progress_emit = build_progress_emitter_by_style(chat_id)
+    try:
+        print(f"[telegram] process start update_id={update_id} chat_id={chat_id}", flush=True)
+        await send_telegram_text_async(chat_id, "已收到，我開始處理，會持續回報進度。")
+        reply = await handle_telegram_text(
+            incoming_text,
+            chat_id,
+            emit_progress=progress_emit,
+        )
+        sent = await send_telegram_text_async(chat_id, reply)
+        print(
+            f"[telegram] process done update_id={update_id} chat_id={chat_id} delivered={sent}",
+            flush=True,
+        )
+    except Exception as exc:
+        print(f"[telegram] process error update_id={update_id} chat_id={chat_id} detail={exc}", flush=True)
+        await send_telegram_text_async(chat_id, "處理過程發生錯誤，已記錄。請再試一次。")
+    finally:
+        stop_typing.set()
+        try:
+            await typing_task
+        except Exception:
+            pass
 
 
 def list_available_personas() -> list[str]:
@@ -745,11 +1000,10 @@ async def telegram_webhook(
         send_telegram_text(message.chat.id, "目前只支援文字訊息。")
         return {"ok": True, "ignored": True, "reason": "no-text"}
 
-    reply = await handle_telegram_text(incoming_text, message.chat.id)
-    sent = send_telegram_text(message.chat.id, reply)
+    asyncio.create_task(process_telegram_message(message.chat.id, incoming_text, update.update_id))
     return {
         "ok": True,
-        "delivered": sent,
+        "accepted": True,
         "chat_id": message.chat.id,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }

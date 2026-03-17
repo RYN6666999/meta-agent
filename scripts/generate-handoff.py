@@ -30,13 +30,24 @@ TODAY = date.today().isoformat()
 
 def get_incomplete_items(text: str) -> list[dict]:
     items, current_section = [], ""
+    seen: set[tuple[str, str]] = set()
     for line in text.splitlines():
         h3 = re.match(r"^### (.+)", line)
         if h3:
             current_section = h3.group(1).strip()
+            # 支援新版 master-plan：以 Gap-* 標題視為未收斂項目。
+            if current_section.startswith("Gap-"):
+                key = ("未收斂缺口", current_section)
+                if key not in seen:
+                    items.append({"section": key[0], "item": key[1]})
+                    seen.add(key)
         todo = re.match(r"^\s*- \[ \] (.+)", line)
         if todo:
-            items.append({"section": current_section, "item": todo.group(1).strip()})
+            item_text = todo.group(1).strip()
+            key = (current_section, item_text)
+            if key not in seen:
+                items.append({"section": current_section, "item": item_text})
+                seen.add(key)
     return items
 
 
@@ -151,6 +162,52 @@ def get_launchd_status() -> list[str]:
         return []
 
 
+def get_code_intelligence_snapshot(system_status: dict) -> str:
+    if not isinstance(system_status, dict):
+        return "（無）"
+
+    payload = system_status.get("code_intelligence", {})
+    if not isinstance(payload, dict) or not payload:
+        return "（無）"
+
+    checked_at = str(payload.get("checked_at", "-")).strip() or "-"
+    available = payload.get("available") is True
+    ok = payload.get("ok") is True
+    trigger = str(payload.get("trigger", "-")).strip() or "-"
+    summary = payload.get("summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+
+    if not available:
+        error = str(payload.get("error", "provider unavailable")).strip() or "provider unavailable"
+        return f"- {checked_at} | trigger={trigger} | unavailable | {error}"
+
+    overview = str(summary.get("overview", "")).strip() or "（無摘要）"
+    risk_level = str(summary.get("risk_level", "unknown")).strip() or "unknown"
+    processes = summary.get("processes", [])
+    top_symbols = summary.get("top_symbols", [])
+    affected_paths = summary.get("affected_paths", [])
+
+    if not isinstance(processes, list):
+        processes = []
+    if not isinstance(top_symbols, list):
+        top_symbols = []
+    if not isinstance(affected_paths, list):
+        affected_paths = []
+
+    process_text = ", ".join(str(item) for item in processes[:3]) if processes else "（無）"
+    symbol_text = ", ".join(str(item) for item in top_symbols[:3]) if top_symbols else "（無）"
+    path_text = ", ".join(str(item) for item in affected_paths[:3]) if affected_paths else "（無）"
+    status_text = "ok" if ok else "partial"
+    return (
+        f"- {checked_at} | trigger={trigger} | {status_text} | risk={risk_level}\n"
+        f"  - overview: {overview}\n"
+        f"  - symbols: {symbol_text}\n"
+        f"  - paths: {path_text}\n"
+        f"  - processes: {process_text}"
+    )
+
+
 def main():
     session_num = get_session_number()
     master_text = MASTER_PLAN.read_text(encoding="utf-8") if MASTER_PLAN.exists() else ""
@@ -163,6 +220,7 @@ def main():
     services = check_services(system_status)
     launchd = get_launchd_status()
     e2e_event = system_status.get("e2e_memory_extract", {})
+    code_intelligence_snapshot = get_code_intelligence_snapshot(system_status)
 
     # 未完成項目
     if incomplete:
@@ -236,6 +294,9 @@ generated: {ts}
 
 ## 最近驗證
 - E2E memory-extract：{e2e_line}
+
+## 最近 Code Intelligence
+{code_intelligence_snapshot}
 
 ---
 

@@ -89,8 +89,33 @@
       "solution": "health/e2e 任一失敗必須自動執行 truth-xval；e2e 失敗再加跑 reactivate_webhooks，並寫入 system-status.auto_recovery",
       "source": "error-log/2026-03-17-health-check.md",
       "added": "2026-03-17"
+    },
+    {
+      "rule": "禁止把重要運行事實只寫進 error-log/ 或 docs/",
+      "reason": "error-log/ 和 docs/ 沒有任何機制保證下次啟動會被讀。寫在那裡 = 寫給自己看的幻覺，下次 agent 依然不知道。",
+      "solution": "重要事實雙寫：1) law.json 對應分類（本檔，啟動必讀）2) /memories/patterns.md（每次對話自動載入）。error-log 只做考古，不做記憶。",
+      "source": "2026-03-18 用戶糾正",
+      "added": "2026-03-18"
     }
   ],
+
+  "mobile_bridge": {
+    "description": "mobile bridge (api/server.py) 運行事實 — 每次排查必讀，不得靠記憶猜測",
+    "log_sink": {
+      "correct": "/private/tmp/meta-agent-api.log",
+      "wrong_do_not_use": "/tmp/com.meta-agent.mobile-bridge.out.log 和 .err.log — launchd 設定的，永遠 0 bytes，沒有 redirect stdout",
+      "how_to_find": "lsof -p $(pgrep -f 'uvicorn.*9901') -a -d 1,2",
+      "monitor": "tail -n 20 -F /private/tmp/meta-agent-api.log"
+    },
+    "restart": "launchctl kickstart -k gui/$(id -u)/com.meta-agent.mobile-bridge",
+    "acceptance_script": "python3 scripts/mobile_bridge_acceptance.py — 第 7 項 runtime_log_sink 會輸出實際 pid 和 log 路徑",
+    "port": 9901,
+    "telegram_webhook": "https://bot.3141919ryanfeofjpewfp.uk/api/v1/telegram/webhook/papa-bridge-20260317",
+    "feature_flags_in_env": {
+      "TELEGRAM_QUERY_STRATEGY": "smart_fallback（預設）| strict_persona",
+      "TELEGRAM_PROGRESS_STYLE": "throttled（預設）| raw"
+    }
+  },
 
   "n8n_rules": [
     {

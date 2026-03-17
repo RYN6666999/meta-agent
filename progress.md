@@ -14,6 +14,7 @@
 - 新增 `scripts/test_code_intelligence.py`，可快速檢查 adapter availability 並輸出 overview/impact JSON 結果。
 - `scripts/e2e_test.py` 已接入非阻塞 code-intelligence enrichment：失敗時會額外產生 `code_intelligence` status shard，GitNexus 不可用時只回寫 unavailable，不影響主流程。
 - `scripts/health_check.py` 已接入同樣的非阻塞 code-intelligence enrichment：health 失敗時會寫入 `code_intelligence` shard，供 handoff / 診斷流程引用。
+- 補強 `common/code_intelligence.py` 的 GitNexus CLI 輸出解析：若 `context` / `impact` / `query` 回傳 JSON，現在會優先結構化提取 risk、symbols、paths、processes，而不是只做文字切片。
 - 接續上一輪執行即時驗證：`scripts/health_check.py`、`scripts/e2e_test.py` 皆 pass。
 - `memory/system-status.json` 已更新最新檢查時間（health: 14:17:34、e2e: 14:17:36）。
 - 完成 D10 可觀測缺口第一階段：

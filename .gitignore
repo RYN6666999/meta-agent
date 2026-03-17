@@ -24,3 +24,4 @@ memory/obsidian-sync.json
 memory/system-status.json
 memory/status/*.json
 memory/smoke-run-report.json
+.gitnexus

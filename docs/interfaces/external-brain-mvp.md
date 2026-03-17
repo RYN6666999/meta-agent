@@ -45,6 +45,7 @@
   - `TELEGRAM_WEBHOOK_SECRET=<long_random_secret>`
   - `CLOUDFLARE_TUNNEL_TOKEN=<named_tunnel_token>`（商業建議）
   - `MOBILE_PUBLIC_BASE_URL=https://<your-fixed-domain>`（商業建議）
+  - 目前正式 bot：`@Metagentbot_bot`
 2. 服務啟動後，設定 Telegram webhook：
   - `https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<PUBLIC_URL>/api/v1/telegram/webhook/<TELEGRAM_WEBHOOK_SECRET>&secret_token=<TELEGRAM_WEBHOOK_SECRET>`
 3. 在 TG 對 bot 發送訊息，可用指令：

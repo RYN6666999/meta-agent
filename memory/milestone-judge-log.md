@@ -230,3 +230,26 @@
   核心腳本變更 scripts/swap-monitor.sh +40
 
 ---
+
+## 2026-03-18 02:18 | auto-git-score | 分數 240 | 📥 達到閾值（240/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=120），含重要變更
+
+**評分明細：**
+  其他變更 api/server.py +10
+  其他變更 common/code_intelligence.py +10
+  其他變更 common/status_store.py +10
+  其他變更 docs/interfaces/code-intelligence-adapter.md +10
+  其他變更 docs/interfaces/gitnexus-integration-plan.md +10
+  其他變更 error-log/2026-03-18-mobile-bridge-api-down.md +10
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 progress.md +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/health_check.py +40
+  核心腳本變更 scripts/test_code_intelligence.py +40
+
+---

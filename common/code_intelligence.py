@@ -163,6 +163,7 @@ class GitNexusLocalAdapter(CodeIntelligenceAdapter):
             return _error_result(request, provider='gitnexus', mode='local-cli', error=result['error'])
 
         output = result['stdout']
+        parsed = _parse_json_output(output)
         return CodeIntelResult(
             ok=True,
             provider='gitnexus',
@@ -171,12 +172,12 @@ class GitNexusLocalAdapter(CodeIntelligenceAdapter):
             checked_at=_now(),
             available=True,
             summary=CodeIntelSummary(
-                overview=_first_non_empty_paragraph(output) or f'Context for {request.target}',
-                top_symbols=_extract_symbol_candidates(output)[:8],
-                affected_paths=_extract_paths(output)[:8],
-                processes=_extract_processes(output)[:5],
-                risk_level='medium',
-                raw={'stdout': output[:4000]},
+                overview=_summarize_context(parsed, output, request.target),
+                top_symbols=_extract_symbols_from_any(parsed, output)[:8],
+                affected_paths=_extract_paths_from_any(parsed, output)[:8],
+                processes=_extract_processes_from_any(parsed, output)[:5],
+                risk_level=_extract_risk_from_any(parsed, output, default='medium'),
+                raw=_build_raw_payload(parsed, output),
             ),
         )
 
@@ -198,7 +199,8 @@ class GitNexusLocalAdapter(CodeIntelligenceAdapter):
             return _error_result(request, provider='gitnexus', mode='local-cli', error=result['error'])
 
         output = result['stdout']
-        risk_level = _infer_risk_level(output)
+        parsed = _parse_json_output(output)
+        risk_level = _extract_risk_from_any(parsed, output)
         return CodeIntelResult(
             ok=True,
             provider='gitnexus',
@@ -207,12 +209,12 @@ class GitNexusLocalAdapter(CodeIntelligenceAdapter):
             checked_at=_now(),
             available=True,
             summary=CodeIntelSummary(
-                overview=_first_non_empty_paragraph(output) or f'Impact for {request.target}',
-                top_symbols=_extract_symbol_candidates(output)[:8],
-                affected_paths=_extract_paths(output)[:8],
-                processes=_extract_processes(output)[:5],
+                overview=_summarize_impact(parsed, output, request.target),
+                top_symbols=_extract_symbols_from_any(parsed, output)[:8],
+                affected_paths=_extract_paths_from_any(parsed, output)[:8],
+                processes=_extract_processes_from_any(parsed, output)[:5],
                 risk_level=risk_level,
-                raw={'stdout': output[:4000], 'direction': direction},
+                raw={**_build_raw_payload(parsed, output), 'direction': direction},
             ),
         )
 
@@ -237,6 +239,7 @@ class GitNexusLocalAdapter(CodeIntelligenceAdapter):
             return _error_result(request, provider='gitnexus', mode='local-cli', error=result['error'])
 
         output = result['stdout']
+        parsed = _parse_json_output(output)
         return CodeIntelResult(
             ok=True,
             provider='gitnexus',
@@ -245,12 +248,12 @@ class GitNexusLocalAdapter(CodeIntelligenceAdapter):
             checked_at=_now(),
             available=True,
             summary=CodeIntelSummary(
-                overview=_first_non_empty_paragraph(output) or f'Process search for {request.query}',
-                top_symbols=_extract_symbol_candidates(output)[:8],
-                affected_paths=_extract_paths(output)[:8],
-                processes=_extract_processes(output)[:5],
-                risk_level='medium',
-                raw={'stdout': output[:4000]},
+                overview=_summarize_query(parsed, output, request.query),
+                top_symbols=_extract_symbols_from_any(parsed, output)[:8],
+                affected_paths=_extract_paths_from_any(parsed, output)[:8],
+                processes=_extract_processes_from_any(parsed, output)[:5],
+                risk_level=_extract_risk_from_any(parsed, output, default='medium'),
+                raw=_build_raw_payload(parsed, output),
             ),
         )
 
@@ -381,6 +384,21 @@ def _normalize_output(stdout: str, stderr: str) -> str:
     return '\n'.join(parts).strip()
 
 
+def _parse_json_output(text: str) -> dict[str, Any] | list[Any] | None:
+    candidate = text.strip()
+    if not candidate:
+        return None
+    if not (candidate.startswith('{') or candidate.startswith('[')):
+        return None
+    try:
+        parsed = json.loads(candidate)
+    except Exception:
+        return None
+    if isinstance(parsed, (dict, list)):
+        return parsed
+    return None
+
+
 def _unavailable_result(request: CodeIntelRequest, *, provider: str, mode: str) -> CodeIntelResult:
     return CodeIntelResult(
         ok=False,
@@ -429,6 +447,23 @@ def _extract_paths(text: str) -> list[str]:
     return found
 
 
+def _extract_paths_from_any(parsed: dict[str, Any] | list[Any] | None, text: str) -> list[str]:
+    if parsed is None:
+        return _extract_paths(text)
+    found: list[str] = []
+    seen: set[str] = set()
+    for item in _walk_json(parsed):
+        if not isinstance(item, str):
+            continue
+        if '/' not in item:
+            continue
+        if item in seen:
+            continue
+        seen.add(item)
+        found.append(item)
+    return found
+
+
 def _extract_symbol_candidates(text: str) -> list[str]:
     results: list[str] = []
     seen: set[str] = set()
@@ -456,6 +491,24 @@ def _extract_symbol_candidates(text: str) -> list[str]:
     return results
 
 
+def _extract_symbols_from_any(parsed: dict[str, Any] | list[Any] | None, text: str) -> list[str]:
+    if parsed is None:
+        return _extract_symbol_candidates(text)
+    found: list[str] = []
+    seen: set[str] = set()
+    preferred_keys = {'name', 'target', 'symbol', 'id'}
+    if isinstance(parsed, dict):
+        for key, value in parsed.items():
+            if key in preferred_keys:
+                _collect_symbol_value(value, found, seen)
+        for item in _walk_json(parsed):
+            _collect_symbol_value(item, found, seen)
+    else:
+        for item in _walk_json(parsed):
+            _collect_symbol_value(item, found, seen)
+    return found
+
+
 def _extract_processes(text: str) -> list[str]:
     items: list[str] = []
     seen: set[str] = set()
@@ -476,6 +529,24 @@ def _extract_processes(text: str) -> list[str]:
     return items
 
 
+def _extract_processes_from_any(parsed: dict[str, Any] | list[Any] | None, text: str) -> list[str]:
+    if parsed is None:
+        return _extract_processes(text)
+    items: list[str] = []
+    seen: set[str] = set()
+    for value in _walk_json(parsed):
+        if not isinstance(value, str):
+            continue
+        if '→' in value or '->' in value:
+            if value not in seen:
+                seen.add(value)
+                items.append(value)
+        elif value.lower().endswith('flow') and value not in seen:
+            seen.add(value)
+            items.append(value)
+    return items
+
+
 def _infer_risk_level(text: str) -> str:
     lowered = text.lower()
     if 'will break' in lowered or 'high risk' in lowered:
@@ -485,6 +556,96 @@ def _infer_risk_level(text: str) -> str:
     if 'may need testing' in lowered or 'low risk' in lowered:
         return 'low'
     return 'unknown'
+
+
+def _extract_risk_from_any(parsed: dict[str, Any] | list[Any] | None, text: str, default: str = 'unknown') -> str:
+    if isinstance(parsed, dict):
+        for key in ('risk', 'risk_level'):
+            value = parsed.get(key)
+            if isinstance(value, str) and value.strip():
+                normalized = value.strip().lower()
+                if normalized == 'critical':
+                    return 'high'
+                if normalized in {'high', 'medium', 'low'}:
+                    return normalized
+    inferred = _infer_risk_level(text)
+    return inferred if inferred != 'unknown' else default
+
+
+def _summarize_impact(parsed: dict[str, Any] | list[Any] | None, text: str, target: str) -> str:
+    if isinstance(parsed, dict):
+        target_name = target
+        target_data = parsed.get('target')
+        if isinstance(target_data, dict):
+            target_name = str(target_data.get('name') or target_name)
+        impacted = parsed.get('impactedCount')
+        risk = parsed.get('risk')
+        summary = parsed.get('summary')
+        if isinstance(summary, dict):
+            direct = summary.get('direct')
+            processes = summary.get('processes_affected')
+            modules = summary.get('modules_affected')
+            return f'Impact for {target_name}: impacted={impacted}, direct={direct}, processes={processes}, modules={modules}, risk={risk}'.strip()
+        return f'Impact for {target_name}: impacted={impacted}, risk={risk}'.strip()
+    return _first_non_empty_paragraph(text) or f'Impact for {target}'
+
+
+def _summarize_context(parsed: dict[str, Any] | list[Any] | None, text: str, target: str) -> str:
+    if isinstance(parsed, dict):
+        symbol = parsed.get('symbol')
+        if isinstance(symbol, dict):
+            name = symbol.get('name') or target
+            file_path = symbol.get('filePath') or ''
+            return f'Context for {name} in {file_path}'.strip()
+    return _first_non_empty_paragraph(text) or f'Context for {target}'
+
+
+def _summarize_query(parsed: dict[str, Any] | list[Any] | None, text: str, query: str) -> str:
+    if isinstance(parsed, dict):
+        process_count = len(parsed.get('processes', [])) if isinstance(parsed.get('processes'), list) else 0
+        defs = len(parsed.get('definitions', [])) if isinstance(parsed.get('definitions'), list) else 0
+        return f'Query "{query}" matched {process_count} processes and {defs} definitions.'
+    return _first_non_empty_paragraph(text) or f'Process search for {query}'
+
+
+def _build_raw_payload(parsed: dict[str, Any] | list[Any] | None, output: str) -> dict[str, Any]:
+    if parsed is not None:
+        return {'parsed': parsed}
+    return {'stdout': output[:4000]}
+
+
+def _walk_json(value: Any):
+    if isinstance(value, dict):
+        for nested in value.values():
+            yield from _walk_json(nested)
+        return
+    if isinstance(value, list):
+        for nested in value:
+            yield from _walk_json(nested)
+        return
+    yield value
+
+
+def _collect_symbol_value(value: Any, found: list[str], seen: set[str]) -> None:
+    if isinstance(value, dict):
+        name = value.get('name')
+        if isinstance(name, str) and name and name not in seen:
+            seen.add(name)
+            found.append(name)
+        return
+    if not isinstance(value, str):
+        return
+    candidate = value.strip()
+    if not candidate or len(candidate) > 120:
+        return
+    if candidate in seen:
+        return
+    if '/' in candidate and ':' not in candidate:
+        return
+    if not any(ch.isalpha() for ch in candidate):
+        return
+    seen.add(candidate)
+    found.append(candidate)
 
 
 def _merge_unique_lists(*items: list[str], limit: int) -> list[str]:

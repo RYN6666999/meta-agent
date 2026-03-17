@@ -1,50 +1,54 @@
 ---
-date: 2026-03-17
-session: meta-agent — Session 23
-status: 穩定運行
-generated: 2026-03-18 00:16
+date: 2026-03-18
+session: meta-agent — Session 26
+status: 建設中
+generated: 2026-03-18 03:17
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-18 00:16 自動生成）
+## 系統狀態（2026-03-18 03:17 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ✅ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | dedup-lightrag(idle) | generate-handoff(33383) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：53
 
 ---
 
 ## 未完成項目
-✅ 所有計劃項目已完成
+
 
 ## 下一步（立刻執行）
-1. 觀察 launchd 夜間任務結果（memory-decay / generate-handoff）
-2. 使用 extract-session.sh 把重要對話 ingest 進 LightRAG
+1. Gap-1｜Bug Closeout 一致性（P0）
+2. Gap-2｜重大變更 guard 命中率（P0）
+3. Gap-3｜KG 維護節律（P1）
 
 ---
 
 ## 最近 Git 提交
+- `f235676 auto: [error_fix+misc] score=120 超過閾值 50 自動備份`
+- `588da33 auto: [error_fix+misc] score=175 超過閾值 50 自動備份`
 - `4c7c000 auto: [error_fix+misc] score=220 超過閾值 50 自動備份`
 - `f88d46e auto: [misc] score=105 超過閾值 50 自動備份`
 - `490db2d feat: add one-command smoke runner with unified report`
 - `a369c3c chore: ignore runtime memory artifacts and untrack status files`
-- `8b188f8 chore: run memory cleanup and refresh tiered summaries`
-- `314c4ae auto: [misc] score=80 超過閾值 50 自動備份`
 
 ## 最近 Error Log
+- 2026-03-18-telegram-monitoring-source-mismatch.md
+- 2026-03-18-mobile-bridge-api-down.md
+- 2026-03-18-mobile-bridge-webhook-bind-failed.md
 - 2026-03-17-mobile-bridge-api-down.md
 - 2026-03-17-mobile-bridge-webhook-bind-failed.md
-- 2026-03-17-mobile-bridge-tunnel-down.md
-- 2026-03-17-mobile-bridge-url-missing.md
-- 2026-03-17-mobile-bridge-smoke.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-17 15:06:48: local-memory-extract
+
+## 最近 Code Intelligence
+（無）
 
 ---
 

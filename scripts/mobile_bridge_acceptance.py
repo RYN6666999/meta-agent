@@ -127,6 +127,36 @@ def check_watchdog_status_fresh() -> tuple[bool, str]:
         return False, str(exc)
 
 
+def check_runtime_log_sink() -> tuple[bool, str]:
+    proc = subprocess.run(
+        ['pgrep', '-f', r'uvicorn api.server:app --host 127.0.0.1 --port 9901'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    pid_lines = (proc.stdout or '').strip().splitlines()
+    if not pid_lines:
+        return False, 'bridge process missing'
+
+    pid = pid_lines[0].strip()
+    sinks = subprocess.run(
+        ['lsof', '-p', pid, '-a', '-d', '1,2'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    text = (sinks.stdout or '').strip()
+    if not text:
+        return False, f'lsof empty pid={pid}'
+
+    lines = [line for line in text.splitlines() if '/private/tmp/' in line or '/tmp/' in line]
+    if not lines:
+        return False, f'no tmp log sink pid={pid}'
+
+    sink = lines[-1].split()[-1]
+    return True, f'pid={pid} sink={sink}'
+
+
 def main() -> int:
     env = load_env()
     api_key = env.get('META_AGENT_API_KEY') or env.get('API_KEY') or env.get('N8N_API_KEY', '')
@@ -137,6 +167,7 @@ def main() -> int:
     checks.append(('tunnel_mode',) + check_tunnel_mode(env))
     checks.append(('public_reach',) + check_public_url_reachable())
     checks.append(('telegram_webhook',) + check_telegram_webhook(env))
+    checks.append(('runtime_log_sink',) + check_runtime_log_sink())
     checks.append(('watchdog_status',) + check_watchdog_status_fresh())
 
     passed = sum(1 for _, ok, _ in checks if ok)
