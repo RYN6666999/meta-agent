@@ -11,9 +11,10 @@ from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from common.status_store import load_status, save_status
+
 BASE_DIR = Path("/Users/ryan/meta-agent")
 ENV_FILE = BASE_DIR / ".env"
-STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
 REGISTRY_FILE = BASE_DIR / "memory" / "persona-registry.json"
 REPORT_ROOT = BASE_DIR / "memory" / "persona-reports"
 
@@ -187,7 +188,7 @@ def ingest_report(api_key: str, persona_id: str, content: str, title: str) -> tu
 
 def main() -> int:
     env = load_env()
-    status = load_json(STATUS_FILE, {})
+    status = load_status()
     registry = load_json(REGISTRY_FILE, {"active_persona": "builder", "personas": {}})
 
     api_key = env.get("META_AGENT_API_KEY") or env.get("API_KEY") or env.get("N8N_API_KEY") or ""
@@ -212,7 +213,7 @@ def main() -> int:
             "reason": "workflow disabled",
             "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        save_json(STATUS_FILE, status)
+        save_status(status)
         print(f"[persona_tech_radar] skip: {persona_id} disabled")
         return 0
 
@@ -224,7 +225,7 @@ def main() -> int:
             "reason": "BRAVE_API_KEY missing",
             "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        save_json(STATUS_FILE, status)
+        save_status(status)
         print("[persona_tech_radar] BRAVE_API_KEY missing")
         return 1
 
@@ -265,7 +266,7 @@ def main() -> int:
         "ingest_ok": ingest_ok,
         "ingest_message": ingest_msg,
     }
-    save_json(STATUS_FILE, status)
+    save_status(status)
 
     print(f"[persona_tech_radar] report={report_file}")
     print(f"[persona_tech_radar] ingest_ok={ingest_ok}")

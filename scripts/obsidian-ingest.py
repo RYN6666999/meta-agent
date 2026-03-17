@@ -33,11 +33,11 @@ if str(ROOT_DIR) not in sys.path:
 
 from common.config import BASE_DIR, LIGHTRAG_API
 from common.jsonio import load_json, save_json
+from common.status_store import load_status, save_status
 
 # ── 路徑設定 ─────────────────────────────────────────────────────
 OBSIDIAN_VAULT = Path("/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun")
 SYNC_STATE = BASE_DIR / "memory" / "obsidian-sync.json"
-STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
 
 # ── 跳過清單（系統文件/緩存/不需 ingest 的目錄）────────────────────
 IGNORE_DIRS = {".obsidian", ".trash", "Extras", "templates", "Templates"}
@@ -213,9 +213,9 @@ def main():
 
 
 def _write_status(data: dict) -> None:
-    status = load_json(STATUS_FILE, {})
+    status = load_status()
     status["obsidian_ingest"] = data
-    save_json(STATUS_FILE, status)
+    save_status(status)
     print(f"💾 狀態已寫入 system-status.json[obsidian_ingest]")
 
 

@@ -8,17 +8,22 @@ generate-handoff.py — 自動生成交接文件（P0-B）
 
 import re
 import json
+import sys
 import subprocess
 import urllib.request
 from datetime import date, datetime
 from pathlib import Path
 
 META = Path("/Users/ryan/meta-agent")
+if str(META) not in sys.path:
+    sys.path.insert(0, str(META))
+
+from common.status_store import load_status
+
 MASTER_PLAN = META / "memory" / "master-plan.md"
 HANDOFF_FILE = META / "memory" / "handoff" / "latest-handoff.md"
 ERROR_LOG_DIR = META / "error-log"
 TURN_COUNT_FILE = META / "memory" / "turn-count.txt"
-STATUS_FILE = META / "memory" / "system-status.json"
 TODAY = date.today().isoformat()
 
 
@@ -58,12 +63,8 @@ def get_turn_count() -> int:
 
 
 def load_system_status() -> dict:
-    if not STATUS_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    status = load_status()
+    return status if isinstance(status, dict) else {}
 
 
 def is_recent_success(event: dict, days: int = 2) -> bool:

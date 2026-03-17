@@ -11,3 +11,5 @@ __pycache__/
 node_modules/
 .venv/
 memory/on-stop-state.json
+memory/*.json.lock
+memory/status/*.json.lock

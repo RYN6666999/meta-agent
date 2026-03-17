@@ -17,10 +17,14 @@ from datetime import datetime, date
 from pathlib import Path
 
 META = Path("/Users/ryan/meta-agent")
+if str(META) not in sys.path:
+    sys.path.insert(0, str(META))
+
+from common.status_store import load_status
+
 COUNTER_FILE = META / "memory" / "turn-count.txt"
 CHECKPOINT_DIR = META / "memory" / "checkpoints"
 LOCAL_EXTRACT_SCRIPT = META / "scripts" / "local_memory_extract.py"
-STATUS_FILE = META / "memory" / "system-status.json"
 RUNTIME_STATE_FILE = META / "memory" / "on-stop-state.json"
 HANDOFF_MIN_INTERVAL_SEC = 300
 EXTRACT_MIN_INTERVAL_SEC = 300
@@ -43,7 +47,7 @@ def save_json_file(path: Path, data: dict) -> None:
 
 
 def get_extract_every_turn() -> int:
-    status = load_json_file(STATUS_FILE)
+    status = load_status()
     health_ok = bool(status.get("health_check", {}).get("ok", False))
     e2e_ok = bool(status.get("e2e_memory_extract", {}).get("ok", False))
     if health_ok and e2e_ok:

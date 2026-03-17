@@ -1,0 +1,61 @@
+{
+  "total_calls": 393,
+  "per_endpoint": {
+    "GET /api/v1/health": {
+      "count": 24,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "GET /api/v1/status": {
+      "count": 90,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "GET /api/v1/rules": {
+      "count": 20,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "POST /api/v1/query": {
+      "count": 29,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "GET /api/v1/trace": {
+      "count": 21,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "POST /api/v1/ingest": {
+      "count": 21,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "POST /api/v1/protocol/parse": {
+      "count": 20,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "POST /api/v1/loop": {
+      "count": 19,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "GET /api/v1/persona/current": {
+      "count": 16,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    },
+    "POST /api/v1/persona/switch": {
+      "count": 133,
+      "last_status_code": 200,
+      "last_called_at": "2026-03-17 14:22:12"
+    }
+  },
+  "last_call": {
+    "path": "/api/v1/persona/switch",
+    "method": "POST",
+    "status_code": 200,
+    "called_at": "2026-03-17 14:22:12"
+  }
+}

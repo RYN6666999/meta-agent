@@ -2,33 +2,19 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 from datetime import date, datetime
 from pathlib import Path
 
+from common.status_store import load_status, save_status
+
 BASE_DIR = Path("/Users/ryan/meta-agent")
-STATUS_FILE = BASE_DIR / "memory" / "system-status.json"
 TIER_DIR = BASE_DIR / "memory" / "tiered"
 SCAN_DIRS = [
     BASE_DIR / "truth-source",
     BASE_DIR / "error-log",
     BASE_DIR / "memory",
 ]
-
-
-def load_status() -> dict:
-    if not STATUS_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def save_status(data: dict) -> None:
-    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def frontmatter_value(text: str, key: str) -> str:
