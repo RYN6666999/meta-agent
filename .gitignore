@@ -13,3 +13,13 @@ node_modules/
 memory/on-stop-state.json
 memory/*.json.lock
 memory/status/*.json.lock
+
+# Runtime generated high-churn artifacts
+memory/git-score-error.log
+memory/git-score-log.md
+memory/git-score.log
+memory/lightrag-compat-store.jsonl
+memory/obsidian-ingest.log
+memory/obsidian-sync.json
+memory/system-status.json
+memory/status/*.json
