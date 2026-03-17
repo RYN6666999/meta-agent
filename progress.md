@@ -1,4 +1,9 @@
 ## 2026-03-17
+- 修復主路徑：建立本地 LightRAG 相容服務 `scripts/lightrag_compat_server.py`，預設 `LIGHTRAG_API` 改走 `http://127.0.0.1:9631`。
+- 修復主路徑：建立本地記憶萃取器 `scripts/local_memory_extract.py`，改由 Groq + memory-mcp 直接完成 conversation → memories → ingest。
+- `scripts/on-stop.py` 與 `scripts/extract-session.sh` 已切換到本地萃取主路徑，不再依賴損毀的 n8n memory webhook。
+- 驗證結果：`scripts/health_check.py` 全綠；`scripts/e2e_test.py` 全綠。
+- 根因結論：repo 腳本歷史上可行，故障主因為外部 runtime（n8n SQLite 損毀、LightRAG 9621 timeout），已改為 repo 可控主路徑恢復運作。
 - 驗證鏈路硬化：`law.json` 新增硬規則，health/e2e 失敗必自動觸發交叉查核（truth-xval），e2e 再加跑 `reactivate_webhooks`。
 - `scripts/health_check.py`：失敗自動觸發 `truth-xval`，並回寫 `system-status.json.auto_recovery`。
 - `scripts/e2e_test.py`：新增三層 fallback（HTTP API → local backend → degraded queue），避免 SQLite 損毀時完全中斷。

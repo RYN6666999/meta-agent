@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""端對端完整測試：送長文本到 memory webhook，成功時回寫 system-status。"""
+"""端對端完整測試：送長文本到本地記憶萃取主流程，成功時回寫 system-status。"""
 import json
 import importlib.util
 import subprocess
@@ -21,6 +21,7 @@ URL = f'{N8N_API}/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract'
 FALLBACK_URL = 'http://127.0.0.1:9901/api/v1/ingest'
 BACKEND_FILE = ROOT_DIR / 'memory-mcp' / 'server.py'
 DEGRADED_QUEUE_FILE = ROOT_DIR / 'memory' / 'degraded-ingest-queue.jsonl'
+LOCAL_EXTRACT_SCRIPT = ROOT_DIR / 'scripts' / 'local_memory_extract.py'
 TRUTH_XVAL_SCRIPT = ROOT_DIR / 'scripts' / 'truth-xval.py'
 REACTIVATE_WEBHOOKS_SCRIPT = ROOT_DIR / 'scripts' / 'reactivate_webhooks.py'
 
@@ -196,38 +197,29 @@ def main() -> int:
 如果此筆記出現在 LightRAG 圖譜中，代表端對端流程成功。
 """.strip()
 
-    payload = json.dumps({
-        'conversation': test_text,
-        'session_id': 'e2e-test-2026-03-16'
-    }).encode('utf-8')
-    req = urllib.request.Request(
-        URL,
-        data=payload,
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-
     print(f'發送請求... ({len(test_text)} 字)')
     try:
-        with urllib.request.urlopen(req, timeout=90) as r:
-            body = r.read().decode()
-            print(f'HTTP {r.status}')
-            try:
-                data = json.loads(body)
-                print(json.dumps(data, indent=2, ensure_ascii=False))
-            except Exception:
-                data = None
-                print(f'response: {body[:500]}')
-
-            ok = r.status == 200
-            detail = f'HTTP {r.status}'
-            update_e2e_status(ok=ok, detail=detail, response=data, fallback_used=False, fallback_ok=False)
-            final_ok = False
-            if isinstance(data, dict):
-                titles = data.get('memories_titles', [])
-                if isinstance(titles, list) and titles:
-                    final_ok = all(isinstance(t, str) and t.strip() and t.strip() != '?' for t in titles)
-            return 0 if ok and final_ok else 1
+        result = subprocess.run(
+            [sys.executable, str(LOCAL_EXTRACT_SCRIPT), '--session-id', 'e2e-test-2026-03-16'],
+            input=test_text,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        stdout = (result.stdout or '').strip()
+        if stdout:
+            print(stdout[:1000])
+        data = json.loads(stdout) if stdout else None
+        ok = result.returncode == 0
+        detail = 'local-memory-extract' if ok else f'local-memory-extract rc={result.returncode}'
+        update_e2e_status(ok=ok, detail=detail, response=data, fallback_used=False, fallback_ok=False)
+        final_ok = False
+        if isinstance(data, dict):
+            titles = data.get('memories_titles', [])
+            if isinstance(titles, list) and titles:
+                final_ok = all(isinstance(t, str) and t.strip() and t.strip() != '?' for t in titles)
+        return 0 if ok and final_ok else 1
     except urllib.error.HTTPError as e:
         msg = e.read().decode()[:500]
         print(f'HTTP Error {e.code}: {msg}')

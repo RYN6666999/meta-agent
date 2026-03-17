@@ -19,7 +19,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from common.config import BASE_DIR, ENV_FILE
+from common.config import BASE_DIR, ENV_FILE, LIGHTRAG_API
+from common.lightrag_runtime import ensure_lightrag_service
 from common.status_store import load_status, save_status
 
 try:
@@ -45,9 +46,10 @@ model = 'llama-3.1-8b-instant'
 
 
 def check_lightrag() -> tuple[bool, str]:
+    ensure_lightrag_service()
     endpoints = [
-        ('http://localhost:9621/health', 5),
-        ('http://localhost:9621/health', 15),
+        (f'{LIGHTRAG_API}/health', 5),
+        (f'{LIGHTRAG_API}/health', 15),
     ]
     last_err = ''
     for url, timeout_sec in endpoints:

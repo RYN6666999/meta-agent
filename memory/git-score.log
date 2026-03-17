@@ -341,3 +341,43 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+
+🔍 里程碑裁判啟動
+   主題：auto-git-score
+   描述：git-score 自動 commit（score=115），含重要變更
+   閾值：60 分
+
+📊 評分結果：290 / 60
+  其他變更 error-log/2026-03-17-health-check.md +10
+  law.json forbidden規則變更 +80
+  其他變更 memory/degraded-ingest-queue.jsonl +10
+  其他變更 memory/git-score-log.md +10
+  其他變更 memory/git-score.log +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/system-status.json +10
+  其他變更 progress.md +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/health_check.py +40
+  核心腳本變更 scripts/replay_degraded_queue.py +40
+
+🚨 達到閾值！偵測到重大里程碑
+📥 已寫入 memory/pending-decisions.md
+   說 'approve auto-git-score' 確認後由 AI 建立 decision/ 分支
+📊 評分結果：115/50
+  law.json 變更 +25
+  memory 變更 (memory/git-score-log.md) +10
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/milestone-judge-log.md) +10
+  memory 變更 (memory/obsidian-ingest.log) +10
+  memory 變更 (memory/pending-decisions.md) +10
+  memory 變更 (memory/system-status.json) +10
+  其他變更 (progress.md) +5
+  其他變更 (scripts/e2e_test.py) +5
+  其他變更 (scripts/health_check.py) +5
+  memory 變更 (memory/degraded-ingest-queue.jsonl) +10
+  其他變更 (scripts/replay_degraded_queue.py) +5
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成

@@ -22,6 +22,7 @@ from typing import Optional
 import httpx
 from mcp.server.fastmcp import FastMCP
 from common.frontmatter import get_frontmatter_value
+from common.config import LIGHTRAG_API as CONFIG_LIGHTRAG_API
 from common.debug_solver import dumps as _debug_dumps
 from common.debug_solver import generate_debug_solutions as _generate_debug_solutions
 from common.ig_discuss import discuss_instagram_post as _discuss_instagram_post
@@ -31,7 +32,7 @@ from common.identity import normalize_id
 from common.instagram_extract import extract_instagram_post as _extract_instagram_post
 
 # ── 常數 ─────────────────────────────────────────────────────────────
-LIGHTRAG_API = "http://localhost:9621"
+LIGHTRAG_API = os.environ.get("LIGHTRAG_API", CONFIG_LIGHTRAG_API)
 LAW_JSON = Path("/Users/ryan/meta-agent/law.json")
 ERROR_LOG_DIR = Path("/Users/ryan/meta-agent/error-log")
 META_AGENT_DIR = Path("/Users/ryan/meta-agent")

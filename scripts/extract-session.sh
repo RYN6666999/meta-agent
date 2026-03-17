@@ -9,7 +9,6 @@
 
 set -e
 
-WEBHOOK="http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract"
 SESSION_ID="session-$(date +%Y%m%d-%H%M%S)"
 
 if [ $# -ge 1 ]; then
@@ -31,10 +30,7 @@ fi
 
 echo "📤 送出萃取 (${CHAR_COUNT} 字)..."
 
-RESULT=$(curl -s -X POST "$WEBHOOK" \
-    -H "Content-Type: application/json" \
-    -d "{\"conversation\": $(echo "$CONVERSATION" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'), \"session_id\": \"$SESSION_ID\"}" \
-    --max-time 60)
+RESULT=$(echo "$CONVERSATION" | /opt/homebrew/bin/python3 /Users/ryan/meta-agent/scripts/local_memory_extract.py --session-id "$SESSION_ID")
 
 echo "$RESULT" | python3 -c "
 import json,sys

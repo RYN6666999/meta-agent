@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path("/Users/ryan/meta-agent")
@@ -13,7 +14,7 @@ STATUS_FILE = MEMORY_DIR / "system-status.json"
 ENV_FILE = BASE_DIR / ".env"
 LAW_JSON = BASE_DIR / "law.json"
 
-LIGHTRAG_API = "http://localhost:9621"
+LIGHTRAG_API = os.environ.get("LIGHTRAG_API", "http://127.0.0.1:9631")
 N8N_API = "http://localhost:5678"
 
 HTTP_TIMEOUT_SHORT = 5

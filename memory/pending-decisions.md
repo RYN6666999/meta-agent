@@ -10,5 +10,6 @@
 | 2026-03-16 | auto-git-score | git-score 自動 commit（score=55），含重要變更 [commit:HEAD~1..HEAD] | 180 | 其他變更 memory/handoff/latest-handoff.md +10; 其他變更 memory/milestone-judge-log.md +10 | done:decision/auto-git-score-2026-03-16 |
 | 2026-03-17 | auto-git-score | git-score 自動 commit（score=160），含重要變更 [commit:HEAD~1..HEAD] | 410 | 其他變更 api/agent_loop.py +10; 其他變更 api/server.py +10 | pending |
 | 2026-03-17 | auto-git-score | git-score 自動 commit（score=235），含重要變更 [commit:HEAD~1..HEAD] | 510 | 其他變更 common/debug_solver.py +10; 其他變更 common/ig_discuss.py +10 | pending |
+| 2026-03-17 | auto-git-score | git-score 自動 commit（score=115），含重要變更 [commit:HEAD~1..HEAD] | 290 | 其他變更 error-log/2026-03-17-health-check.md +10; law.json forbidden規則變更 +80 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 

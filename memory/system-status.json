@@ -1,23 +1,33 @@
 {
   "e2e_memory_extract": {
     "ok": true,
-    "checked_at": "2026-03-17 13:26:35",
-    "detail": "HTTP 500: {\"code\":0,\"message\":\"SQLITE_CORRUPT: database disk image is malformed\",\"stacktrace\":\"QueryFailedError: SQLITE_CORRUPT: database disk image is malformed\\n    at Statement.handler (/usr/local/lib/node_modules/n8n/node_modules/@n8n/typeorm/driver/sqlite-pooled/SqliteLibrary.js:102:39)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\"} | fallback=degraded-buffered: degraded-ingest-queue.jsonl",
+    "checked_at": "2026-03-17 14:00:43",
+    "detail": "local-memory-extract",
     "quality_ok": true,
-    "titles_total": 0,
-    "titles_valid": 0,
+    "titles_total": 1,
+    "titles_valid": 1,
     "titles_invalid": 0,
     "quality_failure_count": 0,
-    "fallback_used": true,
-    "fallback_ok": true
+    "fallback_used": false,
+    "fallback_ok": false,
+    "response": {
+      "success": true,
+      "summary": "✅ Ingest 1 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0",
+      "ingested_count": 1,
+      "memories_titles": [
+        "對話重點摘要"
+      ],
+      "errors": [],
+      "timestamp": "2026-03-17T14:00:43.015111"
+    }
   },
   "health_check": {
-    "ok": false,
-    "checked_at": "2026-03-17 13:19:47",
+    "ok": true,
+    "checked_at": "2026-03-17 14:00:41",
     "services": {
       "lightrag": {
-        "ok": false,
-        "detail": "timed out"
+        "ok": true,
+        "detail": "HTTP 200 (timeout=5s)"
       },
       "n8n": {
         "ok": true,
@@ -7364,7 +7374,7 @@
   },
   "obsidian_ingest": {
     "ok": false,
-    "checked_at": "2026-03-17 13:22",
+    "checked_at": "2026-03-17 13:52",
     "error": "LightRAG down"
   },
   "benchmark_baseline": {
@@ -7413,10 +7423,10 @@
     }
   },
   "degraded_queue": {
-    "ok": false,
-    "checked_at": "2026-03-17 13:32:55",
-    "success_count": 0,
-    "remaining_count": 1,
-    "detail": "success=0 remain=1 total=1"
+    "ok": true,
+    "checked_at": "2026-03-17 14:00:41",
+    "success_count": 1,
+    "remaining_count": 0,
+    "detail": "success=1 remain=0 total=1"
   }
 }

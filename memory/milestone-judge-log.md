@@ -161,3 +161,24 @@
   truth-source 新增驗證決策 truth-source/2026-03-17-jsonld-fallback-implementation.md +60
 
 ---
+
+## 2026-03-17 13:47 | auto-git-score | 分數 290 | 📥 達到閾值（290/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=115），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-17-health-check.md +10
+  law.json forbidden規則變更 +80
+  其他變更 memory/degraded-ingest-queue.jsonl +10
+  其他變更 memory/git-score-log.md +10
+  其他變更 memory/git-score.log +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/system-status.json +10
+  其他變更 progress.md +10
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/health_check.py +40
+  核心腳本變更 scripts/replay_degraded_queue.py +40
+
+---

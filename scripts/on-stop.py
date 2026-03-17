@@ -21,6 +21,7 @@ META = Path("/Users/ryan/meta-agent")
 COUNTER_FILE = META / "memory" / "turn-count.txt"
 CHECKPOINT_DIR = META / "memory" / "checkpoints"
 WEBHOOK_URL = "http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract"
+LOCAL_EXTRACT_SCRIPT = META / "scripts" / "local_memory_extract.py"
 
 # 讀取 hook 輸入
 try:
@@ -116,23 +117,18 @@ if turn % 10 == 0:
             sys.stderr.write(f"[on-stop] JSONL not found for session {session_id[:8]}\n")
         if len(turns_texts) >= 3:
             excerpt = "\n---\n".join(turns_texts[-30:])
-            payload_bytes = json.dumps({
-                "conversation": excerpt,
-                "session_id": session_id,
-                "turn": turn,
-                "auto": True,
-            }).encode("utf-8")
-            req = _urllib_req.Request(
-                WEBHOOK_URL,
-                data=payload_bytes,
-                headers={"Content-Type": "application/json"},
-                method="POST",
+            result = subprocess.run(
+                [sys.executable, str(LOCAL_EXTRACT_SCRIPT), "--session-id", session_id],
+                input=excerpt,
+                text=True,
+                capture_output=True,
+                timeout=90,
+                check=False,
             )
-            with _urllib_req.urlopen(req, timeout=30) as resp:
-                sys.stderr.write(
-                    f"[on-stop] auto-extract sent (turn={turn}, turns={len(turns_texts)})"
-                    f" from {jsonl_file.name if jsonl_file else '?'}, status={resp.status}\n"
-                )
+            sys.stderr.write(
+                f"[on-stop] local-extract done (turn={turn}, turns={len(turns_texts)})"
+                f" rc={result.returncode} from {jsonl_file.name if jsonl_file else '?'}\n"
+            )
         else:
             sys.stderr.write(f"[on-stop] auto-extract skip: {len(turns_texts)} turns < 3\n")
     except Exception as e:
