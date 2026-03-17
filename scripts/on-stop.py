@@ -20,6 +20,35 @@ META = Path("/Users/ryan/meta-agent")
 COUNTER_FILE = META / "memory" / "turn-count.txt"
 CHECKPOINT_DIR = META / "memory" / "checkpoints"
 LOCAL_EXTRACT_SCRIPT = META / "scripts" / "local_memory_extract.py"
+STATUS_FILE = META / "memory" / "system-status.json"
+RUNTIME_STATE_FILE = META / "memory" / "on-stop-state.json"
+HANDOFF_MIN_INTERVAL_SEC = 300
+EXTRACT_MIN_INTERVAL_SEC = 300
+
+
+def load_json_file(path: Path) -> dict:
+    try:
+        if path.exists():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def save_json_file(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def get_extract_every_turn() -> int:
+    status = load_json_file(STATUS_FILE)
+    health_ok = bool(status.get("health_check", {}).get("ok", False))
+    e2e_ok = bool(status.get("e2e_memory_extract", {}).get("ok", False))
+    if health_ok and e2e_ok:
+        return 30
+    return 10
 
 # 讀取 hook 輸入
 try:
@@ -28,6 +57,8 @@ except Exception:
     hook_input = {}
 
 session_id = hook_input.get("session_id", "unknown")
+runtime_state = load_json_file(RUNTIME_STATE_FILE)
+now_ts = int(datetime.now().timestamp())
 
 # ── 計數器 ──────────────────────────────────────────
 COUNTER_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -77,7 +108,11 @@ type: checkpoint
 # Bug 修復：
 #   1. 路徑動態搜尋，不再寫死 -Users-ryan（meta-agent 實際在 -Users-ryan-meta-agent）
 #   2. assistant content 為 list[{type, text/thinking}]，只取 type==text 區塊
-if turn % 10 == 0:
+extract_every = get_extract_every_turn()
+extract_due = turn % extract_every == 0
+last_extract_ts = int(runtime_state.get("last_extract_ts", 0) or 0)
+extract_debounced = now_ts - last_extract_ts < EXTRACT_MIN_INTERVAL_SEC
+if extract_due and not extract_debounced:
     try:
         # 動態搜尋：掃描所有 project dirs 找符合 session_id 的 JSONL
         claude_projects_root = Path.home() / ".claude" / "projects"
@@ -126,19 +161,34 @@ if turn % 10 == 0:
                 f"[on-stop] local-extract done (turn={turn}, turns={len(turns_texts)})"
                 f" rc={result.returncode} from {jsonl_file.name if jsonl_file else '?'}\n"
             )
+            runtime_state["last_extract_ts"] = now_ts
         else:
             sys.stderr.write(f"[on-stop] auto-extract skip: {len(turns_texts)} turns < 3\n")
     except Exception as e:
         sys.stderr.write(f"[on-stop] auto-extract error: {e}\n")
+elif extract_due and extract_debounced:
+    wait_sec = EXTRACT_MIN_INTERVAL_SEC - (now_ts - last_extract_ts)
+    sys.stderr.write(f"[on-stop] auto-extract debounce: wait {wait_sec}s\n")
 
 # ── 每次都更新 handoff（確保中斷恢復永遠最新）──────────────
-try:
-    subprocess.run(
-        [sys.executable, str(META / "scripts" / "generate-handoff.py")],
-        timeout=30, check=False, capture_output=True
-    )
-    sys.stderr.write(f"[on-stop] handoff updated (turn {turn})\n")
-except Exception as e:
-    sys.stderr.write(f"[on-stop] generate-handoff failed: {e}\n")
+last_handoff_ts = int(runtime_state.get("last_handoff_ts", 0) or 0)
+handoff_debounced = now_ts - last_handoff_ts < HANDOFF_MIN_INTERVAL_SEC
+if not handoff_debounced:
+    try:
+        subprocess.run(
+            [sys.executable, str(META / "scripts" / "generate-handoff.py")],
+            timeout=30, check=False, capture_output=True
+        )
+        runtime_state["last_handoff_ts"] = now_ts
+        sys.stderr.write(f"[on-stop] handoff updated (turn {turn})\n")
+    except Exception as e:
+        sys.stderr.write(f"[on-stop] generate-handoff failed: {e}\n")
+else:
+    wait_sec = HANDOFF_MIN_INTERVAL_SEC - (now_ts - last_handoff_ts)
+    sys.stderr.write(f"[on-stop] handoff debounce: wait {wait_sec}s\n")
+
+runtime_state["last_turn"] = turn
+runtime_state["last_session_id"] = session_id
+save_json_file(RUNTIME_STATE_FILE, runtime_state)
 
 sys.exit(0)
