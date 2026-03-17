@@ -271,3 +271,73 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+
+🔍 里程碑裁判啟動
+   主題：auto-git-score
+   描述：git-score 自動 commit（score=235），含重要變更
+   閾值：60 分
+
+📊 評分結果：510 / 60
+  其他變更 common/debug_solver.py +10
+  其他變更 common/ig_discuss.py +10
+  其他變更 common/instagram_extract.py +10
+  其他變更 docs/domain/snapinsta-blackbox-analysis-2026-03-17.md +10
+  其他變更 error-log/2026-03-17-health-check.md +10
+  其他變更 memory-mcp/server.py +10
+  其他變更 memory/debug-capability-benchmark-2026-03-17.json +10
+  其他變更 memory/git-score-log.md +10
+  其他變更 memory/git-score.log +10
+  其他變更 memory/ig-extract-cache.json +10
+  其他變更 memory/ig-image-analysis-latest.json +10
+  其他變更 memory/ig-jsonld-smoke-test.json +10
+  其他變更 memory/ig-ocr-raw-latest.json +10
+  其他變更 memory/ig-stability-validation-2026-03-17.json +10
+  其他變更 memory/lightpanda-decision-analysis-2026-03-17.md +10
+  其他變更 memory/master-plan.md +10
+  其他變更 memory/obsidian-ingest.log +10
+  其他變更 memory/plan-c-completion-summary.md +10
+  其他變更 memory/system-status.json +10
+  其他變更 progress.md +10
+  核心腳本變更 scripts/analyze_ig_images_once.py +40
+  核心腳本變更 scripts/benchmark_debug_capability.py +40
+  核心腳本變更 scripts/ocr_ig_images_raw.py +40
+  核心腳本變更 scripts/test_jsonld_fallback.py +40
+  核心腳本變更 scripts/test_jsonld_unit.py +40
+  核心腳本變更 scripts/verify_jsonld_fallback.sh +40
+  其他變更 task_plan.md +10
+  truth-source 新增驗證決策 truth-source/2026-03-17-jsonld-fallback-implementation.md +60
+
+🚨 達到閾值！偵測到重大里程碑
+📥 已寫入 memory/pending-decisions.md
+   說 'approve auto-git-score' 確認後由 AI 建立 decision/ 分支
+📊 評分結果：235/50
+  其他變更 (docs/domain/snapinsta-blackbox-analysis-2026-03-17.md) +5
+  error_fix 變更 (error-log/2026-03-17-health-check.md) +30
+  其他變更 (memory-mcp/server.py) +5
+  memory 變更 (memory/git-score-log.md) +10
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/ig-extract-cache.json) +10
+  memory 變更 (memory/master-plan.md) +10
+  memory 變更 (memory/obsidian-ingest.log) +10
+  memory 變更 (memory/system-status.json) +10
+  其他變更 (progress.md) +5
+  其他變更 (task_plan.md) +5
+  其他變更 (common/debug_solver.py) +5
+  其他變更 (common/ig_discuss.py) +5
+  memory 變更 (memory/debug-capability-benchmark-2026-03-17.json) +10
+  memory 變更 (memory/ig-image-analysis-latest.json) +10
+  memory 變更 (memory/ig-jsonld-smoke-test.json) +10
+  memory 變更 (memory/ig-ocr-raw-latest.json) +10
+  memory 變更 (memory/ig-stability-validation-2026-03-17.json) +10
+  memory 變更 (memory/lightpanda-decision-analysis-2026-03-17.md) +10
+  memory 變更 (memory/plan-c-completion-summary.md) +10
+  其他變更 (scripts/analyze_ig_images_once.py) +5
+  其他變更 (scripts/benchmark_debug_capability.py) +5
+  其他變更 (scripts/ocr_ig_images_raw.py) +5
+  其他變更 (scripts/test_jsonld_fallback.py) +5
+  其他變更 (scripts/test_jsonld_unit.py) +5
+  其他變更 (scripts/verify_jsonld_fallback.sh) +5
+  verified_truth 變更 (truth-source/2026-03-17-jsonld-fallback-implementation.md) +15
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成

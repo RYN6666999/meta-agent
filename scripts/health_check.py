@@ -28,6 +28,8 @@ except Exception:
     httpx = None
 
 LOG_DIR = BASE_DIR / 'error-log'
+TRUTH_XVAL_SCRIPT = BASE_DIR / 'scripts' / 'truth-xval.py'
+REPLAY_QUEUE_SCRIPT = BASE_DIR / 'scripts' / 'replay_degraded_queue.py'
 
 env = {}
 with open(ENV_FILE) as f:
@@ -43,11 +45,21 @@ model = 'llama-3.1-8b-instant'
 
 
 def check_lightrag() -> tuple[bool, str]:
-    try:
-        with urllib.request.urlopen('http://localhost:9621/health', timeout=5) as r:
-            return r.status == 200, f'HTTP {r.status}'
-    except Exception as e:
-        return False, str(e)
+    endpoints = [
+        ('http://localhost:9621/health', 5),
+        ('http://localhost:9621/health', 15),
+    ]
+    last_err = ''
+    for url, timeout_sec in endpoints:
+        try:
+            with urllib.request.urlopen(url, timeout=timeout_sec) as r:
+                if r.status == 200:
+                    attempt = f'timeout={timeout_sec}s'
+                    return True, f'HTTP {r.status} ({attempt})'
+                last_err = f'HTTP {r.status}'
+        except Exception as e:
+            last_err = str(e)
+    return False, last_err
 
 
 def check_n8n() -> tuple[bool, str]:
@@ -157,6 +169,52 @@ def write_health_status(lightrag: tuple[bool, str], n8n: tuple[bool, str], groq:
     save_status(status)
 
 
+def run_auto_recovery(trigger: str, failures: list[tuple[str, str]]) -> None:
+    now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    status = load_status()
+    recovery = status.get('auto_recovery', {})
+    steps = []
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(TRUTH_XVAL_SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+        steps.append({
+            'step': 'truth_xval',
+            'ok': result.returncode == 0,
+            'detail': (result.stdout or result.stderr or '').strip()[:240],
+        })
+    except Exception as exc:
+        steps.append({'step': 'truth_xval', 'ok': False, 'detail': str(exc)[:240]})
+
+    recovery['last_trigger'] = {
+        'trigger': trigger,
+        'triggered_at': now_ts,
+        'failures': [{'service': name, 'detail': msg} for name, msg in failures],
+        'steps': steps,
+    }
+    status['auto_recovery'] = recovery
+    save_status(status)
+
+
+def run_replay_queue() -> None:
+    try:
+        subprocess.run(
+            [sys.executable, str(REPLAY_QUEUE_SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+    except Exception:
+        # replay 失敗不阻斷健康檢查主流程
+        pass
+
+
 def main():
     lightrag = check_lightrag()
     n8n = check_n8n()
@@ -173,6 +231,7 @@ def main():
     write_health_status(lightrag=lightrag, n8n=n8n, groq=groq)
 
     if failures:
+        run_auto_recovery(trigger='health_check_failure', failures=failures)
         log_path = LOG_DIR / f'{date}-health-check.md'
         lines = [f'# 健康檢查失敗 {now}\n']
         for name, msg in failures:
@@ -181,6 +240,7 @@ def main():
         print(f'[health_check] 已寫入 {log_path}', flush=True)
         return 1
 
+    run_replay_queue()
     print(f'[health_check] 全部正常 {now}', flush=True)
     return 0
 

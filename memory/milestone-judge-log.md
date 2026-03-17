@@ -125,3 +125,39 @@
   核心腳本變更 scripts/truth-xval.py +40
 
 ---
+
+## 2026-03-17 12:47 | auto-git-score | 分數 510 | 📥 達到閾值（510/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=235），含重要變更
+
+**評分明細：**
+  其他變更 common/debug_solver.py +10
+  其他變更 common/ig_discuss.py +10
+  其他變更 common/instagram_extract.py +10
+  其他變更 docs/domain/snapinsta-blackbox-analysis-2026-03-17.md +10
+  其他變更 error-log/2026-03-17-health-check.md +10
+  其他變更 memory-mcp/server.py +10
+  其他變更 memory/debug-capability-benchmark-2026-03-17.json +10
+  其他變更 memory/git-score-log.md +10
+  其他變更 memory/git-score.log +10
+  其他變更 memory/ig-extract-cache.json +10
+  其他變更 memory/ig-image-analysis-latest.json +10
+  其他變更 memory/ig-jsonld-smoke-test.json +10
+  其他變更 memory/ig-ocr-raw-latest.json +10
+  其他變更 memory/ig-stability-validation-2026-03-17.json +10
+  其他變更 memory/lightpanda-decision-analysis-2026-03-17.md +10
+  其他變更 memory/master-plan.md +10
+  其他變更 memory/obsidian-ingest.log +10
+  其他變更 memory/plan-c-completion-summary.md +10
+  其他變更 memory/system-status.json +10
+  其他變更 progress.md +10
+  核心腳本變更 scripts/analyze_ig_images_once.py +40
+  核心腳本變更 scripts/benchmark_debug_capability.py +40
+  核心腳本變更 scripts/ocr_ig_images_raw.py +40
+  核心腳本變更 scripts/test_jsonld_fallback.py +40
+  核心腳本變更 scripts/test_jsonld_unit.py +40
+  核心腳本變更 scripts/verify_jsonld_fallback.sh +40
+  其他變更 task_plan.md +10
+  truth-source 新增驗證決策 truth-source/2026-03-17-jsonld-fallback-implementation.md +60
+
+---

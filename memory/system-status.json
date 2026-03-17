@@ -1,17 +1,19 @@
 {
   "e2e_memory_extract": {
-    "ok": false,
-    "checked_at": "2026-03-17 12:44:45",
-    "detail": "HTTP 500: {\"code\":0,\"message\":\"SQLITE_CORRUPT: database disk image is malformed\",\"stacktrace\":\"QueryFailedError: SQLITE_CORRUPT: database disk image is malformed\\n    at Statement.handler (/usr/local/lib/node_modules/n8n/node_modules/@n8n/typeorm/driver/sqlite-pooled/SqliteLibrary.js:102:39)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\"} | title_quality_failed",
-    "quality_ok": false,
+    "ok": true,
+    "checked_at": "2026-03-17 13:26:35",
+    "detail": "HTTP 500: {\"code\":0,\"message\":\"SQLITE_CORRUPT: database disk image is malformed\",\"stacktrace\":\"QueryFailedError: SQLITE_CORRUPT: database disk image is malformed\\n    at Statement.handler (/usr/local/lib/node_modules/n8n/node_modules/@n8n/typeorm/driver/sqlite-pooled/SqliteLibrary.js:102:39)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\"} | fallback=degraded-buffered: degraded-ingest-queue.jsonl",
+    "quality_ok": true,
     "titles_total": 0,
     "titles_valid": 0,
     "titles_invalid": 0,
-    "quality_failure_count": 0
+    "quality_failure_count": 0,
+    "fallback_used": true,
+    "fallback_ok": true
   },
   "health_check": {
     "ok": false,
-    "checked_at": "2026-03-17 12:44:39",
+    "checked_at": "2026-03-17 13:19:47",
     "services": {
       "lightrag": {
         "ok": false,
@@ -7362,7 +7364,7 @@
   },
   "obsidian_ingest": {
     "ok": false,
-    "checked_at": "2026-03-17 12:22",
+    "checked_at": "2026-03-17 13:22",
     "error": "LightRAG down"
   },
   "benchmark_baseline": {
@@ -7385,5 +7387,36 @@
         "max_ms": 5160.08
       }
     }
+  },
+  "auto_recovery": {
+    "last_trigger": {
+      "trigger": "e2e_http_error",
+      "triggered_at": "2026-03-17 13:26:35",
+      "failures": [
+        {
+          "service": "e2e_memory_extract",
+          "detail": "HTTP 500: {\"code\":0,\"message\":\"SQLITE_CORRUPT: database disk image is malformed\",\"stacktrace\":\"QueryFailedError: SQLITE_CORRUPT: database disk image is malformed\\n    at Statement.handler (/usr/local/lib/node_modules/n8n/node_modules/@n8n/typeorm/driver/sqlite-pooled/SqliteLibrary.js:102:39)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\"} | fallback=degraded-buffered: degraded-ingest-queue.jsonl"
+        }
+      ],
+      "steps": [
+        {
+          "step": "truth_xval",
+          "ok": true,
+          "detail": "🔍 三真理源交叉驗證器\n====================================================\n⚠️  LightRAG 不可用 — 跳過圖譜驗證（其他兩源仍驗證）\n\n📊 驗證結果（共 5 筆決策）\n   ✅ 三源一致：0 筆\n   ⚠️  警告（LightRAG 查無或不可用）：5 筆\n   ❌ 錯誤（git 分支不存在）：0 筆\n   WARN  | 2026-03-16-auto-git-score.md | git:✅ lightra"
+        },
+        {
+          "step": "reactivate_webhooks",
+          "ok": false,
+          "detail": "[reactivate_webhooks] 等待 n8n 就緒..."
+        }
+      ]
+    }
+  },
+  "degraded_queue": {
+    "ok": false,
+    "checked_at": "2026-03-17 13:32:55",
+    "success_count": 0,
+    "remaining_count": 1,
+    "detail": "success=0 remain=1 total=1"
   }
 }

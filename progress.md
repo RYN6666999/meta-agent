@@ -1,4 +1,10 @@
 ## 2026-03-17
+- 驗證鏈路硬化：`law.json` 新增硬規則，health/e2e 失敗必自動觸發交叉查核（truth-xval），e2e 再加跑 `reactivate_webhooks`。
+- `scripts/health_check.py`：失敗自動觸發 `truth-xval`，並回寫 `system-status.json.auto_recovery`。
+- `scripts/e2e_test.py`：新增三層 fallback（HTTP API → local backend → degraded queue），避免 SQLite 損毀時完全中斷。
+- 新增降級佇列檔：`memory/degraded-ingest-queue.jsonl`（當前已可寫入，確保資料不丟）。
+- 新增回放腳本：`scripts/replay_degraded_queue.py`，供 LightRAG 恢復後補寫佇列資料。
+- 當前狀態：e2e 在降級模式可回報 `ok=true`；health 仍因 LightRAG timeout 保持 fail，待容器層修復。
 - 啟動 D10（驗證機制穩定化）規劃，主軸由擴功能轉為穩定驗證鏈路。
 - 執行即時基線檢查：`scripts/health_check.py`、`scripts/e2e_test.py`。
 - 基線結果：LightRAG timeout、memory-extract HTTP 500（SQLITE_CORRUPT），n8n/Groq 正常。

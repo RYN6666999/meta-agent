@@ -203,3 +203,33 @@
   memory 變更 (memory/ig-extract-cache.json) +10
   memory 變更 (memory/ig-extract-cache.json.lock) +10
   → commit 成功（14 個檔案）
+
+## 2026-03-17 12:47 | 分數：235 | ✅ 自動 commit
+  其他變更 (docs/domain/snapinsta-blackbox-analysis-2026-03-17.md) +5
+  error_fix 變更 (error-log/2026-03-17-health-check.md) +30
+  其他變更 (memory-mcp/server.py) +5
+  memory 變更 (memory/git-score-log.md) +10
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/ig-extract-cache.json) +10
+  memory 變更 (memory/master-plan.md) +10
+  memory 變更 (memory/obsidian-ingest.log) +10
+  memory 變更 (memory/system-status.json) +10
+  其他變更 (progress.md) +5
+  其他變更 (task_plan.md) +5
+  其他變更 (common/debug_solver.py) +5
+  其他變更 (common/ig_discuss.py) +5
+  memory 變更 (memory/debug-capability-benchmark-2026-03-17.json) +10
+  memory 變更 (memory/ig-image-analysis-latest.json) +10
+  memory 變更 (memory/ig-jsonld-smoke-test.json) +10
+  memory 變更 (memory/ig-ocr-raw-latest.json) +10
+  memory 變更 (memory/ig-stability-validation-2026-03-17.json) +10
+  memory 變更 (memory/lightpanda-decision-analysis-2026-03-17.md) +10
+  memory 變更 (memory/plan-c-completion-summary.md) +10
+  其他變更 (scripts/analyze_ig_images_once.py) +5
+  其他變更 (scripts/benchmark_debug_capability.py) +5
+  其他變更 (scripts/ocr_ig_images_raw.py) +5
+  其他變更 (scripts/test_jsonld_fallback.py) +5
+  其他變更 (scripts/test_jsonld_unit.py) +5
+  其他變更 (scripts/verify_jsonld_fallback.sh) +5
+  verified_truth 變更 (truth-source/2026-03-17-jsonld-fallback-implementation.md) +15
+  → commit 成功（27 個檔案）

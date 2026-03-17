@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "last_updated": "2026-03-16",
+  "last_updated": "2026-03-17",
   "description": "meta-agent 系統硬規則法典。每個分類上限 10 條，超過必須清洗合併。90天未觸發自動標記 deprecated。",
 
   "paths": {
@@ -82,6 +82,13 @@
       "solution": "Phase 1 只輸出 JSON 施工圖，Phase 2 才解鎖執行",
       "source": "架構 V2.0",
       "added": "2026-03-16"
+    },
+    {
+      "rule": "禁止 health/e2e 失敗後不自動觸發交叉查核",
+      "reason": "只記錄失敗不啟動交叉查核，會導致故障卡住且需要用戶提醒",
+      "solution": "health/e2e 任一失敗必須自動執行 truth-xval；e2e 失敗再加跑 reactivate_webhooks，並寫入 system-status.auto_recovery",
+      "source": "error-log/2026-03-17-health-check.md",
+      "added": "2026-03-17"
     }
   ],
 
