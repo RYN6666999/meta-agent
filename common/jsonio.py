@@ -48,4 +48,12 @@ def save_json(path: Path, data: Any) -> None:
     serialized = json.dumps(data, ensure_ascii=False, indent=2)
     lock_path = path.with_suffix(path.suffix + ".lock")
     with file_lock(lock_path):
+        # Avoid unnecessary disk writes when content is unchanged.
+        if path.exists():
+            try:
+                current = path.read_text(encoding="utf-8")
+                if current == serialized:
+                    return
+            except Exception:
+                pass
         atomic_write_text(path, serialized)
