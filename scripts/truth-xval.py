@@ -30,6 +30,7 @@ if str(REPO_DIR) not in sys.path:
     sys.path.insert(0, str(REPO_DIR))
 
 from common.config import BASE_DIR, ERROR_LOG_DIR, LIGHTRAG_API, STATUS_FILE, TRUTH_SOURCE_DIR
+from common.frontmatter import parse_frontmatter_block
 from common.status_store import load_status, save_status
 
 REPO_DIR = BASE_DIR
@@ -93,21 +94,9 @@ def git_branch_exists(branch_name: str) -> bool:
 
 
 def parse_frontmatter(path: Path) -> dict:
-    """讀取 YAML frontmatter（僅支援簡單 key: value）"""
+    """讀取 YAML frontmatter（共用 parser，支援 key: value 基礎格式）"""
     text = path.read_text(encoding="utf-8")
-    fm = {}
-    in_fm = False
-    for line in text.splitlines():
-        if line.strip() == "---":
-            if not in_fm:
-                in_fm = True
-                continue
-            else:
-                break
-        if in_fm:
-            m = re.match(r"^(\w+):\s*(.+)$", line)
-            if m:
-                fm[m.group(1)] = m.group(2).strip()
+    fm, _ = parse_frontmatter_block(text)
     return fm
 
 

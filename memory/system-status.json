@@ -7353,7 +7353,7 @@
   },
   "truth_xval": {
     "ok": true,
-    "checked_at": "2026-03-17 10:24",
+    "checked_at": "2026-03-17 11:11",
     "total": 4,
     "ok_count": 0,
     "warn_count": 4,
@@ -7362,7 +7362,7 @@
   },
   "obsidian_ingest": {
     "ok": false,
-    "checked_at": "2026-03-17 10:22",
+    "checked_at": "2026-03-17 11:22",
     "error": "LightRAG down"
   },
   "benchmark_baseline": {

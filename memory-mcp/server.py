@@ -8,6 +8,7 @@ memory-mcp/server.py — 記憶黑盒 MCP 伺服器
   ingest_memory(content, type)     → 存入圖譜
   get_rules()                      → 讀 law.json
   log_error(root_cause, solution)  → 寫 error-log + ingest
+    extract_instagram_post(url)      → 透過 yt-dlp 抽取 IG 貼文文字/圖片/影片
 """
 
 import json
@@ -20,6 +21,9 @@ from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from common.frontmatter import get_frontmatter_value
+from common.identity import normalize_id
+from common.instagram_extract import extract_instagram_post as _extract_instagram_post
 
 # ── 常數 ─────────────────────────────────────────────────────────────
 LIGHTRAG_API = "http://localhost:9621"
@@ -56,13 +60,11 @@ RISKY_KEYWORDS = {
 
 
 def _normalize_user_id(user_id: str) -> str:
-    safe = "".join(ch for ch in (user_id or "") if ch.isalnum() or ch in "_-").strip("_-")
-    return safe[:64] if safe else "default"
+    return normalize_id(raw=user_id, default="default", max_len=64)
 
 
 def _parse_frontmatter_value(text: str, key: str) -> str:
-    match = re.search(rf"^{re.escape(key)}:\s*(.+)$", text, flags=re.MULTILINE)
-    return match.group(1).strip() if match else ""
+    return get_frontmatter_value(text=text, key=key, default="")
 
 
 def _extract_title(text: str) -> str:
@@ -300,6 +302,7 @@ def _check_conflicts(content: str, title: str) -> Optional[str]:
         )
     return None
 
+
 VALID_TYPES = {"error_fix", "tech_decision", "verified_truth", "rule", "deprecated"}
 
 # ── FastMCP 初始化 ────────────────────────────────────────────────────
@@ -475,6 +478,44 @@ async def ingest_memory(content: str, mem_type: str = "verified_truth", title: s
 
 # ── 工具 3：get_rules ─────────────────────────────────────────────────
 @mcp.tool()
+def extract_instagram_post(url: str) -> str:
+    """
+    方案一：透過 yt-dlp 讀取 Instagram 貼文內容（caption + 圖片/影片 URL）。
+
+    Args:
+        url: IG 貼文網址（/p/ /reel/ /tv/）
+
+    Returns:
+        JSON 文字（可直接被 Agent 使用）
+    """
+    if not url or not str(url).strip():
+        return json.dumps(
+            {
+                "ok": False,
+                "error": "invalid_url",
+                "message": "只支援 instagram.com / instagr.am 網址",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    try:
+        payload = _extract_instagram_post(url)
+        return json.dumps({"ok": True, **payload}, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps(
+            {
+                "ok": False,
+                "error": "extract_failed",
+                "message": str(exc)[:500],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+
+
+# ── 工具 4：get_rules ─────────────────────────────────────────────────
+@mcp.tool()
 def get_rules(category: str = "all") -> str:
     """
     讀取 law.json 硬規則法典。
@@ -501,7 +542,7 @@ def get_rules(category: str = "all") -> str:
     return json.dumps({category: section}, ensure_ascii=False, indent=2)
 
 
-# ── 工具 4：log_error ─────────────────────────────────────────────────
+# ── 工具 5：log_error ─────────────────────────────────────────────────
 @mcp.tool()
 async def log_error(root_cause: str, solution: str, topic: str = "", context: str = "") -> str:
     """

@@ -16,6 +16,7 @@ from slowapi.util import get_remote_address
 
 from api.agent_loop import parse_golem_protocol, run_protocol_loop
 from common.config import BASE_DIR, ENV_FILE, PERSONA_REPORTS_DIR, STATUS_FILE, USERS_DIR
+from common.identity import normalize_id
 from common.status_store import load_status as shared_load_status
 from common.status_store import save_status as shared_save_status
 
@@ -147,8 +148,7 @@ def update_usage(path: str, method: str, status_code: int) -> None:
 
 
 def _sanitize_persona_id(raw: str) -> str:
-    safe = "".join(ch for ch in (raw or "") if ch.isalnum() or ch in "_-").strip("_-")
-    return safe[:64] if safe else "default"
+    return normalize_id(raw=raw, default="default", max_len=64)
 
 
 def load_registry() -> dict[str, Any]:

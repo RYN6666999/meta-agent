@@ -95,3 +95,33 @@
 其他變更 memory/milestone-judge-log.md +10
 
 ---
+
+## 2026-03-17 10:47 | auto-git-score | 分數 410 | 📥 達到閾值（410/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=160），含重要變更
+
+**評分明細：**
+  其他變更 api/agent_loop.py +10
+  其他變更 api/server.py +10
+  其他變更 common/__init__.py +10
+  其他變更 common/config.py +10
+  其他變更 common/jsonio.py +10
+  其他變更 common/status_store.py +10
+  error-log 新增根因 error-log/2026-03-17-health-check.md +50
+  其他變更 memory-mcp/server.py +10
+  其他變更 memory/git-score-log.md +10
+  其他變更 memory/git-score.log +10
+  其他變更 memory/obsidian-ingest.log +10
+  其他變更 memory/obsidian-sync.json +10
+  其他變更 memory/perf-baseline-2026-03-17.json +10
+  其他變更 memory/perf-report-2026-03-17.json +10
+  其他變更 memory/perf-report-2026-03-17.md +10
+  其他變更 memory/system-status.json +10
+  其他變更 memory/system-status.json.lock +10
+  核心腳本變更 scripts/benchmark_perf.py +40
+  核心腳本變更 scripts/e2e_test.py +40
+  核心腳本變更 scripts/health_check.py +40
+  核心腳本變更 scripts/obsidian-ingest.py +40
+  核心腳本變更 scripts/truth-xval.py +40
+
+---
