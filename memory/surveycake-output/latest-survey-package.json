@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "generated_at": "2026-03-17 16:32:51",
+  "template": "gemini-final-v1",
+  "files": {
+    "spec": "memory/surveycake-output/survey-spec-20260317-163251.json",
+    "manual": "memory/surveycake-output/surveycake-manual-20260317-163251.md",
+    "score_guide": "memory/surveycake-output/survey-score-guide-20260317-163251.json",
+    "google_apps_script": "memory/surveycake-output/google-form-create-20260317-163251.gs"
+  }
+}

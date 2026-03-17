@@ -8,6 +8,14 @@
   輸入：`q`, `mode`
   輸出：搜尋結果與時間戳
 
+- `POST /api/v1/telegram/webhook/{secret}`
+  輸入：Telegram Update payload
+  輸出：是否成功回覆 Telegram
+
+- `GET /api/v1/telegram/config`
+  輸入：無
+  輸出：Telegram 功能是否啟用、必要環境變數是否已設定
+
 - `POST /api/v1/ingest`
   輸入：`content`, `mem_type`, `title`
   輸出：ingest 結果與成功訊息
@@ -31,6 +39,18 @@
 - Header：`Authorization: Bearer <META_AGENT_API_KEY>`
 - 開發期可用 `.env` 中 `META_AGENT_API_KEY` 控制
 
+## Telegram 遠端機制（參考 golem/nanoclaw 協議）
+1. 在 `.env` 新增：
+  - `TELEGRAM_BOT_TOKEN=<your_bot_token>`
+  - `TELEGRAM_WEBHOOK_SECRET=<long_random_secret>`
+2. 服務啟動後，設定 Telegram webhook：
+  - `https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<PUBLIC_URL>/api/v1/telegram/webhook/<TELEGRAM_WEBHOOK_SECRET>&secret_token=<TELEGRAM_WEBHOOK_SECRET>`
+3. 在 TG 對 bot 發送訊息，可用指令：
+  - `/q <問題>`：查記憶
+  - `/ingest <內容>`：寫入 verified memory（自動加 `[CONFIRMED]`）
+  - `/protocol <GOLEM 協議內容>`：執行 `[GOLEM_MEMORY]/[GOLEM_ACTION]/[GOLEM_REPLY]` 區塊
+
 ## 驗證
 - 啟動：`python -m uvicorn api.server:app --host 127.0.0.1 --port 9901`
 - Smoke test：`python scripts/test_api.py --base-url http://127.0.0.1:9901`
+- Telegram 設定檢查：`curl -H "Authorization: Bearer <META_AGENT_API_KEY>" http://127.0.0.1:9901/api/v1/telegram/config`

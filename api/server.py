@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -43,6 +45,9 @@ def load_env() -> dict[str, str]:
 
 ENV = load_env()
 API_KEY = ENV.get("META_AGENT_API_KEY") or ENV.get("API_KEY") or ENV.get("N8N_API_KEY")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or ENV.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET") or ENV.get("TELEGRAM_WEBHOOK_SECRET", "")
+TELEGRAM_MAX_REPLY_CHARS = 3500
 
 
 def load_backend() -> Any:
@@ -103,6 +108,29 @@ class ProtocolLoopRequest(BaseModel):
     raw_response: str = Field(..., min_length=1)
     persist_memory: bool = Field(default=True)
     execute_actions: bool = Field(default=True)
+
+
+class TelegramChat(BaseModel):
+    id: int
+    type: str = "private"
+
+
+class TelegramUser(BaseModel):
+    id: int
+    username: str | None = None
+
+
+class TelegramMessage(BaseModel):
+    message_id: int
+    text: str | None = None
+    chat: TelegramChat
+    from_user: TelegramUser | None = Field(default=None, alias="from")
+
+
+class TelegramUpdate(BaseModel):
+    update_id: int
+    message: TelegramMessage | None = None
+    edited_message: TelegramMessage | None = None
 
 
 def require_auth(authorization: str | None = Header(default=None)) -> None:
@@ -232,6 +260,100 @@ def resolve_persona_id(request_user_id: str) -> str:
     if not candidate:
         return get_active_persona()
     return _sanitize_persona_id(candidate)
+
+
+def telegram_ready() -> bool:
+    return bool(TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET)
+
+
+def _telegram_api_url(method: str) -> str:
+    return f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
+
+
+def send_telegram_text(chat_id: int, text: str) -> bool:
+    if not TELEGRAM_BOT_TOKEN:
+        return False
+
+    payload = {
+        "chat_id": chat_id,
+        "text": text[:TELEGRAM_MAX_REPLY_CHARS],
+        "disable_web_page_preview": True,
+    }
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        _telegram_api_url("sendMessage"),
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            return 200 <= getattr(resp, "status", 200) < 300
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False
+
+
+async def handle_telegram_text(text: str, chat_id: int) -> str:
+    clean = (text or "").strip()
+    if not clean:
+        return "請輸入文字訊息，我才能幫你查詢。"
+
+    persona_id = _sanitize_persona_id(f"tg_{chat_id}")
+    ensure_persona_in_registry(persona_id)
+
+    if clean.startswith("/start") or clean.startswith("/help"):
+        return (
+            "可用指令:\n"
+            "/q <問題> 查記憶\n"
+            "/ingest <內容> 寫入記憶\n"
+            "/protocol <GOLEM 回應區塊> 執行 golem/nanoclaw 風格動作"
+        )
+
+    if clean.startswith("/q "):
+        query = clean[3:].strip()
+        if not query:
+            return "格式錯誤：/q 後面要帶查詢內容。"
+        if hasattr(backend, "query_memory_structured"):
+            data = await backend.query_memory_structured(query, "hybrid", persona_id)
+            result = str(data.get("result", "")).strip()
+        else:
+            result = str(await backend.query_memory(query, "hybrid", persona_id)).strip()
+        return result or "查無相關記憶。"
+
+    if clean.startswith("/ingest "):
+        content = clean[8:].strip()
+        if len(content) < 50:
+            return "寫入內容太短，請至少 50 字。"
+        result = await backend.ingest_memory(
+            f"[CONFIRMED] {content}",
+            "verified_truth",
+            "telegram-ingest",
+            persona_id,
+        )
+        return result
+
+    if clean.startswith("/protocol "):
+        raw = clean[len("/protocol ") :].strip()
+        if not raw:
+            return "格式錯誤：/protocol 後面要帶 GOLEM 協議內容。"
+        loop_result = await run_protocol_loop(
+            user_input="telegram-protocol",
+            raw_response=raw,
+            backend=backend,
+            persist_memory=True,
+            execute_actions=True,
+        )
+        parsed = loop_result.get("parsed", {})
+        reply = str(parsed.get("reply") or "已執行 protocol。")
+        obs_count = len(loop_result.get("observation", []))
+        return f"{reply}\n\n[protocol] observations={obs_count}"
+
+    if hasattr(backend, "query_memory_structured"):
+        data = await backend.query_memory_structured(clean, "hybrid", persona_id)
+        result = str(data.get("result", "")).strip()
+    else:
+        result = str(await backend.query_memory(clean, "hybrid", persona_id)).strip()
+    return result or "查無相關記憶。你可以用 /ingest 寫入背景後再查詢。"
 
 
 def list_available_personas() -> list[str]:
@@ -483,6 +605,56 @@ async def status_dashboard(request: Request, _: None = Depends(require_auth)) ->
         "api_usage": status.get("api_usage", {}),
         "health_check": status.get("health_check", {}),
         "e2e_memory_extract": status.get("e2e_memory_extract", {}),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@app.get("/api/v1/telegram/config")
+@limiter.limit("60/minute")
+async def telegram_config(request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "enabled": telegram_ready(),
+        "has_bot_token": bool(TELEGRAM_BOT_TOKEN),
+        "has_webhook_secret": bool(TELEGRAM_WEBHOOK_SECRET),
+        "webhook_path": "/api/v1/telegram/webhook/{secret}",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@app.post("/api/v1/telegram/webhook/{secret}")
+@limiter.limit("120/minute")
+async def telegram_webhook(
+    secret: str,
+    payload: TelegramUpdate,
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    if not telegram_ready():
+        raise HTTPException(status_code=503, detail="telegram is not configured")
+
+    if secret != TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="invalid webhook secret")
+
+    # Telegram 支援額外 Header secret，雙重驗證可降低被掃描濫打風險。
+    if x_telegram_bot_api_secret_token and x_telegram_bot_api_secret_token != TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="invalid telegram header secret")
+
+    message = payload.message or payload.edited_message
+    if message is None:
+        return {"ok": True, "ignored": True, "reason": "no-message"}
+
+    incoming_text = (message.text or "").strip()
+    if not incoming_text:
+        send_telegram_text(message.chat.id, "目前只支援文字訊息。")
+        return {"ok": True, "ignored": True, "reason": "no-text"}
+
+    reply = await handle_telegram_text(incoming_text, message.chat.id)
+    sent = send_telegram_text(message.chat.id, reply)
+    return {
+        "ok": True,
+        "delivered": sent,
+        "chat_id": message.chat.id,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 

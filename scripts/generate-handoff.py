@@ -11,6 +11,7 @@ import json
 import sys
 import subprocess
 import urllib.request
+import urllib.error
 from datetime import date, datetime
 from pathlib import Path
 
@@ -87,18 +88,49 @@ def get_session_number() -> int:
     return 1
 
 
-def check_services() -> dict:
+def _is_recent_timestamp(ts: str, minutes: int = 30) -> bool:
+    try:
+        checked = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return False
+    return (datetime.now() - checked).total_seconds() <= minutes * 60
+
+
+def check_services(system_status: dict) -> dict:
+    # 優先使用最近一次 health_check 結果，降低瞬時探測誤判。
+    health = system_status.get("health_check", {}) if isinstance(system_status, dict) else {}
+    checked_at = health.get("checked_at", "") if isinstance(health, dict) else ""
+    health_services = health.get("services", {}) if isinstance(health, dict) else {}
+    if isinstance(health_services, dict) and _is_recent_timestamp(checked_at, minutes=30):
+        mapped = {
+            "LightRAG": health_services.get("lightrag", {}),
+            "n8n": health_services.get("n8n", {}),
+        }
+        services: dict[str, str] = {}
+        for name, payload in mapped.items():
+            ok = isinstance(payload, dict) and payload.get("ok") is True
+            services[name] = "✅" if ok else "❌"
+        if services:
+            return services
+
     services = {}
     checks = {
         "LightRAG": "http://localhost:9621/health",
         "n8n": "http://localhost:5678/healthz",
     }
     for name, url in checks.items():
-        try:
-            req = urllib.request.urlopen(url, timeout=2)
-            services[name] = "✅" if req.status == 200 else "⚠️"
-        except Exception:
-            services[name] = "❌"
+        status = "❌"
+        for timeout_sec in (2, 5):
+            try:
+                req = urllib.request.urlopen(url, timeout=timeout_sec)
+                status = "✅" if req.status == 200 else "⚠️"
+                break
+            except urllib.error.HTTPError:
+                status = "⚠️"
+                break
+            except Exception:
+                continue
+        services[name] = status
     return services
 
 
@@ -127,9 +159,9 @@ def main():
     git_log = get_recent_git_log()
     recent_errors = get_recent_errors()
     turn_count = get_turn_count()
-    services = check_services()
-    launchd = get_launchd_status()
     system_status = load_system_status()
+    services = check_services(system_status)
+    launchd = get_launchd_status()
     e2e_event = system_status.get("e2e_memory_extract", {})
 
     # 未完成項目

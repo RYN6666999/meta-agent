@@ -1,0 +1,40 @@
+{
+  "version": "v1",
+  "logic": [
+    {
+      "id": "hot_intent",
+      "description": "學費了解程度高 + 決策可自行做主",
+      "rule": {
+        "all": [
+          {
+            "question_id": "q12_fee_awareness",
+            "equals": "已有初步了解，想聽完講座後評估是否投入"
+          },
+          {
+            "question_id": "q11_decision_mode",
+            "equals": "我可以自己做主"
+          }
+        ]
+      },
+      "tag": "A"
+    },
+    {
+      "id": "warm_intent",
+      "description": "有興趣但需進一步教育",
+      "rule": {
+        "any": [
+          {
+            "question_id": "q12_fee_awareness",
+            "equals": "尚不清楚，希望在講座中了解相關資訊"
+          },
+          {
+            "question_id": "q11_decision_mode",
+            "equals": "習慣先與家人或伴侶討論"
+          }
+        ]
+      },
+      "tag": "B"
+    }
+  ],
+  "fallback_tag": "C"
+}

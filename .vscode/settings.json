@@ -1,0 +1,23 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/memory/**": true,
+    "**/error-log/**": true,
+    "**/truth-source/**": true,
+    "**/docs/domain/**": true
+  },
+  "search.exclude": {
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/memory/**": true,
+    "**/error-log/**": true,
+    "**/truth-source/**": true,
+    "**/docs/domain/**": true
+  },
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.indexing": false,
+  "typescript.tsserver.maxTsServerMemory": 512
+}
