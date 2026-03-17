@@ -1,0 +1,54 @@
+{
+  "aggregate": {
+    "cases": 3,
+    "ok_cases": 3,
+    "avg_paths": 2.67,
+    "avg_local_hits": 1.67,
+    "avg_gh_hits": 3.33,
+    "avg_so_hits": 0.0,
+    "avg_web_hits": 0.0
+  },
+  "rows": [
+    {
+      "problem": "FastAPI timeout with httpx when calling upstream API and intermittent 403",
+      "ok": true,
+      "local_hits": 4,
+      "so_hits": 0,
+      "gh_hits": 5,
+      "web_hits": 0,
+      "paths": 4,
+      "path_names": [
+        "A: 沿用本地既有修復模式",
+        "B: 觀測先行（timeout/403 分離）",
+        "C: 先做最小防禦修補",
+        "E: Bug 庫已知問題路線"
+      ]
+    },
+    {
+      "problem": "Python ModuleNotFoundError No module named common when running script directly",
+      "ok": true,
+      "local_hits": 0,
+      "so_hits": 0,
+      "gh_hits": 5,
+      "web_hits": 0,
+      "paths": 1,
+      "path_names": [
+        "E: Bug 庫已知問題路線"
+      ]
+    },
+    {
+      "problem": "Instagram scraping returns media_count 0 with yt-dlp but caption exists",
+      "ok": true,
+      "local_hits": 1,
+      "so_hits": 0,
+      "gh_hits": 0,
+      "web_hits": 0,
+      "paths": 3,
+      "path_names": [
+        "A: 沿用本地既有修復模式",
+        "B: 觀測先行（timeout/403 分離）",
+        "C: 先做最小防禦修補"
+      ]
+    }
+  ]
+}

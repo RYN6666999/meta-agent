@@ -1,0 +1,51 @@
+{
+  "date": "2026-03-17",
+  "scope": "instagram_extractor_hardening",
+  "changes": [
+    "free_text_url_extraction",
+    "error_classification",
+    "stale_cache_fallback_on_failure"
+  ],
+  "validation": {
+    "syntax_ok": true,
+    "scenario_noisy_text_input": {
+      "input": "幫我抓這篇 IG： https://www.instagram.com/p/DVqFtTlkY2a/?utm_source=ig_web_copy_link 謝謝",
+      "run1": {
+        "source": "instaloader",
+        "media_count": 9,
+        "cache_hit": false,
+        "stale_cache": false,
+        "error_class": "none",
+        "elapsed_ms": 11992.95
+      },
+      "run2": {
+        "source": "instaloader",
+        "media_count": 9,
+        "cache_hit": true,
+        "stale_cache": false,
+        "error_class": "none",
+        "elapsed_ms": 0.35
+      }
+    },
+    "scenario_forced_provider_failures": {
+      "method": "monkeypatch _run_ytdlp and _run_instaloader to raise errors; force cache ttl expired",
+      "result": {
+        "cache_hit": true,
+        "stale_cache": true,
+        "error_class": "provider_block",
+        "fallback_attempt": {
+          "method": "stale_cache_fallback",
+          "ok": true
+        }
+      }
+    }
+  },
+  "kpi_delta": {
+    "availability_under_upstream_failure": "improved_by_stale_cache_fallback",
+    "repeat_call_latency_ms": {
+      "before_like_first_call": 11992.95,
+      "after_cache_hit": 0.35
+    }
+  },
+  "status": "pass"
+}

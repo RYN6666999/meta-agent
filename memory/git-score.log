@@ -253,3 +253,21 @@
 
 🚨 超過閾值 50，自動 commit...
 ✅ commit 完成
+📊 評分結果：110/50
+  其他變更 (memory-mcp/server.py) +5
+  memory 變更 (memory/git-score-log.md) +10
+  memory 變更 (memory/git-score.log) +10
+  memory 變更 (memory/milestone-judge-log.md) +10
+  memory 變更 (memory/obsidian-ingest.log) +10
+  memory 變更 (memory/pending-decisions.md) +10
+  memory 變更 (memory/system-status.json) +10
+  其他變更 (scripts/truth-xval.py) +5
+  其他變更 (common/frontmatter.py) +5
+  其他變更 (common/identity.py) +5
+  其他變更 (common/instagram_extract.py) +5
+  其他變更 (docs/domain/snapinsta-blackbox-analysis-2026-03-17.md) +5
+  memory 變更 (memory/ig-extract-cache.json) +10
+  memory 變更 (memory/ig-extract-cache.json.lock) +10
+
+🚨 超過閾值 50，自動 commit...
+✅ commit 完成

@@ -1,35 +1,42 @@
-# D7 Hardening Execution Plan
+# D10 Verification Stability Plan
 
-## Goal
-補齊商業化剩餘缺口：`D5-4` 結構化 query 輸出 + `D4-5` project-golem 掛載驗證。
+## Mission Alignment
+以用戶視角優先確保：系統可判斷、可恢復、可追溯。先穩定驗證鏈路，再擴充能力。
 
-## Phases
-| Phase | Status | Outcome |
-|------|--------|---------|
-| 1. D5-4 結構化 query | completed | `query_memory_structured()` + `/api/v1/query` JSON 欄位 |
-| 2. 向下相容保留 | completed | MCP `query_memory` 仍維持文字輸出，不破壞既有流程 |
-| 3. D4-5 golem MCP 掛載 | completed | `project-golem` 的 `memory-mcp` 已 `✓ Connected` |
-| 4. 驗證與同步計畫 | in_progress | 靜態檢查通過，待完成 smoke 與 handoff 同步 |
+## Live Baseline (2026-03-17)
+- health：LightRAG timeout（fail）
+- e2e：memory-extract 回傳 HTTP 500，錯誤為 SQLITE_CORRUPT（fail）
+- n8n / Groq：可用（pass）
+- 來源：`memory/system-status.json` 已更新
 
-## Decisions
-- API 端優先讀結構化 payload；若 backend 舊版則 fallback 文字模式。
-- 維持 `memory-mcp` 工具介面穩定，避免外部 MCP 客戶端破壞性升級。
-- 對 `project-golem` 直接做 project-scope MCP 掛載，先打通共享後端路徑。
+## User-Scenario Objectives
+| Scenario | User expectation | SLO target |
+|---|---|---|
+| 對話中斷後續跑 | 5 分鐘內知道下一步 | handoff 新鮮度 <= 10 分鐘 |
+| 送出記憶萃取 | 不要 silent fail | e2e 成功率 >= 95% / 日 |
+| 查詢歷史與規則 | 回應可追溯 | trace 命中率 >= 95% |
+| 服務異常時 | 先告警再修復 | 偵測延遲 <= 5 分鐘 |
 
-## Risks
-- `rerank_candidates` 目前仍是本地 heuristic，非 cross-encoder。
-- 多租戶目前屬軟隔離，仍需 namespace-level hard isolation。
+## Execution Phases
+| Phase | Status | Goal | Validation | Rollback |
+|---|---|---|---|---|
+| P1 故障止血 | in_progress | 確認 n8n SQLite 損毀影響範圍，恢復 e2e | `scripts/e2e_test.py` 連續 3 次通過 | 回退到前一份可用 DB 備份 |
+| P2 健康穩定化 | not_started | 降低 LightRAG timeout，完成可用性基線 | `scripts/health_check.py` 每次全綠 | 使用保守 timeout 與重試策略 |
+| P3 驗證守門 | not_started | 建立 pre-merge smoke gate | health+e2e 皆 pass 才允許發布 | 關閉 gate，回手動審核 |
+| P4 可觀測增強 | not_started | status 加入失敗連續次數與 MTTR | `memory/system-status.json` 欄位齊全 | 保留舊欄位相容輸出 |
 
-## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| 無阻塞錯誤 | 1 | 直接落地 D5-4 與 D4-5，靜態檢查先通過 |
+## Week-1 Runbook (Practical)
+1. 每日上午先跑 health + e2e，更新狀態檔與錯誤日誌。
+2. 若 e2e fail 且含 SQLITE_CORRUPT，先執行 DB 修復路徑，不做功能開發。
+3. 若 LightRAG timeout，先套重試與超時分級，確認健康恢復後再放行 ingest。
+4. 每次修復必須附帶 machine-readable 狀態更新與可回放驗證結果。
+5. 每日晚間生成 handoff，下一輪只從狀態檔推導 next steps。
 
-## Verification
-- `get_errors`：`api/server.py`、`memory-mcp/server.py`、`scripts/test_api.py` 無錯。
-- `claude mcp list`（在 project-golem）顯示 `memory-mcp ... ✓ Connected`。
-- 待執行：`scripts/test_api.py` 重新驗證 `query` 結構化欄位。
+## Deliverables
+- D10-1：驗證穩定化 runbook（故障分類 + 處置流程）
+- D10-2：健康與 e2e 守門規則（Fail fast）
+- D10-3：狀態檔補強（連續失敗計數、最近恢復時間）
+- D10-4：一週穩定性報告（成功率、MTTR、主要根因）
 
-## Next Actions
-- 補跑完整 smoke test，確認 `query` 一定回傳 `rerank_candidates`/`memory_boost_updated`。
-- 將 D7 結果回寫最新 handoff，確保中斷可續跑。
+## Immediate Next Step
+先修復 n8n SQLite 損毀造成的 e2e 500，再把 LightRAG timeout 變成可預期告警與可恢復流程。

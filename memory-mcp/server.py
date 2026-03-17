@@ -22,6 +22,11 @@ from typing import Optional
 import httpx
 from mcp.server.fastmcp import FastMCP
 from common.frontmatter import get_frontmatter_value
+from common.debug_solver import dumps as _debug_dumps
+from common.debug_solver import generate_debug_solutions as _generate_debug_solutions
+from common.ig_discuss import discuss_instagram_post as _discuss_instagram_post
+from common.ig_discuss import dumps as _dumps
+from common.ig_discuss import prepare_instagram_discussion as _prepare_instagram_discussion
 from common.identity import normalize_id
 from common.instagram_extract import extract_instagram_post as _extract_instagram_post
 
@@ -516,6 +521,88 @@ def extract_instagram_post(url: str) -> str:
 
 # ── 工具 4：get_rules ─────────────────────────────────────────────────
 @mcp.tool()
+def prepare_instagram_discussion(url: str, remove_promo: bool = True, max_images: int = 9) -> str:
+    """
+    一次完成 IG 貼文討論前處理：抽取貼文 + 圖片 OCR + 廣告清洗。
+
+    Args:
+        url: IG 貼文網址（/p/ /reel/ /tv/）
+        remove_promo: 是否清洗品牌/導流廣告語
+        max_images: 最多處理圖片張數
+
+    Returns:
+        JSON 文字（含 cleaned context，可直接拿去對談）
+    """
+    if not url or not str(url).strip():
+        return _dumps({"ok": False, "error": "invalid_url"})
+
+    try:
+        payload = _prepare_instagram_discussion(
+            url=url,
+            remove_promo=bool(remove_promo),
+            max_images=int(max_images),
+        )
+        return _dumps(payload)
+    except Exception as exc:
+        return _dumps({"ok": False, "error": "prepare_failed", "message": str(exc)[:500]})
+
+
+# ── 工具 5：IG 直接對談 ───────────────────────────────────────────────
+@mcp.tool()
+def discuss_instagram_post(url: str, question: str, remove_promo: bool = True, max_images: int = 9) -> str:
+    """
+    貼上 IG 連結後直接提問，回傳可對談答案（基於 caption + OCR 文字證據）。
+
+    Args:
+        url: IG 貼文網址
+        question: 想討論的問題
+        remove_promo: 是否清洗品牌/導流廣告語
+        max_images: 最多處理圖片張數
+
+    Returns:
+        JSON 文字（answer + evidence）
+    """
+    if not url or not str(url).strip():
+        return _dumps({"ok": False, "error": "invalid_url"})
+    if not question or not str(question).strip():
+        return _dumps({"ok": False, "error": "invalid_question"})
+
+    try:
+        payload = _discuss_instagram_post(
+            url=url,
+            question=question,
+            remove_promo=bool(remove_promo),
+            max_images=int(max_images),
+        )
+        return _dumps(payload)
+    except Exception as exc:
+        return _dumps({"ok": False, "error": "discuss_failed", "message": str(exc)[:500]})
+
+
+# ── 工具 6：get_rules ─────────────────────────────────────────────────
+@mcp.tool()
+def debug_solution_crosscheck(problem: str, top_k: int = 3) -> str:
+    """
+    回答前的多來源解法交叉器：從本地經驗 + Stack Overflow 產生多條解法路徑。
+
+    Args:
+        problem: 問題敘述（錯誤訊息、症狀、技術棧）
+        top_k: 回傳解法路徑數量
+
+    Returns:
+        JSON 文字（paths + evidence）
+    """
+    if not problem or not str(problem).strip():
+        return _debug_dumps({"ok": False, "error": "invalid_problem"})
+    try:
+        payload = _generate_debug_solutions(problem=problem, top_k=int(top_k))
+        return _debug_dumps(payload)
+    except Exception as exc:
+        return _debug_dumps({"ok": False, "error": "crosscheck_failed", "message": str(exc)[:500]})
+
+
+# ── 工具 7：get_rules ─────────────────────────────────────────────────
+@mcp.tool()
 def get_rules(category: str = "all") -> str:
     """
     讀取 law.json 硬規則法典。
@@ -542,7 +629,7 @@ def get_rules(category: str = "all") -> str:
     return json.dumps({category: section}, ensure_ascii=False, indent=2)
 
 
-# ── 工具 5：log_error ─────────────────────────────────────────────────
+# ── 工具 8：log_error ─────────────────────────────────────────────────
 @mcp.tool()
 async def log_error(root_cause: str, solution: str, topic: str = "", context: str = "") -> str:
     """

@@ -26,6 +26,23 @@
 
 ## 技術映射：可移植 vs 不建議
 
+### 可移植映射評分（impact/effort/risk/time）
+1. 輸入文字自動抽 URL + 正規化
+- Score: impact=4, effort=1, risk=1, time=1
+- Decision: 採用。低成本直接降低使用者輸入噪音導致的失敗。
+
+2. 多來源 fallback（yt-dlp -> cookies -> instaloader）
+- Score: impact=5, effort=3, risk=2, time=2
+- Decision: 採用。對抗 provider 變動最有價值。
+
+3. 失敗時 stale cache 回退（短期）
+- Score: impact=4, effort=2, risk=2, time=1
+- Decision: 採用。上游短暫異常時可維持可用性。
+
+4. 私有端點模擬（action2.php + anti-bot token）
+- Score: impact=2, effort=4, risk=5, time=4
+- Decision: 不採用。高風險且不可維運。
+
 ### 可移植（建議）
 1. 輸入容錯層
 - 從任意貼上文字中先抽取第一個 URL，再做網域與 path 正規化。
@@ -53,6 +70,8 @@
 ## 對 meta-agent 的落地建議
 1. 已落地
 - 將 Snapinsta 的「先抽 URL 再處理」概念導入 common/instagram_extract.py。
+- 加入 error_class（none/network/auth/format/provider_block/unknown）回傳欄位。
+- 加入 stale cache fallback（可由 IG_ALLOW_STALE_CACHE_ON_FAILURE 控制）。
 
 2. 下一步
 - 在 system-status 增加 IG 成功率與 error_class 日統計。

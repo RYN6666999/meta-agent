@@ -90,6 +90,15 @@ last_updated: 2026-03-16 17:10
   記憶萃取 / 清洗 / 格式化 → 全部用 Groq（免費額度高，速度快）
   ✅ 已寫入 `law.json` 的 `groq_architecture` 欄位
 
+- [x] **P2-D：Instagram 提取品質改善** ⭐ NEW (2026-03-17)
+  問題：media_count=0 但 caption 存在（yt-dlp 黑箱限制）
+  解決方案：JSON-LD fallback 層
+  實施：`common/instagram_extract.py` 新增 `_run_jsonld()` 函數
+  流程：yt-dlp(0媒體但有caption) → JSON-LD爬取meta+schema → instaloader
+  驗證：✅ Unit test 10/10 passed (parsing + fallback chain)
+  預期效果：media_count 完整率 72% → 85%+（待 1 週現場驗證）
+  後續：若 < 80% → 升級 P3 Lightpanda 原型，否則持續監控
+
 ---
 
 ### P3｜遺忘曲線執行引擎

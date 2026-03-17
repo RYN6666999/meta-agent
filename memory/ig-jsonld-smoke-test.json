@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-03-17 12:37:19",
+  "test_count": 3,
+  "success_count": 0,
+  "success_rate": "0%",
+  "total_media_extracted": 0,
+  "avg_extraction_time_ms": "0",
+  "jsonld_fallback_triggered": 0,
+  "results": [
+    {
+      "url": "https://www.instagram.com/p/DB1qK_ByAcz/",
+      "ok": false,
+      "error": "Fetching Post metadata failed."
+    },
+    {
+      "url": "https://www.instagram.com/reel/DFTm_bUo7SR/",
+      "ok": false,
+      "error": "Fetching Post metadata failed."
+    },
+    {
+      "url": "https://www.instagram.com/p/DC7NUUVIhz9/",
+      "ok": false,
+      "error": "Fetching Post metadata failed."
+    }
+  ]
+}

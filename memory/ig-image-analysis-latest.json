@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "post": {
+    "url": "https://www.instagram.com/p/DVqFtTlkY2a/",
+    "author": "boss.fdao",
+    "caption_preview": "你人生追求的又是什麼？\n\n以財入道，從掌控自己的時間開始。\n\n💎 想了解更多財富與修行的智慧？\n👉 訂閱 Patreon 解鎖獨家內容\n🔗 連結在個人簡介\n\n#BOSS財道 #以財入道 #bossquote #davelee",
+    "media_count": 9,
+    "cache_hit": true,
+    "elapsed_ms": 0.49
+  },
+  "image_analysis": [
+    {
+      "index": 1,
+      "image_url_preview": "https://instagram.ftpe7-2.fna.fbcdn.net/v/t51.82787-15/649223470_17997953624912865_3636138615139979261_n.jpg?stp=dst-jpg",
+      "ok": true,
+      "analysis_raw": "```json\n{\n  \"scene\": \"人物訪談宣傳\",\n  \"key_objects\": [\n    \"Bruce Greyson\",\n    \"BOSS財道Logo\"\n  ],\n  \"text_in_image\": [\n    \"BOSS財道\",\n    \"@boss.fdao\",\n    \"50年瀕死經驗科學研究\",\n    \"Bruce Greyson 葛瑞森\",\n    \"人生真正追求的是什麼？\",\n    \"死亡邊緣的人，看清了活著的人最看不透的事\"\n  ],\n  \"tone\": \"嚴肅, 知性\",\n  \"marketing_angle\": \"以瀕死經驗為切入點，探討人生意義，吸引對生命哲學感興趣的受眾。\",\n  \"risk_flags\": []\n}\n```"
+    },
+    {
+      "index": 2,
+      "image_url_preview": "https://instagram.ftpe7-2.fna.fbcdn.net/v/t51.82787-15/649233730_17997953642912865_4645351511851245202_n.jpg?stp=dst-jpg",
+      "ok": true,
+      "analysis_raw": "```json\n{\n  \"scene\": \"書籍推廣\",\n  \"key_objects\": [\n    \"書籍封面\",\n    \"精神科醫師 Bruce Greyson 的照片\"\n  ],\n  \"text_in_image\": \"BOSS財道 @boss.fdao, 修行智慧, A Doctor Explores What Near-Death Experiences Reveal about Life and Beyond, After, BRUCE GREYSON, MD., 一個精神科醫師的50年追問, 1970年代,精神科醫師 Bruce Greyson遇到了一個無法解釋的病人報告。從此,他花了整整50年,收集並分析全球逾千個「瀕死經驗」案例。他最初以為:缺氧、藥物、幻覺可以解釋一切。但數十年的數據告訴他:「這些解釋,全部不成立。」他的研究,從被醫學界冷嘲熱諷,到今天成為全球最權威的瀕死研究。科學家用50年數據,挑戰了我們對死亡與意識的一切假設\",\n  \"tone\": \"嚴肅、學術、啟發\",\n  \"marketing_angle\": \"以精神科醫師50年的研究為基礎，挑戰對死亡與意識的傳統認知，引發讀者對生命意義的思考。\",\n  \"risk_flags\": []\n}\n```"
+    },
+    {
+      "index": 3,
+      "image_url_preview": "https://instagram.ftpe7-2.fna.fbcdn.net/v/t51.82787-15/648162997_17997953660912865_5728091323353132228_n.jpg?stp=dst-jpg",
+      "ok": true,
+      "analysis_raw": "```json\n{\n  \"scene\": \"瀕死體驗探討\",\n  \"key_objects\": [\n    \"人影\",\n    \"隧道\",\n    \"文字\"\n  ],\n  \"text_in_image\": [\n    \"BOSS財道\",\n    \"@boss.fdao\",\n    \"修行智慧\",\n    \"死亡邊緣的人，看到了什麼？\",\n    \"靈魂出竅\",\n    \"人生回顧\",\n    \"感官超越\",\n    \"光的存在\",\n    \"比現實還要真實\"\n  ],\n  \"tone\": \"神秘、引人深思\",\n  \"marketing_angle\": \"探索未知領域，引發對生命意義的思考\",\n  \"risk_flags\": []\n}\n```"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "e2e_memory_extract": {
     "ok": false,
-    "checked_at": "2026-03-17 10:24:41",
+    "checked_at": "2026-03-17 12:44:45",
     "detail": "HTTP 500: {\"code\":0,\"message\":\"SQLITE_CORRUPT: database disk image is malformed\",\"stacktrace\":\"QueryFailedError: SQLITE_CORRUPT: database disk image is malformed\\n    at Statement.handler (/usr/local/lib/node_modules/n8n/node_modules/@n8n/typeorm/driver/sqlite-pooled/SqliteLibrary.js:102:39)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\\n    at Statement.replacement (/usr/local/lib/node_modules/n8n/node_modules/sqlite3/lib/trace.js:25:27)\"} | title_quality_failed",
     "quality_ok": false,
     "titles_total": 0,
@@ -11,7 +11,7 @@
   },
   "health_check": {
     "ok": false,
-    "checked_at": "2026-03-17 10:24:46",
+    "checked_at": "2026-03-17 12:44:39",
     "services": {
       "lightrag": {
         "ok": false,
@@ -7362,7 +7362,7 @@
   },
   "obsidian_ingest": {
     "ok": false,
-    "checked_at": "2026-03-17 11:22",
+    "checked_at": "2026-03-17 12:22",
     "error": "LightRAG down"
   },
   "benchmark_baseline": {
