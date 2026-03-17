@@ -1,10 +1,10 @@
 {
-  "last_synced_ts": 1773712325.312937,
-  "last_synced_str": "2026-03-17 09:52",
+  "last_synced_ts": 1773728569.920729,
+  "last_synced_str": "2026-03-17 14:22",
   "last_run": {
-    "ingested": 8,
-    "skipped_short": 0,
+    "ingested": 0,
+    "skipped_short": 1,
     "errors": 0,
-    "total_candidates": 8
+    "total_candidates": 1
   }
 }

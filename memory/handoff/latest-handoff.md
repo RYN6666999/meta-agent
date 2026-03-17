@@ -1,21 +1,21 @@
 ---
-date: 2026-03-16
-session: meta-agent — Session 18
+date: 2026-03-17
+session: meta-agent — Session 21
 status: 穩定運行
-generated: 2026-03-16 23:50
+generated: 2026-03-17 14:27
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-16 23:50 自動生成）
+## 系統狀態（2026-03-17 14:27 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
-| LightRAG | ✅ |
+| LightRAG | ❌ |
 | n8n | ✅ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | dedup-lightrag(idle) | generate-handoff(75760) | truth-xval(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：50
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**Turn 計數**：53
 
 ---
 
@@ -29,22 +29,22 @@ generated: 2026-03-16 23:50
 ---
 
 ## 最近 Git 提交
-- `fda8347 auto: [misc] score=50 超過閾值 50 自動備份`
-- `06c5aaf chore: update handoff + turn-count before session close`
-- `1ddb558 feat: 自動觸發機制強化 (D9) — on-stop.py 修復 + Obsidian 自動同步`
-- `f1cae21 feat: 三真理源交叉驗證 — truth-xval.py + milestone-judge 自動 ingest LightRAG`
-- `3ced70e chore: update git-score logs after persona isolation fixes`
-- `16af242 auto: [misc] score=55 超過閾值 50 自動備份`
+- `92d5a74 perf: debounce on-stop and compact api status payload`
+- `f1dede2 feat: harden health/e2e reliability metrics and auto-recovery`
+- `e4847ab chore: update verification status snapshot`
+- `9af6a34 refactor: remove obsolete fallback branches`
+- `e969b4e fix: restore local memory extraction main path`
+- `95e9353 auto: [law+misc] score=115 超過閾值 50 自動備份`
 
 ## 最近 Error Log
+- 2026-03-17-health-check.md
 - 2026-03-16-health-check.md
 - 2026-03-16-d1-fix-verification.md
 - 2026-03-16-claude-bug-log-discipline.md
 - douyin-parser-bugs.md
-- 2026-03-16-workflow-c-groq-proxy-dns.md
 
 ## 最近驗證
-- E2E memory-extract：✅ 2026-03-16 16:44:09: HTTP 200
+- E2E memory-extract：✅ 2026-03-17 14:27:21: local-memory-extract
 
 ---
 

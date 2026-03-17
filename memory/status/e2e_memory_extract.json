@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "checked_at": "2026-03-17 14:27:21",
+  "checked_at": "2026-03-17 14:42:21",
   "detail": "local-memory-extract",
   "quality_ok": true,
   "titles_total": 1,
@@ -17,8 +17,8 @@
       "對話重點摘要"
     ],
     "errors": [],
-    "timestamp": "2026-03-17T14:27:21.198875"
+    "timestamp": "2026-03-17T14:42:21.113875"
   },
   "consecutive_failures": 0,
-  "last_ok_at": "2026-03-17 14:27:21"
+  "last_ok_at": "2026-03-17 14:42:21"
 }
