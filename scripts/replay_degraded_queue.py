@@ -6,7 +6,9 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +20,7 @@ from common.status_store import load_status, save_status
 
 BACKEND_FILE = ROOT_DIR / 'memory-mcp' / 'server.py'
 QUEUE_FILE = ROOT_DIR / 'memory' / 'degraded-ingest-queue.jsonl'
+DEFAULT_CONCURRENCY = 8
 
 
 def load_backend():
@@ -29,10 +32,11 @@ def load_backend():
     return module
 
 
-def parse_queue() -> list[dict]:
+def parse_queue() -> tuple[list[dict], int]:
     if not QUEUE_FILE.exists():
-        return []
+        return [], 0
     items: list[dict] = []
+    invalid_lines = 0
     for line in QUEUE_FILE.read_text(encoding='utf-8').splitlines():
         line = line.strip()
         if not line:
@@ -41,49 +45,105 @@ def parse_queue() -> list[dict]:
             row = json.loads(line)
             if isinstance(row, dict):
                 items.append(row)
+            else:
+                invalid_lines += 1
         except Exception:
-            continue
-    return items
+            invalid_lines += 1
+    return items, invalid_lines
 
 
 def write_queue(items: list[dict]) -> None:
+    QUEUE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp_file = QUEUE_FILE.with_suffix('.jsonl.tmp')
     if not items:
-        QUEUE_FILE.write_text('', encoding='utf-8')
+        tmp_file.write_text('', encoding='utf-8')
+        tmp_file.replace(QUEUE_FILE)
         return
     payload = '\n'.join(json.dumps(i, ensure_ascii=False) for i in items) + '\n'
-    QUEUE_FILE.write_text(payload, encoding='utf-8')
+    tmp_file.write_text(payload, encoding='utf-8')
+    tmp_file.replace(QUEUE_FILE)
 
 
-async def replay() -> tuple[int, int, str]:
-    rows = parse_queue()
-    total = len(rows)
-    if total == 0:
-        return 0, 0, 'queue empty'
+def _get_concurrency() -> int:
+    raw = os.getenv('META_REPLAY_CONCURRENCY', '').strip()
+    if not raw:
+        return DEFAULT_CONCURRENCY
+    try:
+        value = int(raw)
+    except Exception:
+        return DEFAULT_CONCURRENCY
+    return max(1, min(64, value))
 
-    backend = load_backend()
-    remain: list[dict] = []
-    success = 0
 
+def _dedup_rows(rows: list[dict]) -> tuple[list[dict], int]:
+    seen: set[tuple[str, str]] = set()
+    deduped: list[dict] = []
+    duplicates = 0
     for row in rows:
         content = str(row.get('content', '')).strip()
         title = str(row.get('title', 'degraded-replay')).strip() or 'degraded-replay'
         if not content:
             continue
+        key = (title, content)
+        if key in seen:
+            duplicates += 1
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped, duplicates
+
+
+async def _replay_one(backend, row: dict, sem: asyncio.Semaphore) -> tuple[bool, dict | None]:
+    async with sem:
+        content = str(row.get('content', '')).strip()
+        title = str(row.get('title', 'degraded-replay')).strip() or 'degraded-replay'
+        if not content:
+            return True, None
         try:
             result = await backend.ingest_memory(content, 'verified_truth', title)
             if isinstance(result, str) and result.startswith('✅'):
-                success += 1
-            else:
-                row['last_replay_result'] = str(result)[:200]
-                row['last_replay_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                remain.append(row)
+                return True, None
+            failed = dict(row)
+            failed['last_replay_result'] = str(result)[:200]
+            failed['last_replay_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            return False, failed
         except Exception as exc:
-            row['last_replay_result'] = str(exc)[:200]
-            row['last_replay_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            remain.append(row)
+            failed = dict(row)
+            failed['last_replay_result'] = str(exc)[:200]
+            failed['last_replay_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            return False, failed
+
+
+async def replay() -> tuple[int, int, str]:
+    started = time.perf_counter()
+    rows, invalid_lines = parse_queue()
+    total_raw = len(rows)
+    rows, duplicates = _dedup_rows(rows)
+    total = len(rows)
+    if total == 0:
+        detail = f'queue empty raw={total_raw} invalid={invalid_lines} duplicates={duplicates}'
+        return 0, 0, detail
+
+    backend = load_backend()
+    sem = asyncio.Semaphore(_get_concurrency())
+    tasks = [_replay_one(backend, row, sem) for row in rows]
+    results = await asyncio.gather(*tasks)
+
+    remain: list[dict] = []
+    success = 0
+    for ok, failed_row in results:
+        if ok:
+            success += 1
+        elif isinstance(failed_row, dict):
+            remain.append(failed_row)
 
     write_queue(remain)
-    return success, len(remain), f'success={success} remain={len(remain)} total={total}'
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    detail = (
+        f'success={success} remain={len(remain)} total={total} '
+        f'raw={total_raw} invalid={invalid_lines} duplicates={duplicates} elapsed_ms={elapsed_ms}'
+    )
+    return success, len(remain), detail
 
 
 def update_status(success: int, remain: int, detail: str) -> None:
