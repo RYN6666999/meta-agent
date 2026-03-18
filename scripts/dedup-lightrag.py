@@ -10,6 +10,7 @@ dedup-lightrag.py — P4-B 實體去重腳本
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from datetime import datetime, date
@@ -17,9 +18,20 @@ from collections import defaultdict
 
 import httpx
 
-LIGHTRAG_API = "http://localhost:9621"
 META = Path("/Users/ryan/meta-agent")
 LOG_FILE = META / "memory" / "dedup-log.md"
+COMPAT_STORE = META / "memory" / "lightrag-compat-store.jsonl"
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+try:
+    from common.config import LIGHTRAG_API as CONFIG_LIGHTRAG_API
+except Exception:
+    CONFIG_LIGHTRAG_API = "http://127.0.0.1:9631"
+
+LIGHTRAG_API = os.environ.get("LIGHTRAG_API", CONFIG_LIGHTRAG_API)
 
 # 相似度閾值：兩個實體名稱「包含」關係或極短 Levenshtein 距離視為重複
 SIMILARITY_THRESHOLD = 0.8
@@ -46,16 +58,48 @@ def levenshtein(a: str, b: str) -> float:
 
 def fetch_entities() -> list[dict]:
     """從 LightRAG 取得所有實體"""
-    try:
-        resp = httpx.get(f"{LIGHTRAG_API}/graphs", timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        # LightRAG graph API 結構
-        nodes = data.get("nodes") or data.get("entities") or []
-        return nodes
-    except Exception as e:
-        print(f"❌ 無法連接 LightRAG: {e}", file=sys.stderr)
-        return []
+    endpoints = [
+        f"{LIGHTRAG_API}/graphs",
+        f"{LIGHTRAG_API}/entities",
+    ]
+
+    for endpoint in endpoints:
+        try:
+            resp = httpx.get(endpoint, timeout=8)
+            if resp.status_code == 404:
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            # LightRAG graph API 結構
+            nodes = data.get("nodes") or data.get("entities") or []
+            if isinstance(nodes, list):
+                return nodes
+        except Exception as e:
+            print(f"⚠️  讀取 {endpoint} 失敗: {e}", file=sys.stderr)
+
+    # compat server 沒有 /graphs；退回用已 ingest 文件描述做最小實體視角
+    if COMPAT_STORE.exists():
+        entities = []
+        for line in COMPAT_STORE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except Exception:
+                continue
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("description") or row.get("title") or "").strip()
+            if not name:
+                continue
+            entities.append({"id": name, "type": "DOCUMENT"})
+        if entities:
+            print("ℹ️  使用 compat store 進行去重分析", file=sys.stderr)
+            return entities
+
+    print("❌ 無法連接 LightRAG 或取得實體", file=sys.stderr)
+    return []
 
 
 def find_duplicates(entities: list[dict]) -> list[tuple[dict, dict, float]]:
@@ -69,6 +113,9 @@ def find_duplicates(entities: list[dict]) -> list[tuple[dict, dict, float]]:
             e_b, name_b = names[j]
             if not name_a or not name_b:
                 continue
+            # 同名實體另外做摘要統計，避免在 pair-list 產生大量噪音
+            if name_a.lower().strip() == name_b.lower().strip():
+                continue
 
             sim = levenshtein(name_a, name_b)
             # 也檢查包含關係
@@ -79,6 +126,17 @@ def find_duplicates(entities: list[dict]) -> list[tuple[dict, dict, float]]:
                 duplicates.append((e_a, e_b, sim))
 
     return duplicates
+
+
+def summarize_exact_duplicates(entities: list[dict]) -> dict[str, int]:
+    """統計同名重複（名稱完全相同，count>1）"""
+    counter: dict[str, int] = defaultdict(int)
+    for e in entities:
+        name = (e.get("id") or e.get("name") or "").strip()
+        if not name:
+            continue
+        counter[name] += 1
+    return {name: cnt for name, cnt in counter.items() if cnt > 1}
 
 
 def group_by_type(entities: list[dict]) -> dict[str, list]:
@@ -109,10 +167,24 @@ def write_dedup_log(duplicates: list, stats: dict, dry_run: bool):
         f"**模式**：{mode_str}",
         f"**總實體數**：{stats.get('total', 0)}",
         f"**發現重複對**：{len(duplicates)}",
+        f"**同名重複群組**：{stats.get('exact_name_groups', 0)}",
+        f"",
+        f"## 同名重複摘要",
+        f"",
+    ]
+
+    exact_duplicates = stats.get("exact_duplicates", {})
+    if exact_duplicates:
+        for name, cnt in sorted(exact_duplicates.items(), key=lambda item: item[1], reverse=True)[:20]:
+            lines.append(f"- `{name}` x{cnt}")
+    else:
+        lines.append("✅ 未發現同名重複")
+
+    lines.extend([
         f"",
         f"## 重複實體清單",
         f"",
-    ]
+    ])
 
     if not duplicates:
         lines.append("✅ 未發現重複實體")
@@ -154,6 +226,11 @@ def main():
         print(f"  {etype}: {len(items)} 個")
 
     print("🔎 掃描重複實體...")
+    exact_duplicates = summarize_exact_duplicates(entities)
+    if exact_duplicates:
+        print(f"🧩 同名重複群組 {len(exact_duplicates)} 組")
+        for name, cnt in sorted(exact_duplicates.items(), key=lambda item: item[1], reverse=True)[:10]:
+            print(f"  {name} x{cnt}")
     duplicates = find_duplicates(entities)
 
     if not duplicates:
@@ -168,11 +245,19 @@ def main():
         if not args.dry_run:
             print("📝 LightRAG 目前不支援直接 API 合併實體。")
             print("   重複實體已記錄到日誌，請手動在 WebUI 處理：")
-            print(f"   http://localhost:9621/webui")
+            print(f"   {LIGHTRAG_API}/webui")
         else:
             print("（dry-run 模式，未修改任何資料）")
 
-    write_dedup_log(duplicates, {"total": len(entities)}, args.dry_run)
+    write_dedup_log(
+        duplicates,
+        {
+            "total": len(entities),
+            "exact_name_groups": len(exact_duplicates),
+            "exact_duplicates": exact_duplicates,
+        },
+        args.dry_run,
+    )
     print(f"📄 報告已寫入 {LOG_FILE}")
 
 

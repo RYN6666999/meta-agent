@@ -1,0 +1,75 @@
+{
+  "checked_at": "2026-03-18 15:30:00",
+  "mode": "analyze",
+  "facts": {
+    "health_check": {},
+    "e2e_memory_extract": {},
+    "git_status": {
+      "uncommitted_count": 9,
+      "uncommitted_files": [
+        "docs/project-execution-flow.md",
+        "docs/project-execution-flow.mmd",
+        "error-log/2026-03-18-health-check.md",
+        "memory/auto-decision-log.md",
+        "memory/handoff/latest-handoff.md",
+        "memory/status/swap-monitor.log",
+        "scripts/auto-decision-loop.py",
+        "scripts/decision-engine.py",
+        "scripts/dedup-lightrag.py"
+      ]
+    },
+    "recent_errors": [
+      "douyin-parser-bugs.md",
+      "2026-03-18-telegram-monitoring-source-mismatch.md",
+      "2026-03-18-mobile-bridge-webhook-bind-failed.md",
+      "2026-03-18-mobile-bridge-api-down.md",
+      "2026-03-18-health-check.md"
+    ],
+    "smoke_run": {
+      "ok": true,
+      "checked_at": "2026-03-17 15:01:42",
+      "steps": [
+        {
+          "name": "health_check",
+          "ok": true,
+          "returncode": 0,
+          "elapsed_ms": 770,
+          "output_preview": "[health_check] ✅ LightRAG: HTTP 200 (timeout=5s)\n[health_check] ✅ n8n: HTTP 200\n[health_check] ✅ Groq API: HTTP 200\n[health_check] 全部正常 2026-03-17 15:01"
+        },
+        {
+          "name": "e2e_test",
+          "ok": true,
+          "returncode": 0,
+          "elapsed_ms": 1042,
+          "output_preview": "發送請求... (383 字)\n{\"success\": true, \"summary\": \"✅ Ingest 1 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0\", \"ingested_count\": 1, \"memories_titles\": [\"對話重點摘要\"], \"errors\": [], \"timestamp\": \"2026-03-17T15:01:44.437053\"}"
+        },
+        {
+          "name": "replay_degraded_queue",
+          "ok": true,
+          "returncode": 0,
+          "elapsed_ms": 139,
+          "output_preview": "[replay_degraded_queue] queue empty raw=0 invalid=0 duplicates=0"
+        }
+      ]
+    }
+  },
+  "decisions": [
+    {
+      "id": "git_pending_changes",
+      "action": "check_git_score_and_commit",
+      "priority": "P1",
+      "reason": "有未提交文件，評估 git score",
+      "auto_executable": true,
+      "scripts": [
+        "scripts/git-score.py"
+      ],
+      "facts": {
+        "health_ok": null,
+        "e2e_ok": null,
+        "uncommitted_count": 9
+      }
+    }
+  ],
+  "executions": [],
+  "next_iteration_hint": "Re-run this script after health/e2e or source changes."
+}

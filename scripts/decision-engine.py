@@ -1,305 +1,258 @@
 #!/usr/bin/env python3
 """
-decision-engine.py — 事實面決策自動化
+decision-engine.py — 事實面決策引擎（簡化迴圈版）
 
-根據當前系統事實（health 狀態、git diff、錯誤日誌），
-自動決定下一步應該做什麼，消除 Ryan 的決策壓力。
-
-核心原則：
-- 事實面為準（測量數據，不是生成式建議）
-- 明確的下一步（已就緒，手工確認即執行）
-- 機器決策（基於規則引擎，不是 LLM 的「可以考慮」）
-
-輸出：更新 latest-handoff.md 的 next_steps（事實面驅動）
+目標：
+- 單一入口，讀取可驗證事實
+- 規則化決策（非 LLM 建議）
+- 可選自動執行
+- 每次執行都寫入 machine-readable 報告，方便下一輪迭代
 """
 
+from __future__ import annotations
+
+import argparse
 import json
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
-BASE_DIR = Path(__file__).parent.parent
-LAW_JSON = BASE_DIR / "law.json"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from common.decision_rule_engine import DecisionRuleEngine
+
+BASE_DIR = ROOT_DIR
 SYSTEM_STATUS = BASE_DIR / "memory" / "system-status.json"
-LATEST_HANDOFF = BASE_DIR / "memory" / "handoff" / "latest-handoff.md"
 ERROR_LOG_DIR = BASE_DIR / "error-log"
-GIT_SCORE_LOG = BASE_DIR / "memory" / "git-score-log.md"
+SMOKE_REPORT = BASE_DIR / "memory" / "smoke-run-report.json"
+LOOP_REPORT = BASE_DIR / "memory" / "decision-loop-last.json"
+
+ACTION_TO_SCRIPTS: dict[str, list[str]] = {
+    "run_truth_xval": ["scripts/truth-xval.py"],
+    "reactivate_webhooks_and_xval": ["scripts/reactivate_webhooks.py", "scripts/truth-xval.py"],
+    "check_git_score_and_commit": ["scripts/git-score.py"],
+    "review_and_fix_violation": [],
+}
 
 
 class DecisionContext:
-    """決策上下文 — 蒐集所有事實面數據"""
+    """決策上下文：蒐集當前事實。"""
 
-    def __init__(self):
-        self.law = self._load_json(LAW_JSON)
+    def __init__(self) -> None:
+        self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.system_status = self._load_json(SYSTEM_STATUS)
         self.git_status = self._get_git_status()
-        self.recent_errors = self._get_recent_errors()
-        self.health_state = self._parse_health_state()
-        self.e2e_state = self._parse_e2e_state()
-        self.timestamp = datetime.now().isoformat()
+        self.recent_errors = self._get_recent_error_names()
+        self.smoke_report = self._load_json(SMOKE_REPORT)
 
     @staticmethod
     def _load_json(path: Path) -> dict[str, Any]:
         if not path.exists():
             return {}
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
         except Exception:
             return {}
 
     def _get_git_status(self) -> dict[str, Any]:
-        """取得 git 當前狀態"""
         try:
-            # 未 commit 的改動
-            output = subprocess.run(
+            uncommitted_output = subprocess.run(
                 ["git", "-C", str(BASE_DIR), "diff", "--name-only"],
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=8,
+                check=False,
             ).stdout.strip()
-            uncommitted = output.split("\n") if output else []
-
-            # 未推送的 commit
-            output = subprocess.run(
-                ["git", "-C", str(BASE_DIR), "log", "--oneline", "origin/main..HEAD"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            ).stdout.strip()
-            unpushed = len(output.split("\n")) if output else 0
+            uncommitted = [line for line in uncommitted_output.split("\n") if line.strip()]
 
             return {
-                "uncommitted_files": uncommitted,
                 "uncommitted_count": len(uncommitted),
-                "unpushed_commits": unpushed,
+                "uncommitted_files": uncommitted,
             }
-        except Exception as e:
-            return {"error": str(e)}
+        except Exception as exc:
+            return {"error": str(exc)}
 
-    def _get_recent_errors(self) -> list[dict[str, Any]]:
-        """取得最近 3 個 error-log"""
+    def _get_recent_error_names(self) -> list[str]:
         if not ERROR_LOG_DIR.exists():
             return []
-        files = sorted(ERROR_LOG_DIR.glob("*.md"), reverse=True)[:3]
-        return [{"filename": f.name, "path": str(f)} for f in files]
+        files = sorted(ERROR_LOG_DIR.glob("*.md"), reverse=True)[:5]
+        return [f.name for f in files]
 
-    def _parse_health_state(self) -> dict[str, Any]:
-        """解析 health_check 狀態"""
-        status = self.system_status.get("health_check", {})
+    def as_rule_context(self) -> dict[str, Any]:
         return {
-            "ok": status.get("ok", False),
-            "passed_at": status.get("passed_at"),
-            "failed_at": status.get("failed_at"),
-        }
-
-    def _parse_e2e_state(self) -> dict[str, Any]:
-        """解析 e2e 狀態"""
-        status = self.system_status.get("e2e_memory_extract", {})
-        return {
-            "ok": status.get("ok", False),
-            "passed_at": status.get("passed_at"),
-            "failed_at": status.get("failed_at"),
+            "health_check": self.system_status.get("health_check", {}),
+            "e2e_memory_extract": self.system_status.get("e2e_memory_extract", {}),
+            "git_status": self.git_status,
+            "recent_errors": self.recent_errors,
+            "smoke_run": self.smoke_report,
         }
 
 
 class DecisionEngine:
-    """決策引擎 — 根據事實面規則自動決定下一步"""
+    """規則化決策引擎。"""
 
-    def __init__(self, ctx: DecisionContext):
+    def __init__(self, ctx: DecisionContext) -> None:
         self.ctx = ctx
-        self.decisions: list[dict[str, Any]] = []
+        self.rule_engine = DecisionRuleEngine()
 
     def analyze(self) -> list[dict[str, Any]]:
-        """執行決策分析"""
-        self._check_health_recovery()
-        self._check_rule_violations()
-        self._check_git_threshold()
-        self._check_phase_transition()
-        self._prioritize_decisions()
-        return self.decisions
+        decisions = self.rule_engine.evaluate_rules(self.ctx.as_rule_context())
+        for d in decisions:
+            action = d.get("action", "")
+            d["scripts"] = ACTION_TO_SCRIPTS.get(action, [])
+            d["facts"] = {
+                "health_ok": self.ctx.system_status.get("health_check", {}).get("ok"),
+                "e2e_ok": self.ctx.system_status.get("e2e_memory_extract", {}).get("ok"),
+                "uncommitted_count": self.ctx.git_status.get("uncommitted_count", 0),
+            }
+        return decisions
 
-    def _check_health_recovery(self) -> None:
-        """檢查 health/e2e 的自動恢復機制
 
-        根據 law.json 的規則：
-        - health 失敗 → 自動觸發交叉查核 (truth-xval)
-        - e2e 失敗 → 自動觸發 reactivate-webhooks + truth-xval
-        """
-        health_ok = self.ctx.health_state.get("ok", False)
-        e2e_ok = self.ctx.e2e_state.get("ok", False)
+class DecisionExecutor:
+    """依決策執行腳本。"""
 
-        if not health_ok:
-            self.decisions.append({
-                "id": "recovery_health_xval",
-                "priority": "P0",
-                "action": "run_truth_xval",
-                "reason": "health_check 失敗，自動觸發交叉查核",
-                "evidence": f"health_check.failed_at = {self.ctx.health_state.get('failed_at')}",
-                "script": "scripts/truth-xval.py",
-                "auto_executable": True,
-            })
+    def __init__(self, root_dir: Path) -> None:
+        self.root_dir = root_dir
 
-        if not e2e_ok:
-            self.decisions.append({
-                "id": "recovery_e2e_webhooks",
-                "priority": "P0",
-                "action": "reactivate_webhooks_and_xval",
-                "reason": "e2e_memory_extract 失敗，自動觸發 webhook 重啟 + 交叉查核",
-                "evidence": f"e2e_memory_extract.failed_at = {self.ctx.e2e_state.get('failed_at')}",
-                "scripts": [
-                    "scripts/reactivate-webhooks.py",
-                    "scripts/truth-xval.py",
-                ],
-                "auto_executable": True,
-            })
+    def execute(self, decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
 
-    def _check_rule_violations(self) -> None:
-        """檢查 law.json 的 forbidden 規則是否被違反
+        for decision in decisions:
+            action = decision.get("action", "unknown")
+            scripts = decision.get("scripts", [])
+            auto = bool(decision.get("auto_executable"))
 
-        根據最近的 error-log，判斷是否有規則違反
-        """
-        recent_errors = self.ctx.recent_errors[:3]
-        if not recent_errors:
-            return
+            if not auto:
+                results.append({
+                    "action": action,
+                    "executed": False,
+                    "ok": False,
+                    "reason": "manual_required",
+                })
+                continue
 
-        # 檢查最新的 error-log
-        latest_error = recent_errors[0]["filename"]
-        error_topics = [
-            ("bug_closeout", "bug 修復需要立即 log_error"),
-            ("webhook", "n8n webhook 相關規則"),
-            ("health_check", "health 失敗相關規則"),
-        ]
+            if not scripts:
+                results.append({
+                    "action": action,
+                    "executed": False,
+                    "ok": False,
+                    "reason": "no_script_mapped",
+                })
+                continue
 
-        for topic, description in error_topics:
-            if topic in latest_error.lower():
-                self.decisions.append({
-                    "id": f"rule_violation_{topic}",
-                    "priority": "P0" if topic == "bug_closeout" else "P1",
-                    "action": "review_and_fix_violation",
-                    "reason": description,
-                    "evidence": f"error-log/{latest_error}",
-                    "requires_manual_review": True,
+            action_ok = True
+            step_outputs: list[dict[str, Any]] = []
+            for script in scripts:
+                script_path = self.root_dir / script
+                if not script_path.exists():
+                    action_ok = False
+                    step_outputs.append({
+                        "script": script,
+                        "ok": False,
+                        "returncode": -1,
+                        "output": "script_not_found",
+                    })
+                    continue
+
+                proc = subprocess.run(
+                    [sys.executable, str(script_path)],
+                    cwd=str(self.root_dir),
+                    capture_output=True,
+                    text=True,
+                    timeout=360,
+                    check=False,
+                )
+                output = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()[:500]
+                step_ok = proc.returncode == 0
+                if not step_ok:
+                    action_ok = False
+                step_outputs.append({
+                    "script": script,
+                    "ok": step_ok,
+                    "returncode": proc.returncode,
+                    "output": output,
                 })
 
-    def _check_git_threshold(self) -> None:
-        """檢查 git diff 是否超過自動竝交的閾值
-
-        law.json git_score.threshold = 50
-        """
-        if self.ctx.git_status.get("error"):
-            return
-
-        uncommitted_count = self.ctx.git_status.get("uncommitted_count", 0)
-        if uncommitted_count > 0:
-            self.decisions.append({
-                "id": "git_pending_changes",
-                "priority": "P1",
-                "action": "check_git_score_and_commit",
-                "reason": f"有 {uncommitted_count} 個未提交文件",
-                "evidence": self.ctx.git_status.get("uncommitted_files", [])[:5],
-                "script": "scripts/git-score.py",
-                "auto_executable": True,
+            results.append({
+                "action": action,
+                "executed": True,
+                "ok": action_ok,
+                "steps": step_outputs,
             })
 
-    def _check_phase_transition(self) -> None:
-        """檢查是否可以進入下一個 Phase
-
-        Phase 流程（law.json workflow_loop）：
-        - Phase 1: JSON 施工圖，禁止執行 ✅ (已完成 Phase 1: razor-first)
-        - Phase 2: 解鎖 MCP，Just-in-Time RAG
-        - Phase 3: 驗證通過 → truth-source + LightRAG
-        """
-        # 檢查是否有新的 phase 就緒
-        if "5beb41c" in subprocess.run(
-            ["git", "-C", str(BASE_DIR), "log", "--oneline", "-1"],
-            capture_output=True,
-            text=True,
-        ).stdout:
-            # Phase 1 剛完成
-            self.decisions.append({
-                "id": "phase2_ready",
-                "priority": "P0",
-                "action": "start_phase2_state_machine",
-                "reason": "Phase 1 (razor-first RequestContext) 已完成，Phase 2 (狀態機) 可開始",
-                "evidence": "commit 5beb41c: Phase 1 refactoring",
-                "next_deliverables": [
-                    "State machine 實現 (trigger_checkpoints 邏輯)",
-                    "bug-closeout / major-change-guard / kg-maintenance 執行腳本",
-                    "統一狀態結構 (phase 3)",
-                ],
-                "requires_manual_review": True,
-            })
-
-    def _prioritize_decisions(self) -> None:
-        """按優先級排序決策"""
-        priority_map = {"P0": 0, "P1": 1, "P2": 2}
-        self.decisions.sort(
-            key=lambda d: (
-                priority_map.get(d.get("priority", "P2"), 3),
-                d.get("id", ""),
-            )
-        )
+        return results
 
 
-def render_handoff_section(decisions: list[dict[str, Any]]) -> str:
-    """將決策轉換為 handoff markdown 格式"""
+def save_loop_report(ctx: DecisionContext, decisions: list[dict[str, Any]], executions: list[dict[str, Any]], execute_mode: bool) -> None:
+    report = {
+        "checked_at": ctx.timestamp,
+        "mode": "execute" if execute_mode else "analyze",
+        "facts": ctx.as_rule_context(),
+        "decisions": decisions,
+        "executions": executions,
+        "next_iteration_hint": "Re-run this script after health/e2e or source changes.",
+    }
+    LOOP_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    LOOP_REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def print_summary(decisions: list[dict[str, Any]], executions: list[dict[str, Any]], execute_mode: bool) -> None:
+    print("=" * 70)
+    print("Decision Engine (Fact-Driven)")
+    print("=" * 70)
+    print(f"mode: {'execute' if execute_mode else 'analyze'}")
+    print(f"decisions: {len(decisions)}")
+
     if not decisions:
-        return "## 下一步\n無待決事項\n"
+        print("- no action triggered")
 
-    lines = ["## 下一步（機器決策，事實面驅動）\n"]
+    for idx, d in enumerate(decisions, start=1):
+        priority = d.get("priority", "P?")
+        action = d.get("action", "unknown")
+        reason = d.get("reason", "")
+        auto = "auto" if d.get("auto_executable") else "manual"
+        print(f"{idx}. [{priority}] {action} ({auto}) - {reason}")
 
-    for idx, decision in enumerate(decisions, 1):
-        priority = decision.get("priority", "P?")
-        action = decision.get("action", "unknown")
-        reason = decision.get("reason", "")
-        evidence = decision.get("evidence", "")
+    if execute_mode:
+        ok_count = sum(1 for e in executions if e.get("ok"))
+        print(f"executed_ok: {ok_count}/{len(executions)}")
 
-        auto = "✓ 自動執行可行" if decision.get("auto_executable") else "⚠ 需手工確認"
-
-        lines.append(f"### {idx}. {action} [{priority}] {auto}")
-        lines.append(f"**原因**：{reason}")
-        if evidence:
-            if isinstance(evidence, list):
-                lines.append(f"**證據**：{', '.join(map(str, evidence[:3]))}")
-            else:
-                lines.append(f"**證據**：{evidence}")
-
-        if decision.get("script"):
-            lines.append(f"**執行**：`{decision['script']}`")
-        elif decision.get("scripts"):
-            for script in decision["scripts"]:
-                lines.append(f"**執行**：`{script}`")
-
-        lines.append("")
-
-    return "\n".join(lines)
+    print(f"report: {LOOP_REPORT}")
 
 
-def main() -> None:
-    """主程序"""
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Fact-driven decision engine")
+    parser.add_argument("--execute", action="store_true", help="execute auto-executable decisions")
+    parser.add_argument("--json", action="store_true", help="print JSON decisions to stdout")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
     ctx = DecisionContext()
     engine = DecisionEngine(ctx)
     decisions = engine.analyze()
 
-    # 生成 handoff 內容
-    handoff_section = render_handoff_section(decisions)
+    executions: list[dict[str, Any]] = []
+    if args.execute:
+        executions = DecisionExecutor(BASE_DIR).execute(decisions)
 
-    print("\n" + "=" * 70)
-    print("決策自動化結果")
-    print("=" * 70)
-    print(handoff_section)
+    save_loop_report(ctx, decisions, executions, execute_mode=args.execute)
 
-    # 更新 latest-handoff.md（可選）
-    if LATEST_HANDOFF.exists():
-        content = LATEST_HANDOFF.read_text(encoding="utf-8")
-        # 簡單替換（在實際應用中應該用更穩健的 markdown 解析）
-        # TODO: 更新 handoff 文檔
-        pass
+    if args.json:
+        print(json.dumps({"decisions": decisions, "executions": executions}, ensure_ascii=False, indent=2))
+    else:
+        print_summary(decisions, executions, execute_mode=args.execute)
 
-    print("\n✅ 決策分析完成")
-    print(f"共 {len(decisions)} 個待決事項，按優先級排序")
+    if args.execute and any(e.get("executed") and not e.get("ok") for e in executions):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
