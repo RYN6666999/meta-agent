@@ -15,5 +15,6 @@
 | 2026-03-18 | auto-git-score | git-score 自動 commit（score=175），含重要變更 [commit:HEAD~1..HEAD] | 260 | 其他變更 error-log/2026-03-17-mobile-bridge-api-down.md +10; error-log 新增根因 error-log/2026-03-18-mobile-bridge-api-down.md +50 | pending |
 | 2026-03-18 | auto-git-score | git-score 自動 commit（score=120），含重要變更 [commit:HEAD~1..HEAD] | 240 | 其他變更 api/server.py +10; 其他變更 common/code_intelligence.py +10 | pending |
 | 2026-03-18 | auto-git-score | git-score 自動 commit（score=175），含重要變更 [commit:HEAD~1..HEAD] | 500 | 其他變更 .claude/skills/bug-closeout-autopipeline/SKILL.md +10; 其他變更 .claude/skills/daily-resume-pdca/SKILL.md +10 | pending |
+| 2026-03-18 | auto-git-score | git-score 自動 commit（score=115），含重要變更 [commit:HEAD~1..HEAD] | 250 | 其他變更 docs/architecture-debt-analysis.md +10; 其他變更 docs/mission-verification.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 

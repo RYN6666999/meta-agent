@@ -308,5 +308,35 @@
     "on_pass": "建立 decision/{topic}-{date} 分支 + commit + 寫 truth-source 記錄",
     "on_fail": "記錄日誌，不建分支，變更交由 git-score.py 日常備份",
     "log": "memory/milestone-judge-log.md"
+  },
+
+  "decision_automation": {
+    "description": "決策自動化 — 降低 Ryan 的決策壓力，事實面為準",
+    "pipeline": [
+      "scripts/decision-engine.py → 分析系統事實面（health/e2e/git/error-log）",
+      "scripts/decision-workflow.py → 自動執行決策對應的腳本",
+      "scripts/auto-decision-loop.py → 完整循環，無人工介入"
+    ],
+    "trigger": "每小時由 launchd 執行 auto-decision-loop.py",
+    "log": "memory/auto-decision-log.md",
+    "core_logic": {
+      "fact_sources": [
+        "system-status.json (health_check / e2e_memory_extract 狀態)",
+        "git diff --name-only (未提交檔案)",
+        "error-log/ (最近 3 個錯誤日誌)",
+        "law.json (規則定義和閾值)"
+      ],
+      "decision_types": [
+        "recovery_health_xval — health 失敗 → 自動觸發 truth-xval",
+        "recovery_e2e_webhooks — e2e 失敗 → 自動觸發 reactivate-webhooks + truth-xval",
+        "rule_violation_{topic} — error-log 中的規則違反 → 需手工審查",
+        "git_pending_changes — diff > 0 → 自動執行 git-score.py",
+        "phase2_ready — Phase 1 完成 → 提示開始 Phase 2"
+      ],
+      "auto_executable": "true 的決策會自動執行（無需人工確認）",
+      "manual_review": "requires_manual_review 的決策會等待人工確認"
+    },
+    "handoff_integration": "auto-decision-loop 結束後自動更新 latest-handoff.md",
+    "invariant": "絕不讓 Ryan 詢問「下一步做什麼」，系統應自動判定 + 執行"
   }
 }
