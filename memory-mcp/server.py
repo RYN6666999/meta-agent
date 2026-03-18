@@ -24,6 +24,7 @@ from mcp.server.fastmcp import FastMCP
 from common.frontmatter import get_frontmatter_value
 from common.config import LIGHTRAG_API as CONFIG_LIGHTRAG_API
 from common.request_context import RequestContext
+from common.state_machine import StateMachine
 from common.debug_solver import dumps as _debug_dumps
 from common.debug_solver import generate_debug_solutions as _generate_debug_solutions
 from common.ig_discuss import discuss_instagram_post as _discuss_instagram_post
@@ -324,6 +325,9 @@ mcp = FastMCP(
 
 
 # ── 分發器：統一決策點 ────────────────────────────────────────────────
+_state_machine = StateMachine()
+
+
 async def _dispatch(ctx: RequestContext, action: str, **kwargs) -> dict:
     """
     統一分發器：所有後端請求的單一入口點。
@@ -336,12 +340,21 @@ async def _dispatch(ctx: RequestContext, action: str, **kwargs) -> dict:
     Returns:
         工具執行結果（dict）
     
-    注意：[Phase 2] 狀態機將在此檢查 trigger_checkpoints，
-          決定是否觸發 bug_closeout / major_change_guard / kg_maintenance
+    Phase 2: 狀態機現已啟用
+    - 檢查 trigger_checkpoints
+    - 直接執行 bug_closeout / major_change_guard / kg_maintenance
     """
-    # TODO [Phase 2]: Check trigger_checkpoints and enforce state machine
-    # if "bug_closeout" in ctx.trigger_checkpoints:
-    #     await run_bug_closeout_checkpoint(...)
+    # Phase 2: 檢查並執行觸發的管道
+    if hasattr(ctx, 'trigger_checkpoints') and ctx.trigger_checkpoints:
+        try:
+            state_result = await _state_machine.execute_triggered_pipelines(
+                ctx.trigger_checkpoints,
+                {"user_id": ctx.user_id, "topic": action, "source": "dispatch"},
+            )
+            if state_result.get("failed", 0) > 0:
+                print(f"⚠ 狀態機執行有失敗：{state_result}")
+        except Exception as e:
+            print(f"❌ 狀態機執行異常：{e}")
     
     user_id = ctx.user_id if hasattr(ctx, 'user_id') else kwargs.pop('user_id', 'default')
     

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- meta-agent 決策自動化循環 -->
+	<!-- 每小時自動執行一次，無人工監督 -->
+	<key>Label</key>
+	<string>com.meta-agent.auto-decision-loop</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/env</string>
+		<string>python3</string>
+		<string>/Users/ryan/meta-agent/scripts/auto-decision-loop.py</string>
+	</array>
+
+	<!-- 工作目錄 -->
+	<key>WorkingDirectory</key>
+	<string>/Users/ryan/meta-agent</string>
+
+	<!-- 環境變量 -->
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>HOME</key>
+		<string>/Users/ryan</string>
+		<!-- 添加必要的 API keys 環境變量 -->
+		<key>LIGHTRAG_API</key>
+		<string>http://localhost:9621</string>
+	</dict>
+
+	<!-- 啟動條件：系統啟動時加載 -->
+	<key>RunAtLoad</key>
+	<true/>
+
+	<!-- 排程：每小時執行一次 -->
+	<!-- StartInterval 以秒為單位：3600 秒 = 1 小時 -->
+	<key>StartInterval</key>
+	<integer>3600</integer>
+
+	<!-- 如果上次執行還在進行中，不再啟動新的 -->
+	<key>ThrottleInterval</key>
+	<integer>300</integer>
+
+	<!-- 標準輸出和標準錯誤 -->
+	<key>StandardOutPath</key>
+	<string>/private/tmp/meta-agent-auto-decision-loop.out.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>/private/tmp/meta-agent-auto-decision-loop.err.log</string>
+
+	<!-- 結束行為 -->
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+
+	<!-- 最多重試次數 -->
+	<key>ExitTimeOut</key>
+	<integer>600</integer>
+</dict>
+</plist>
