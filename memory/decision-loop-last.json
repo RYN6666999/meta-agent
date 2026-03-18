@@ -1,24 +1,25 @@
 {
-  "checked_at": "2026-03-18 15:30:14",
-  "mode": "execute",
+  "checked_at": "2026-03-18 18:32:25",
+  "mode": "analyze",
   "facts": {
     "health_check": {},
     "e2e_memory_extract": {},
     "git_status": {
-      "uncommitted_count": 4,
+      "uncommitted_count": 5,
       "uncommitted_files": [
-        "memory/decision-loop-last.json",
-        "memory/milestone-judge-log.md",
-        "memory/pending-decisions.md",
-        "memory/status/swap-monitor.log"
+        "common/decision_rule_engine.py",
+        "error-log/2026-03-18-mobile-bridge-api-down.md",
+        "memory/reactivate-webhooks.log",
+        "memory/status/swap-monitor.log",
+        "scripts/decision-engine.py"
       ]
     },
     "recent_errors": [
       "douyin-parser-bugs.md",
       "2026-03-18-telegram-monitoring-source-mismatch.md",
       "2026-03-18-mobile-bridge-webhook-bind-failed.md",
-      "2026-03-18-mobile-bridge-api-down.md",
-      "2026-03-18-health-check.md"
+      "2026-03-18-mobile-bridge-tunnel-down.md",
+      "2026-03-18-mobile-bridge-api-down.md"
     ],
     "smoke_run": {
       "ok": true,
@@ -46,6 +47,104 @@
           "output_preview": "[replay_degraded_queue] queue empty raw=0 invalid=0 duplicates=0"
         }
       ]
+    },
+    "fact_bundle": {
+      "github": {
+        "value": {
+          "branch": "main",
+          "recent_commits": [
+            "1735675 auto: [misc] score=70 超過閾值 50 自動備份",
+            "421b8dc auto: [error_fix+misc] score=100 超過閾值 50 自動備份",
+            "7da97d3 Phase 2 並行開發：state machine + 決策引擎規則化 + launchd 集成",
+            "45fc8f4 補充 CLAUDE.md 核心意圖：記憶系統使命",
+            "dd4aaf5 決策自動化工作流 (B 確認工作流 + C 驗證 Phase 1)"
+          ],
+          "recent_commit_count": 5
+        },
+        "freshness": "fresh",
+        "confidence": "high"
+      },
+      "handoff": {
+        "value": {
+          "exists": true,
+          "top_gaps": [
+            "1. Gap-1｜Bug Closeout 一致性（P0）",
+            "2. Gap-2｜重大變更 guard 命中率（P0）",
+            "3. Gap-3｜KG 維護節律（P1）"
+          ],
+          "line_count": 64
+        },
+        "freshness": "fresh",
+        "confidence": "medium"
+      },
+      "error_library": {
+        "value": {
+          "count": 5,
+          "p0_like": 0,
+          "p1_like": 3,
+          "files": [
+            "douyin-parser-bugs.md",
+            "2026-03-18-telegram-monitoring-source-mismatch.md",
+            "2026-03-18-mobile-bridge-webhook-bind-failed.md",
+            "2026-03-18-mobile-bridge-tunnel-down.md",
+            "2026-03-18-mobile-bridge-api-down.md"
+          ]
+        },
+        "freshness": "fresh",
+        "confidence": "high"
+      },
+      "detection_results": {
+        "value": {
+          "health_check": {},
+          "e2e_memory_extract": {},
+          "smoke_run": {
+            "ok": true,
+            "checked_at": "2026-03-17 15:01:42",
+            "steps": [
+              {
+                "name": "health_check",
+                "ok": true,
+                "returncode": 0,
+                "elapsed_ms": 770,
+                "output_preview": "[health_check] ✅ LightRAG: HTTP 200 (timeout=5s)\n[health_check] ✅ n8n: HTTP 200\n[health_check] ✅ Groq API: HTTP 200\n[health_check] 全部正常 2026-03-17 15:01"
+              },
+              {
+                "name": "e2e_test",
+                "ok": true,
+                "returncode": 0,
+                "elapsed_ms": 1042,
+                "output_preview": "發送請求... (383 字)\n{\"success\": true, \"summary\": \"✅ Ingest 1 條記憶 | ⚠️ 跳過 0 | ❌ 錯誤 0\", \"ingested_count\": 1, \"memories_titles\": [\"對話重點摘要\"], \"errors\": [], \"timestamp\": \"2026-03-17T15:01:44.437053\"}"
+              },
+              {
+                "name": "replay_degraded_queue",
+                "ok": true,
+                "returncode": 0,
+                "elapsed_ms": 139,
+                "output_preview": "[replay_degraded_queue] queue empty raw=0 invalid=0 duplicates=0"
+              }
+            ]
+          }
+        },
+        "freshness": "stale",
+        "confidence": "high"
+      },
+      "graph_exposure": {
+        "value": {
+          "truth_source_docs": 6,
+          "dedup_log_exists": true,
+          "dedup_preview": "---\ndate: 2026-03-18\ntype: dedup_report\nmode: dry_run\n---\n\n# LightRAG 去重報告 2026-03-18 15:26:24\n\n**模式**：DRY RUN（只分析，未修改）\n**總實體數**：24\n**發現重複對**：0\n**同名重複群組**：2\n\n##"
+        },
+        "freshness": "fresh",
+        "confidence": "medium"
+      },
+      "forum": {
+        "value": {
+          "enabled": false,
+          "note": "forum_signals_missing_or_empty"
+        },
+        "freshness": "unknown",
+        "confidence": "low"
+      }
     }
   },
   "decisions": [
@@ -61,24 +160,10 @@
       "facts": {
         "health_ok": null,
         "e2e_ok": null,
-        "uncommitted_count": 4
+        "uncommitted_count": 5
       }
     }
   ],
-  "executions": [
-    {
-      "action": "check_git_score_and_commit",
-      "executed": true,
-      "ok": true,
-      "steps": [
-        {
-          "script": "scripts/git-score.py",
-          "ok": true,
-          "returncode": 0,
-          "output": "📊 評分結果：30/50\n  memory 變更 (memory/milestone-judge-log.md) +10\n  memory 變更 (memory/pending-decisions.md) +10\n  memory 變更 (memory/status/swap-monitor.log) +10\n\n⏳ 分數未達 50，暫不 commit"
-        }
-      ]
-    }
-  ],
+  "executions": [],
   "next_iteration_hint": "Re-run this script after health/e2e or source changes."
 }

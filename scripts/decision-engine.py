@@ -30,6 +30,9 @@ SYSTEM_STATUS = BASE_DIR / "memory" / "system-status.json"
 ERROR_LOG_DIR = BASE_DIR / "error-log"
 SMOKE_REPORT = BASE_DIR / "memory" / "smoke-run-report.json"
 LOOP_REPORT = BASE_DIR / "memory" / "decision-loop-last.json"
+HANDOFF_FILE = BASE_DIR / "memory" / "handoff" / "latest-handoff.md"
+DEDUP_LOG = BASE_DIR / "memory" / "dedup-log.md"
+FORUM_SIGNALS = BASE_DIR / "memory" / "forum-signals.json"
 
 ACTION_TO_SCRIPTS: dict[str, list[str]] = {
     "run_truth_xval": ["scripts/truth-xval.py"],
@@ -48,6 +51,34 @@ class DecisionContext:
         self.git_status = self._get_git_status()
         self.recent_errors = self._get_recent_error_names()
         self.smoke_report = self._load_json(SMOKE_REPORT)
+        self.fact_bundle = self._build_fact_bundle()
+
+    @staticmethod
+    def _parse_time(value: str | None) -> datetime | None:
+        if not value:
+            return None
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.strptime(value, fmt)
+            except Exception:
+                continue
+        return None
+
+    @staticmethod
+    def _freshness_from_time(checked_at: str | None, fresh_minutes: int = 15) -> str:
+        dt = DecisionContext._parse_time(checked_at)
+        if not dt:
+            return "unknown"
+        delta_minutes = (datetime.now() - dt).total_seconds() / 60
+        return "fresh" if delta_minutes <= fresh_minutes else "stale"
+
+    @staticmethod
+    def _fact_entry(value: Any, freshness: str, confidence: str) -> dict[str, Any]:
+        return {
+            "value": value,
+            "freshness": freshness,
+            "confidence": confidence,
+        }
 
     @staticmethod
     def _load_json(path: Path) -> dict[str, Any]:
@@ -83,6 +114,131 @@ class DecisionContext:
         files = sorted(ERROR_LOG_DIR.glob("*.md"), reverse=True)[:5]
         return [f.name for f in files]
 
+    def _get_recent_error_summary(self) -> dict[str, Any]:
+        if not ERROR_LOG_DIR.exists():
+            return {"count": 0, "p0_like": 0, "p1_like": 0, "files": []}
+        files = sorted(ERROR_LOG_DIR.glob("*.md"), reverse=True)[:5]
+        p0_like = 0
+        p1_like = 0
+        names: list[str] = []
+        for f in files:
+            names.append(f.name)
+            try:
+                content = f.read_text(encoding="utf-8")[:800].lower()
+                if any(k in content for k in ("critical", "p0", "全掛", "完全失敗")):
+                    p0_like += 1
+                elif any(k in content for k in ("error", "p1", "失敗", "timeout")):
+                    p1_like += 1
+            except Exception:
+                continue
+        return {
+            "count": len(files),
+            "p0_like": p0_like,
+            "p1_like": p1_like,
+            "files": names,
+        }
+
+    def _get_handoff_summary(self) -> dict[str, Any]:
+        if not HANDOFF_FILE.exists():
+            return {"exists": False, "top_gaps": []}
+        try:
+            text = HANDOFF_FILE.read_text(encoding="utf-8")
+        except Exception:
+            return {"exists": False, "top_gaps": []}
+
+        top_gaps: list[str] = []
+        for line in text.splitlines():
+            s = line.strip()
+            if s.startswith("1. ") or s.startswith("2. ") or s.startswith("3. "):
+                top_gaps.append(s)
+            if len(top_gaps) >= 3:
+                break
+
+        return {
+            "exists": True,
+            "top_gaps": top_gaps,
+            "line_count": len(text.splitlines()),
+        }
+
+    def _get_github_summary(self) -> dict[str, Any]:
+        try:
+            branch = subprocess.run(
+                ["git", "-C", str(BASE_DIR), "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            ).stdout.strip()
+            commits = subprocess.run(
+                ["git", "-C", str(BASE_DIR), "log", "--oneline", "-n", "5"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            ).stdout.strip().splitlines()
+            return {
+                "branch": branch,
+                "recent_commits": commits,
+                "recent_commit_count": len([c for c in commits if c.strip()]),
+            }
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    def _get_forum_summary(self) -> dict[str, Any]:
+        data = self._load_json(FORUM_SIGNALS)
+        if not data:
+            return {
+                "enabled": False,
+                "note": "forum_signals_missing_or_empty",
+            }
+        return {
+            "enabled": True,
+            "keys": sorted(data.keys()),
+            "signal_count": len(data) if isinstance(data, dict) else 0,
+        }
+
+    def _get_graph_exposure_summary(self) -> dict[str, Any]:
+        truth_count = len(list((BASE_DIR / "truth-source").glob("*.md"))) if (BASE_DIR / "truth-source").exists() else 0
+        dedup_exists = DEDUP_LOG.exists()
+        dedup_preview = ""
+        if dedup_exists:
+            try:
+                dedup_preview = DEDUP_LOG.read_text(encoding="utf-8")[:160]
+            except Exception:
+                dedup_preview = ""
+        return {
+            "truth_source_docs": truth_count,
+            "dedup_log_exists": dedup_exists,
+            "dedup_preview": dedup_preview,
+        }
+
+    def _build_fact_bundle(self) -> dict[str, Any]:
+        checked_at = self.system_status.get("health_check", {}).get("checked_at")
+        health_freshness = self._freshness_from_time(checked_at, fresh_minutes=15)
+        smoke_checked_at = self.smoke_report.get("checked_at") if isinstance(self.smoke_report, dict) else None
+        smoke_freshness = self._freshness_from_time(smoke_checked_at, fresh_minutes=30)
+
+        return {
+            "github": self._fact_entry(self._get_github_summary(), "fresh", "high"),
+            "handoff": self._fact_entry(self._get_handoff_summary(), "fresh", "medium"),
+            "error_library": self._fact_entry(self._get_recent_error_summary(), "fresh", "high"),
+            "detection_results": self._fact_entry(
+                {
+                    "health_check": self.system_status.get("health_check", {}),
+                    "e2e_memory_extract": self.system_status.get("e2e_memory_extract", {}),
+                    "smoke_run": self.smoke_report,
+                },
+                "fresh" if health_freshness == "fresh" and smoke_freshness in ("fresh", "unknown") else "stale",
+                "high",
+            ),
+            "graph_exposure": self._fact_entry(self._get_graph_exposure_summary(), "fresh", "medium"),
+            "forum": self._fact_entry(
+                self._get_forum_summary(),
+                "fresh" if FORUM_SIGNALS.exists() else "unknown",
+                "low" if not FORUM_SIGNALS.exists() else "medium",
+            ),
+        }
+
     def as_rule_context(self) -> dict[str, Any]:
         return {
             "health_check": self.system_status.get("health_check", {}),
@@ -90,6 +246,7 @@ class DecisionContext:
             "git_status": self.git_status,
             "recent_errors": self.recent_errors,
             "smoke_run": self.smoke_report,
+            "fact_bundle": self.fact_bundle,
         }
 
 

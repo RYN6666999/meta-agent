@@ -64,7 +64,7 @@ class DecisionRuleEngine:
         self.rules.append(
             Rule(
                 id="recovery_health_xval",
-                condition=lambda ctx: ctx.get("health_check", {}).get("ok") == False,
+                condition=lambda ctx: self._get_health_ok(ctx) is False,
                 action="run_truth_xval",
                 priority="P0",
                 reason="health_check 失敗，自動觸發交叉查核",
@@ -76,8 +76,7 @@ class DecisionRuleEngine:
         self.rules.append(
             Rule(
                 id="recovery_e2e_webhooks",
-                condition=lambda ctx: ctx.get("e2e_memory_extract", {}).get("ok")
-                == False,
+                condition=lambda ctx: self._get_e2e_ok(ctx) is False,
                 action="reactivate_webhooks_and_xval",
                 priority="P0",
                 reason="e2e_memory_extract 失敗，自動觸發 webhook 重啟 + 交叉查核",
@@ -89,8 +88,7 @@ class DecisionRuleEngine:
         self.rules.append(
             Rule(
                 id="git_pending_changes",
-                condition=lambda ctx: ctx.get("git_status", {}).get("uncommitted_count", 0)
-                > 0,
+                condition=lambda ctx: self._get_uncommitted_count(ctx) > 0,
                 action="check_git_score_and_commit",
                 priority="P1",
                 reason="有未提交文件，評估 git score",
@@ -104,7 +102,7 @@ class DecisionRuleEngine:
                 id="rule_violation_check",
                 condition=lambda ctx: any(
                     error_file and "forbidden" in error_file.lower()
-                    for error_file in ctx.get("recent_errors", [])
+                    for error_file in self._get_recent_errors(ctx)
                 ),
                 action="review_and_fix_violation",
                 priority="P0",
@@ -112,6 +110,54 @@ class DecisionRuleEngine:
                 auto_executable=False,
             )
         )
+
+    @staticmethod
+    def _bundle_value(ctx: dict[str, Any], source: str) -> Any:
+        bundle = ctx.get("fact_bundle", {})
+        if not isinstance(bundle, dict):
+            return None
+        item = bundle.get(source, {})
+        if not isinstance(item, dict):
+            return None
+        return item.get("value")
+
+    def _get_health_ok(self, ctx: dict[str, Any]) -> Any:
+        detection = self._bundle_value(ctx, "detection_results")
+        if isinstance(detection, dict):
+            health = detection.get("health_check", {})
+            if isinstance(health, dict) and "ok" in health:
+                return health.get("ok")
+        return ctx.get("health_check", {}).get("ok")
+
+    def _get_e2e_ok(self, ctx: dict[str, Any]) -> Any:
+        detection = self._bundle_value(ctx, "detection_results")
+        if isinstance(detection, dict):
+            e2e = detection.get("e2e_memory_extract", {})
+            if isinstance(e2e, dict) and "ok" in e2e:
+                return e2e.get("ok")
+        return ctx.get("e2e_memory_extract", {}).get("ok")
+
+    def _get_uncommitted_count(self, ctx: dict[str, Any]) -> int:
+        legacy_git = ctx.get("git_status", {})
+        if isinstance(legacy_git, dict):
+            count = legacy_git.get("uncommitted_count", 0)
+            if isinstance(count, int):
+                return count
+        github = self._bundle_value(ctx, "github")
+        if isinstance(github, dict):
+            return 0
+        return 0
+
+    def _get_recent_errors(self, ctx: dict[str, Any]) -> list[str]:
+        legacy = ctx.get("recent_errors", [])
+        if isinstance(legacy, list) and legacy:
+            return [str(x) for x in legacy]
+        err = self._bundle_value(ctx, "error_library")
+        if isinstance(err, dict):
+            files = err.get("files", [])
+            if isinstance(files, list):
+                return [str(x) for x in files]
+        return []
 
     def evaluate_rules(self, system_context: dict[str, Any]) -> list[dict[str, Any]]:
         """評估所有規則，回傳觸發的決策列表
