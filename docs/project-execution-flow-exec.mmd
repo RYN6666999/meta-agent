@@ -1,0 +1,14 @@
+flowchart LR
+    T[Trigger]
+    F[Facts]
+    R[Rules]
+    X[Execute]
+    S[Status]
+    I[Iterate]
+
+    T --> F
+    F --> R
+    R --> X
+    X --> S
+    S --> I
+    I --> T

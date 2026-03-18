@@ -315,3 +315,22 @@
   其他變更 truth-source/2026-03-16-pdca-causal-chain.md +10
 
 ---
+
+## 2026-03-18 15:30 | auto-git-score | 分數 200 | 📥 達到閾值（200/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=100），含重要變更
+
+**評分明細：**
+  其他變更 docs/project-execution-flow.md +10
+  其他變更 docs/project-execution-flow.mmd +10
+  其他變更 error-log/2026-03-18-health-check.md +10
+  其他變更 memory/auto-decision-log.md +10
+  其他變更 memory/decision-loop-last.json +10
+  其他變更 memory/dedup-log.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  核心腳本變更 scripts/auto-decision-loop.py +40
+  核心腳本變更 scripts/decision-engine.py +40
+  核心腳本變更 scripts/dedup-lightrag.py +40
+
+---

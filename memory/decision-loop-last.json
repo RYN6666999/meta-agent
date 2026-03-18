@@ -1,21 +1,16 @@
 {
-  "checked_at": "2026-03-18 15:30:00",
-  "mode": "analyze",
+  "checked_at": "2026-03-18 15:30:14",
+  "mode": "execute",
   "facts": {
     "health_check": {},
     "e2e_memory_extract": {},
     "git_status": {
-      "uncommitted_count": 9,
+      "uncommitted_count": 4,
       "uncommitted_files": [
-        "docs/project-execution-flow.md",
-        "docs/project-execution-flow.mmd",
-        "error-log/2026-03-18-health-check.md",
-        "memory/auto-decision-log.md",
-        "memory/handoff/latest-handoff.md",
-        "memory/status/swap-monitor.log",
-        "scripts/auto-decision-loop.py",
-        "scripts/decision-engine.py",
-        "scripts/dedup-lightrag.py"
+        "memory/decision-loop-last.json",
+        "memory/milestone-judge-log.md",
+        "memory/pending-decisions.md",
+        "memory/status/swap-monitor.log"
       ]
     },
     "recent_errors": [
@@ -66,10 +61,24 @@
       "facts": {
         "health_ok": null,
         "e2e_ok": null,
-        "uncommitted_count": 9
+        "uncommitted_count": 4
       }
     }
   ],
-  "executions": [],
+  "executions": [
+    {
+      "action": "check_git_score_and_commit",
+      "executed": true,
+      "ok": true,
+      "steps": [
+        {
+          "script": "scripts/git-score.py",
+          "ok": true,
+          "returncode": 0,
+          "output": "📊 評分結果：30/50\n  memory 變更 (memory/milestone-judge-log.md) +10\n  memory 變更 (memory/pending-decisions.md) +10\n  memory 變更 (memory/status/swap-monitor.log) +10\n\n⏳ 分數未達 50，暫不 commit"
+        }
+      ]
+    }
+  ],
   "next_iteration_hint": "Re-run this script after health/e2e or source changes."
 }
