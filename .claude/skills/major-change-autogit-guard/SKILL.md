@@ -1,6 +1,5 @@
 ---
 name: major-change-autogit-guard
-version: 1.0.0
 description: "Use when code or infra changes may be major. This skill prevents forgetting auto-backup and decision capture by enforcing milestone judge + git-score sequence."
 argument-hint: "--topic <topic> --description <what changed and verified>"
 ---
@@ -17,8 +16,7 @@ argument-hint: "--topic <topic> --description <what changed and verified>"
 ## Workflow
 
 ```bash
-python3 scripts/milestone-judge.py --topic <topic> --description "<what changed and what was verified>"
-python3 scripts/git-score.py
+python3 scripts/major_change_guard.py --topic <topic> --description "<what changed and what was verified>"
 ```
 
 ## Rationale

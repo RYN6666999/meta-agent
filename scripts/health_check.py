@@ -31,6 +31,7 @@ except Exception:
 
 LOG_DIR = BASE_DIR / 'error-log'
 TRUTH_XVAL_SCRIPT = BASE_DIR / 'scripts' / 'truth-xval.py'
+DEDUP_LIGHTRAG_SCRIPT = BASE_DIR / 'scripts' / 'dedup-lightrag.py'
 REPLAY_QUEUE_SCRIPT = BASE_DIR / 'scripts' / 'replay_degraded_queue.py'
 
 env = {}
@@ -218,6 +219,22 @@ def run_auto_recovery(trigger: str, failures: list[tuple[str, str]]) -> None:
         })
     except Exception as exc:
         steps.append({'step': 'truth_xval', 'ok': False, 'detail': str(exc)[:240]})
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(DEDUP_LIGHTRAG_SCRIPT), '--dry-run'],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+        steps.append({
+            'step': 'dedup_lightrag_dry_run',
+            'ok': result.returncode == 0,
+            'detail': (result.stdout or result.stderr or '').strip()[:240],
+        })
+    except Exception as exc:
+        steps.append({'step': 'dedup_lightrag_dry_run', 'ok': False, 'detail': str(exc)[:240]})
 
     recovery['last_trigger'] = {
         'trigger': trigger,

@@ -16,6 +16,7 @@ from common.code_intelligence import build_failure_enrichment, serialize_code_in
 LOCAL_EXTRACT_SCRIPT = ROOT_DIR / 'scripts' / 'local_memory_extract.py'
 TRUTH_XVAL_SCRIPT = ROOT_DIR / 'scripts' / 'truth-xval.py'
 REACTIVATE_WEBHOOKS_SCRIPT = ROOT_DIR / 'scripts' / 'reactivate_webhooks.py'
+DEDUP_LIGHTRAG_SCRIPT = ROOT_DIR / 'scripts' / 'dedup-lightrag.py'
 
 
 def write_code_intelligence_status(detail: str) -> None:
@@ -84,10 +85,14 @@ def run_auto_recovery(detail: str) -> None:
     for step_name, script in [
         ('truth_xval', TRUTH_XVAL_SCRIPT),
         ('reactivate_webhooks', REACTIVATE_WEBHOOKS_SCRIPT),
+        ('dedup_lightrag_dry_run', DEDUP_LIGHTRAG_SCRIPT),
     ]:
         try:
+            cmd = [sys.executable, str(script)]
+            if step_name == 'dedup_lightrag_dry_run':
+                cmd.append('--dry-run')
             result = subprocess.run(
-                [sys.executable, str(script)],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=180,

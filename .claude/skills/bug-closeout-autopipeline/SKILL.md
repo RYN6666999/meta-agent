@@ -1,6 +1,5 @@
 ---
 name: bug-closeout-autopipeline
-version: 1.0.0
 description: "Use when a bug has been fixed and you must avoid memory loss. This skill enforces one-command closeout: error-log, truth-source expansion, LightRAG ingest, milestone judge, auto git-score backup, truth-xval, and KG dedup dry-run."
 argument-hint: "--topic <kebab-case> --summary <text> --root-cause <text> --fix <text> --verify <text> [--skip-kg]"
 ---

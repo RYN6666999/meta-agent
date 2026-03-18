@@ -2,3 +2,7 @@
 [health_check] ✅ n8n: HTTP 200
 [health_check] ✅ Groq API: HTTP 200
 [health_check] 全部正常 2026-03-17 08:02
+[health_check] ✅ LightRAG: HTTP 200 (timeout=5s)
+[health_check] ✅ n8n: HTTP 200
+[health_check] ❌ Groq API: HTTP 000: {"id":"chatcmpl-28dfa846-3c03-4e5b-83ed-7c03573668a6","object":"chat.completion","created":1773705721,"model":"llama-3.1-8b-instant","choices":[{"index":0,"mess
+[health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-03-18-health-check.md

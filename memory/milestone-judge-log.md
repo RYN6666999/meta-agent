@@ -253,3 +253,41 @@
   核心腳本變更 scripts/test_code_intelligence.py +40
 
 ---
+
+## 2026-03-18 03:18 | auto-git-score | 分數 500 | 📥 達到閾值（500/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=175），含重要變更
+
+**評分明細：**
+  其他變更 .claude/skills/bug-closeout-autopipeline/SKILL.md +10
+  其他變更 .claude/skills/daily-resume-pdca/SKILL.md +10
+  其他變更 .claude/skills/gitnexus/gitnexus-cli/SKILL.md +10
+  其他變更 .claude/skills/gitnexus/gitnexus-debugging/SKILL.md +10
+  其他變更 .claude/skills/gitnexus/gitnexus-exploring/SKILL.md +10
+  其他變更 .claude/skills/gitnexus/gitnexus-guide/SKILL.md +10
+  其他變更 .claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md +10
+  其他變更 .claude/skills/gitnexus/gitnexus-refactoring/SKILL.md +10
+  其他變更 .claude/skills/kg-maintenance-loop/SKILL.md +10
+  其他變更 .claude/skills/major-change-autogit-guard/SKILL.md +10
+  其他變更 .gitignore +10
+  其他變更 AGENTS.md +10
+  其他變更 CLAUDE.md +10
+  其他變更 api/agent_loop.py +10
+  其他變更 api/server.py +10
+  其他變更 common/code_intelligence.py +10
+  其他變更 docs/interfaces/external-brain-mvp.md +10
+  其他變更 docs/interfaces/mobile-bridge-monitoring-runbook.md +10
+  error-log 新增根因 error-log/2026-03-18-telegram-monitoring-source-mismatch.md +50
+  law.json forbidden規則變更 +80
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/master-plan.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/persona-registry.json +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 progress.md +10
+  核心腳本變更 scripts/bug_closeout.py +40
+  核心腳本變更 scripts/generate-handoff.py +40
+  核心腳本變更 scripts/mobile_bridge_acceptance.py +40
+
+---

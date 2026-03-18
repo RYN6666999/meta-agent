@@ -27,6 +27,7 @@ import json
 import subprocess
 import sys
 import urllib.request
+import urllib.error
 from datetime import datetime
 from pathlib import Path
 
@@ -34,6 +35,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ERROR_LOG_DIR = ROOT / "error-log"
 TRUTH_DIR = ROOT / "truth-source"
 LIGHTRAG_INGEST = "http://localhost:9621/documents/text"
+ENV_FILE = ROOT / ".env"
+LOG_ERROR_API = "http://localhost:9901/api/v1/log-error"
 
 
 def run(cmd: list[str]) -> tuple[int, str, str]:
@@ -96,6 +99,58 @@ def ingest_lightrag(title: str, content: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def _load_env() -> dict[str, str]:
+    data: dict[str, str] = {}
+    if not ENV_FILE.exists():
+        return data
+    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):].strip()
+        k, _, v = line.partition("=")
+        value = v.strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        data[k.strip()] = value
+    return data
+
+
+def try_log_error_api(*, topic: str, root_cause: str, solution: str, context: str) -> tuple[bool, str]:
+    env = _load_env()
+    api_key = env.get("META_AGENT_API_KEY") or env.get("API_KEY")
+    if not api_key:
+        return False, "META_AGENT_API_KEY/API_KEY not found in .env"
+
+    payload = json.dumps(
+        {
+            "topic": topic,
+            "root_cause": root_cause,
+            "solution": solution,
+            "context": context[:1000],
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        LOG_ERROR_API,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            body = resp.read().decode("utf-8", errors="ignore")
+            return resp.status == 200, (body[:180] or f"HTTP {resp.status}")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore") if hasattr(exc, "read") else str(exc)
+        return False, f"HTTPError {exc.code}: {detail[:180]}"
+    except Exception as exc:
+        return False, str(exc)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Bug closeout autopipeline")
     parser.add_argument("--topic", required=True, help="kebab-case topic name")
@@ -110,6 +165,14 @@ def main() -> int:
 
     err_path = write_error_log(args.topic, args.summary, args.root_cause, args.fix, args.verify)
     print(f"[bug-closeout] error-log written: {err_path}")
+
+    api_ok, api_detail = try_log_error_api(
+        topic=args.topic,
+        root_cause=args.root_cause,
+        solution=args.fix,
+        context=f"summary={args.summary}; verify={args.verify}",
+    )
+    print(f"[bug-closeout] log_error_api: {'ok' if api_ok else 'warn'} ({api_detail})")
 
     truth_path = write_truth_source(args.topic, args.summary, args.root_cause, args.fix, args.verify)
     print(f"[bug-closeout] truth-source written: {truth_path}")

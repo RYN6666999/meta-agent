@@ -53,7 +53,7 @@ last_updated: 2026-03-18 03:20
 - 驗證：每次變更後都可在 `memory/milestone-judge-log.md` 與 `memory/git-score-log.md` 對應到同輪紀錄。
 - 執行：
   - 固定命令：
-    `python3 scripts/milestone-judge.py --topic ... --description ... && python3 scripts/git-score.py`
+    `python3 scripts/major_change_guard.py --topic ... --description ...`
 
 ### Gap-3｜KG 維護節律（P1）
 - 問題：truth-xval / dedup 有能力，但失敗後未固定回圈。
@@ -77,7 +77,7 @@ last_updated: 2026-03-18 03:20
 
 ## 指令速查
 - closeout: `python3 scripts/bug_closeout.py --topic ... --summary ... --root-cause ... --fix ... --verify ...`
-- major-guard: `python3 scripts/milestone-judge.py --topic ... --description ... && python3 scripts/git-score.py`
+- major-guard: `python3 scripts/major_change_guard.py --topic ... --description ...`
 - kg-loop: `python3 scripts/truth-xval.py && python3 scripts/dedup-lightrag.py --dry-run`
 - handoff: `python3 scripts/generate-handoff.py`
 

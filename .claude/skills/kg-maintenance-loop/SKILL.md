@@ -1,6 +1,5 @@
 ---
 name: kg-maintenance-loop
-version: 1.0.0
 description: "Use when LightRAG quality or consistency is a concern. This skill enforces truth cross-validation and graph dedup maintenance in a repeatable loop."
 argument-hint: "[--run-dedup]"
 ---

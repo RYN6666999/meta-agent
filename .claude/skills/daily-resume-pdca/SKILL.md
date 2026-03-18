@@ -1,6 +1,5 @@
 ---
 name: daily-resume-pdca
-version: 1.0.0
 description: "Use at session start to avoid context loss. This skill provides a deterministic startup sequence from handoff to actionable top priorities."
 argument-hint: "[handoff + pending + plan startup]"
 ---

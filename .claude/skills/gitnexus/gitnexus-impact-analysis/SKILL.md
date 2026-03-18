@@ -19,8 +19,9 @@ description: "Use when the user wants to know what will break if they change som
 ```
 1. gitnexus_impact({target: "X", direction: "upstream"})  → What depends on this
 2. READ gitnexus://repo/{name}/processes                   → Check affected execution flows
-3. gitnexus_detect_changes()                               → Map current git changes to affected flows
-4. Assess risk and report to user
+3. git --no-pager diff --name-only                         → Enumerate changed files
+4. gitnexus_impact(...) on changed critical symbols        → Validate blast radius matches expected scope
+5. Assess risk and report to user
 ```
 
 > If "Index is stale" → run `npx gitnexus analyze` in terminal.
@@ -32,7 +33,8 @@ description: "Use when the user wants to know what will break if they change som
 - [ ] Review d=1 items first (these WILL BREAK)
 - [ ] Check high-confidence (>0.8) dependencies
 - [ ] READ processes to check affected execution flows
-- [ ] gitnexus_detect_changes() for pre-commit check
+- [ ] git --no-pager diff --name-only for pre-commit scope
+- [ ] gitnexus_impact on changed critical symbols
 - [ ] Assess risk level and report to user
 ```
 
@@ -73,13 +75,14 @@ gitnexus_impact({
   - authRouter (src/routes/auth.ts:22) [CALLS, 95%]
 ```
 
-**gitnexus_detect_changes** — git-diff based impact analysis:
+**git diff + targeted gitnexus_impact** — pre-commit scope analysis:
 
 ```
-gitnexus_detect_changes({scope: "staged"})
+git --no-pager diff --name-only
+gitnexus_impact({target: "validateUser", direction: "upstream"})
 
-→ Changed: 5 symbols in 3 files
-→ Affected: LoginFlow, TokenRefresh, APIMiddlewarePipeline
+→ Changed files: 3
+→ validateUser impacts: LoginFlow, TokenRefresh
 → Risk: MEDIUM
 ```
 
