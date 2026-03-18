@@ -1,6 +1,19 @@
-# mobile-bridge-tunnel-down incident log
+---
+date: 2026-03-18
+type: error_fix
+status: active
+last_triggered: 2026-03-18
+expires_after_days: 365
+topic: mobile-bridge-tunnel-down
+---
 
-## 2026-03-18 18:10:49
-- root_cause: cloudflared tunnel process not running
-- solution: restart cloudflared via watchdog
-- context: pattern=cloudflared tunnel run --token mode=named
+# Error: cloudflared tunnel process not running
+
+## 根本原因
+cloudflared tunnel process not running
+
+## 解決方案
+restart cloudflared via watchdog
+
+## 背景
+pattern=cloudflared tunnel run --token mode=named

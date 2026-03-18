@@ -32,8 +32,7 @@ description: "Use when the user wants to rename, extract, split, move, or restru
 - [ ] gitnexus_rename({symbol_name: "oldName", new_name: "newName", dry_run: true}) — preview all edits
 - [ ] Review graph edits (high confidence) and ast_search edits (review carefully)
 - [ ] If satisfied: gitnexus_rename({..., dry_run: false}) — apply edits
-- [ ] git --no-pager diff --name-only — verify only expected files changed
-- [ ] gitnexus_impact on changed critical symbols — verify affected scope
+- [ ] gitnexus_detect_changes() — verify only expected files changed
 - [ ] Run tests for affected processes
 ```
 
@@ -44,7 +43,7 @@ description: "Use when the user wants to rename, extract, split, move, or restru
 - [ ] gitnexus_impact({target, direction: "upstream"}) — find all external callers
 - [ ] Define new module interface
 - [ ] Extract code, update imports
-- [ ] git --no-pager diff --name-only + targeted gitnexus_impact — verify affected scope
+- [ ] gitnexus_detect_changes() — verify affected scope
 - [ ] Run tests for affected processes
 ```
 
@@ -56,7 +55,7 @@ description: "Use when the user wants to rename, extract, split, move, or restru
 - [ ] gitnexus_impact({target, direction: "upstream"}) — map callers to update
 - [ ] Create new functions/services
 - [ ] Update callers
-- [ ] git --no-pager diff --name-only + targeted gitnexus_impact — verify affected scope
+- [ ] gitnexus_detect_changes() — verify affected scope
 - [ ] Run tests for affected processes
 ```
 
@@ -79,12 +78,11 @@ gitnexus_impact({target: "validateUser", direction: "upstream"})
 → Affected Processes: LoginFlow, TokenRefresh
 ```
 
-**git diff + targeted gitnexus_impact** — verify your changes after refactoring:
+**gitnexus_detect_changes** — verify your changes after refactoring:
 
 ```
-git --no-pager diff --name-only
-gitnexus_impact({target: "authenticateUser", direction: "upstream"})
-→ Changed files: 8
+gitnexus_detect_changes({scope: "all"})
+→ Changed: 8 files, 12 symbols
 → Affected processes: LoginFlow, TokenRefresh
 → Risk: MEDIUM
 ```
@@ -101,7 +99,7 @@ RETURN caller.name, caller.filePath ORDER BY caller.filePath
 | Risk Factor         | Mitigation                                |
 | ------------------- | ----------------------------------------- |
 | Many callers (>5)   | Use gitnexus_rename for automated updates |
-| Cross-area refs     | Use git diff + targeted impact to verify scope |
+| Cross-area refs     | Use detect_changes after to verify scope  |
 | String/dynamic refs | gitnexus_query to find them               |
 | External/public API | Version and deprecate properly            |
 
@@ -117,7 +115,7 @@ RETURN caller.name, caller.filePath ORDER BY caller.filePath
 3. gitnexus_rename({symbol_name: "validateUser", new_name: "authenticateUser", dry_run: false})
    → Applied 12 edits across 8 files
 
-4. git --no-pager diff --name-only + targeted gitnexus_impact
+4. gitnexus_detect_changes({scope: "all"})
    → Affected: LoginFlow, TokenRefresh
    → Risk: MEDIUM — run tests for these flows
 ```

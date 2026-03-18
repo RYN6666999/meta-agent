@@ -7,6 +7,7 @@ flowchart TD
     M[Manual Queue]
     S[Status and Reports]
     I[Iteration Hint]
+    O[One Fix Per Loop]
 
     T --> F
 
@@ -14,11 +15,15 @@ flowchart TD
     F --> F2[e2e status]
     F --> F3[git diff facts]
     F --> F4[recent error logs]
+    F --> F5[github local plus remote signals]
+    F --> F6[forum primary source only]
 
     F1 --> R
     F2 --> R
     F3 --> R
     F4 --> R
+    F5 --> R
+    F6 --> R
 
     R --> D
 
@@ -39,7 +44,8 @@ flowchart TD
     S --> S3[memory/auto-decision-log.md]
 
     S --> I
-    I --> T
+    I --> O
+    O --> T
 
     classDef core fill:#E8F5E9,stroke:#2E7D32,stroke-width:1px;
     classDef control fill:#E3F2FD,stroke:#1565C0,stroke-width:1px;
@@ -47,4 +53,4 @@ flowchart TD
 
     class T,F,R,D core;
     class A,M,S control;
-    class I,S1,S2,S3 feedback;
+    class I,O,S1,S2,S3 feedback;

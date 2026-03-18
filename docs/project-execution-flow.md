@@ -4,6 +4,7 @@
 - 單一決策入口（decision-engine）
 - 先事實、後決策、再執行
 - 每輪都產生 machine-readable 產物，下一輪直接接續
+- 一次只解一個問題（One Fix Per Loop）
 
 ```mermaid
 flowchart TD
@@ -22,11 +23,15 @@ flowchart TD
     F --> F2[e2e status]
     F --> F3[git diff facts]
     F --> F4[recent error logs]
+    F --> F5[github local plus remote signals]
+    F --> F6[forum primary source only]
 
     F1 --> R
     F2 --> R
     F3 --> R
     F4 --> R
+    F5 --> R
+    F6 --> R
 
     R --> D
 
@@ -59,8 +64,16 @@ flowchart TD
 ## 迭代方式
 
 1. 看 `decision-loop-last.json` 的 facts/decisions/executions。
-2. 只修正失敗步驟，不重跑整個世界。
-3. 下一輪再執行 decision-engine，確認決策數量下降。
+2. 只挑 1 個決策處理（P0 > P1 > P2），其他先不動。
+3. 修正後立即重跑 decision-engine 驗證，不重跑整個世界。
+4. 確認該決策消失或降級，再進下一個。
+
+## 單步節奏（你現在的工作模式）
+
+1. 鎖定一題：只處理一個 action（例如 `check_git_score_and_commit`）。
+2. 最小改動：只改一個區塊或一個檔案。
+3. 立即驗證：`python3 scripts/decision-engine.py --json`。
+4. 看結果：若同題仍存在，繼續同題；若消失，才換下一題。
 
 ## 管理層簡報版（6 節點）
 
@@ -105,11 +118,15 @@ flowchart TD
     F --> E[e2e 結果]
     F --> G[git 變更事實]
     F --> L[近期 error-log]
+    F --> GH[github 雙層信號: local + remote]
+    F --> FO[論壇單一主來源]
 
     H --> R
     E --> R
     G --> R
     L --> R
+    GH --> R
+    FO --> R
 
     R --> D
 
@@ -140,4 +157,6 @@ flowchart TD
 
 1. 先看事實再執行，不憑主觀判斷。
 2. auto 與 manual 分流，避免阻塞整體循環。
-3. 每輪固定落盤，方便追蹤與回歸驗證。
+3. GitHub 信號採雙層（本地 git + 遠端解法），遠端失敗可降級。
+4. 論壇只取單一來源，降低噪音與延遲。
+5. 每輪只解一題，驗證通過再換下一題。

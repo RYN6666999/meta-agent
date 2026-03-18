@@ -3,17 +3,22 @@ flowchart TD
     F[事實採集]
     R[規則判斷]
     D{是否可自動執行}
+    O[一次只解一題]
 
     T --> F
     F --> H[health_check 結果]
     F --> E[e2e 結果]
     F --> G[git 變更事實]
     F --> L[近期 error-log]
+    F --> GH[github 雙層信號: local + remote]
+    F --> FO[論壇單一主來源]
 
     H --> R
     E --> R
     G --> R
     L --> R
+    GH --> R
+    FO --> R
 
     R --> D
 
@@ -37,4 +42,5 @@ flowchart TD
     S --> S4[memory/dedup-log.md]
 
     S --> I[下一輪迭代提示]
-    I --> T
+    I --> O
+    O --> T

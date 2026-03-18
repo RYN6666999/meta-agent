@@ -13,8 +13,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -33,6 +37,7 @@ LOOP_REPORT = BASE_DIR / "memory" / "decision-loop-last.json"
 HANDOFF_FILE = BASE_DIR / "memory" / "handoff" / "latest-handoff.md"
 DEDUP_LOG = BASE_DIR / "memory" / "dedup-log.md"
 FORUM_SIGNALS = BASE_DIR / "memory" / "forum-signals.json"
+GITHUB_CACHE = BASE_DIR / "memory" / "github-signals-cache.json"
 
 ACTION_TO_SCRIPTS: dict[str, list[str]] = {
     "run_truth_xval": ["scripts/truth-xval.py"],
@@ -176,13 +181,160 @@ class DecisionContext:
                 timeout=3,
                 check=False,
             ).stdout.strip().splitlines()
+
+            remote = self._get_remote_github_signals()
             return {
                 "branch": branch,
                 "recent_commits": commits,
                 "recent_commit_count": len([c for c in commits if c.strip()]),
+                "remote": remote,
             }
         except Exception as exc:
             return {"error": str(exc)}
+
+    @staticmethod
+    def _extract_github_repo_slug(remote_url: str) -> str:
+        text = (remote_url or "").strip()
+        m = re.search(r"github\.com[:/](?P<slug>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)(?:\.git)?$", text)
+        if not m:
+            return ""
+        slug = m.group("slug")
+        return slug[:-4] if slug.endswith(".git") else slug
+
+    def _api_get_json(self, url: str, timeout_sec: int = 3) -> Any:
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "meta-agent-decision-engine",
+        }
+        token = os.environ.get("GITHUB_TOKEN", "").strip()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        req = urllib.request.Request(url=url, headers=headers, method="GET")
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+        return json.loads(body)
+
+    def _load_github_cache(self) -> dict[str, Any]:
+        data = self._load_json(GITHUB_CACHE)
+        return data if isinstance(data, dict) else {}
+
+    def _save_github_cache(self, data: dict[str, Any]) -> None:
+        try:
+            GITHUB_CACHE.parent.mkdir(parents=True, exist_ok=True)
+            GITHUB_CACHE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            return
+
+    def _build_solution_keywords(self) -> list[str]:
+        text = " ".join(self.recent_errors).lower()
+        keys: list[str] = []
+        for token in ("timeout", "webhook", "lightrag", "n8n", "telegram", "health", "api"):
+            if token in text:
+                keys.append(token)
+        if not keys:
+            keys = ["python", "webhook", "timeout"]
+        return keys[:4]
+
+    def _search_github_global_solutions(self) -> dict[str, Any]:
+        keywords = self._build_solution_keywords()
+        query = "+".join(keywords + ["is:issue", "state:closed"]) + "&sort=updated&order=desc&per_page=5"
+        url = f"https://api.github.com/search/issues?q={query}"
+        payload = self._api_get_json(url, timeout_sec=5)
+        items = payload.get("items", []) if isinstance(payload, dict) else []
+        candidates = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title", "")).strip()
+            html_url = str(item.get("html_url", "")).strip()
+            if title and html_url:
+                candidates.append({"title": title, "url": html_url})
+        return {
+            "source": "global_search",
+            "keywords": keywords,
+            "solution_candidates": candidates[:5],
+            "fetched_at": self.timestamp,
+        }
+
+    def _get_remote_github_signals(self) -> dict[str, Any]:
+        try:
+            remote_url = subprocess.run(
+                ["git", "-C", str(BASE_DIR), "remote", "get-url", "origin"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            ).stdout.strip()
+            repo_slug = self._extract_github_repo_slug(remote_url)
+            if not repo_slug:
+                return self._search_github_global_solutions()
+
+            repo = self._api_get_json(f"https://api.github.com/repos/{repo_slug}", timeout_sec=3)
+            issues = self._api_get_json(
+                f"https://api.github.com/repos/{repo_slug}/issues?state=open&sort=updated&per_page=10",
+                timeout_sec=4,
+            )
+            pulls = self._api_get_json(
+                f"https://api.github.com/repos/{repo_slug}/pulls?state=closed&sort=updated&per_page=5",
+                timeout_sec=4,
+            )
+
+            issue_titles = []
+            for item in issues if isinstance(issues, list) else []:
+                if not isinstance(item, dict):
+                    continue
+                # /issues 會混入 PR，這裡只保留真正 issue
+                if "pull_request" in item:
+                    continue
+                title = str(item.get("title", "")).strip()
+                if title:
+                    issue_titles.append(title)
+
+            merged_like_titles = []
+            for pr in pulls if isinstance(pulls, list) else []:
+                if not isinstance(pr, dict):
+                    continue
+                title = str(pr.get("title", "")).strip()
+                merged_at = pr.get("merged_at")
+                if title and merged_at:
+                    merged_like_titles.append(title)
+
+            keyword_hits = [
+                t for t in issue_titles
+                if any(k in t.lower() for k in ("fix", "bug", "error", "timeout", "webhook", "workaround"))
+            ][:5]
+
+            result = {
+                "source": "live",
+                "repo": repo_slug,
+                "open_issues": int(repo.get("open_issues_count", 0)) if isinstance(repo, dict) else 0,
+                "recent_issue_titles": issue_titles[:5],
+                "solution_candidates": keyword_hits,
+                "recent_merged_pr_titles": merged_like_titles[:5],
+                "fetched_at": self.timestamp,
+            }
+            self._save_github_cache(result)
+            return result
+        except Exception as exc:
+            # Repo API 失敗時先嘗試全站搜尋，最後再回退快取。
+            try:
+                searched = self._search_github_global_solutions()
+                searched["fallback_reason"] = str(exc)
+                return searched
+            except Exception:
+                pass
+            cached = self._load_github_cache()
+            if cached:
+                return {
+                    **cached,
+                    "source": "cache",
+                    "fallback_reason": str(exc),
+                }
+            return {
+                "source": "unavailable",
+                "reason": str(exc),
+            }
 
     def _get_forum_summary(self) -> dict[str, Any]:
         data = self._load_json(FORUM_SIGNALS)
@@ -191,10 +343,22 @@ class DecisionContext:
                 "enabled": False,
                 "note": "forum_signals_missing_or_empty",
             }
+        if not isinstance(data, dict):
+            return {
+                "enabled": False,
+                "note": "forum_signals_invalid_format",
+            }
+
+        # 只取單一主來源，避免多源交叉造成延遲與噪音。
+        source_keys = sorted(data.keys())
+        primary_source = source_keys[0] if source_keys else ""
+        primary_payload = data.get(primary_source, {}) if primary_source else {}
         return {
             "enabled": True,
-            "keys": sorted(data.keys()),
-            "signal_count": len(data) if isinstance(data, dict) else 0,
+            "primary_source": primary_source,
+            "primary_payload": primary_payload,
+            "available_sources": source_keys,
+            "source_count": len(source_keys),
         }
 
     def _get_graph_exposure_summary(self) -> dict[str, Any]:
@@ -217,9 +381,14 @@ class DecisionContext:
         health_freshness = self._freshness_from_time(checked_at, fresh_minutes=15)
         smoke_checked_at = self.smoke_report.get("checked_at") if isinstance(self.smoke_report, dict) else None
         smoke_freshness = self._freshness_from_time(smoke_checked_at, fresh_minutes=30)
+        github_summary = self._get_github_summary()
+        github_remote = github_summary.get("remote", {}) if isinstance(github_summary, dict) else {}
+        remote_source = github_remote.get("source") if isinstance(github_remote, dict) else "unavailable"
+        github_freshness = "fresh" if remote_source == "live" else "stale" if remote_source == "cache" else "unknown"
+        github_confidence = "high" if remote_source == "live" else "medium" if remote_source == "cache" else "low"
 
         return {
-            "github": self._fact_entry(self._get_github_summary(), "fresh", "high"),
+            "github": self._fact_entry(github_summary, github_freshness, github_confidence),
             "handoff": self._fact_entry(self._get_handoff_summary(), "fresh", "medium"),
             "error_library": self._fact_entry(self._get_recent_error_summary(), "fresh", "high"),
             "detection_results": self._fact_entry(
