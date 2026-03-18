@@ -2,8 +2,9 @@
 date: 2026-03-17
 type: verified_truth
 status: active
-last_triggered: 2026-03-17
-usage_count: 0
+last_triggered: 2026-03-18
+base_score: 120.0
+usage_count: 1
 confidence: 0.78
 persona_id: builder
 source: persona_tech_radar

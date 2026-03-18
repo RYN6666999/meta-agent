@@ -2,7 +2,9 @@
 date: 2026-03-16
 type: verified_truth
 status: active
-last_triggered: 2026-03-16
+last_triggered: 2026-03-18
+base_score: 120.0
+usage_count: 1
 expires_after_days: 365
 source: milestone-judge（自動生成）
 branch: decision/pdca-causal-chain-2026-03-16

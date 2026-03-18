@@ -2,8 +2,9 @@
 date: 2026-03-16
 type: verified_truth
 status: active
-last_triggered: 2026-03-16
-base_score: 120.0
+last_triggered: 2026-03-18
+usage_count: 1
+base_score: 144.0
 expires_after_days: 365
 source: milestone-judge（自動生成）
 branch: decision/bug-fixes-and-automation-loop-2026-03-16
