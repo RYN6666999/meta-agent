@@ -23,6 +23,7 @@ from slowapi.util import get_remote_address
 from api.agent_loop import parse_golem_protocol, run_protocol_loop
 from common.config import BASE_DIR, ENV_FILE, PERSONA_REPORTS_DIR, STATUS_FILE, USERS_DIR
 from common.identity import normalize_id
+from common.request_context import RequestContext
 from common.status_store import load_status as shared_load_status
 from common.status_store import save_status as shared_save_status
 
@@ -789,7 +790,8 @@ async def health(request: Request, _: None = Depends(require_auth)) -> dict[str,
 @app.post("/api/v1/query")
 @limiter.limit("120/minute")
 async def query_memory(payload: QueryRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
-    persona_id = resolve_persona_id(payload.user_id)
+    ctx = RequestContext(user_id=payload.user_id or "default")
+    persona_id = resolve_persona_id(ctx.user_id)
     if hasattr(backend, "query_memory_structured"):
         data = await backend.query_memory_structured(payload.q, payload.mode, persona_id)
         result = data.get("result", "")
@@ -816,7 +818,8 @@ async def query_memory(payload: QueryRequest, request: Request, _: None = Depend
 @app.post("/api/v1/ingest")
 @limiter.limit("30/minute")
 async def ingest_memory(payload: IngestRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
-    persona_id = resolve_persona_id(payload.user_id)
+    ctx = RequestContext(user_id=payload.user_id or "default")
+    persona_id = resolve_persona_id(ctx.user_id)
     metadata_block = (
         "[META]\n"
         f"confidence: {payload.confidence:.2f}\n"
@@ -878,6 +881,7 @@ async def persona_switch(payload: PersonaSwitchRequest, request: Request, _: Non
 @app.get("/api/v1/rules")
 @limiter.limit("60/minute")
 async def rules(request: Request, category: str = Query(default="all"), _: None = Depends(require_auth)) -> dict[str, Any]:
+    ctx = RequestContext(user_id="default")
     result = backend.get_rules(category)
     parsed: Any
     try:
@@ -895,6 +899,7 @@ async def rules(request: Request, category: str = Query(default="all"), _: None 
 @app.post("/api/v1/log-error")
 @limiter.limit("30/minute")
 async def log_error(payload: LogErrorRequest, request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:
+    ctx = RequestContext(user_id=payload.user_id or "default") if hasattr(payload, 'user_id') else RequestContext(user_id="default")
     result = await backend.log_error(
         root_cause=payload.root_cause,
         solution=payload.solution,

@@ -23,6 +23,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from common.frontmatter import get_frontmatter_value
 from common.config import LIGHTRAG_API as CONFIG_LIGHTRAG_API
+from common.request_context import RequestContext
 from common.debug_solver import dumps as _debug_dumps
 from common.debug_solver import generate_debug_solutions as _generate_debug_solutions
 from common.ig_discuss import discuss_instagram_post as _discuss_instagram_post
@@ -320,6 +321,65 @@ mcp = FastMCP(
         "所有 AI 工具（Claude/Golem/Nanoclaw）共用此後端。"
     ),
 )
+
+
+# ── 分發器：統一決策點 ────────────────────────────────────────────────
+async def _dispatch(ctx: RequestContext, action: str, **kwargs) -> dict:
+    """
+    統一分發器：所有後端請求的單一入口點。
+    
+    Args:
+        ctx: 請求上下文（包含 user_id、scope、trigger_checkpoints）
+        action: 行為標籤（query / ingest / get_rules / log_error / extract_instagram）
+        **kwargs: 轉遞給各工具的引數
+    
+    Returns:
+        工具執行結果（dict）
+    
+    注意：[Phase 2] 狀態機將在此檢查 trigger_checkpoints，
+          決定是否觸發 bug_closeout / major_change_guard / kg_maintenance
+    """
+    # TODO [Phase 2]: Check trigger_checkpoints and enforce state machine
+    # if "bug_closeout" in ctx.trigger_checkpoints:
+    #     await run_bug_closeout_checkpoint(...)
+    
+    user_id = ctx.user_id if hasattr(ctx, 'user_id') else kwargs.pop('user_id', 'default')
+    
+    if action == "query":
+        return {
+            "result": await query_memory_structured(
+                q=kwargs.get("q", ""),
+                mode=kwargs.get("mode", "hybrid"),
+                user_id=user_id
+            )
+        }
+    elif action == "ingest":
+        return {
+            "result": await ingest_memory(
+                content=kwargs.get("content", ""),
+                mem_type=kwargs.get("mem_type", "verified_truth"),
+                title=kwargs.get("title", ""),
+                user_id=user_id
+            )
+        }
+    elif action == "get_rules":
+        return {"result": await get_rules()}
+    elif action == "log_error":
+        return {
+            "result": await log_error(
+                root_cause=kwargs.get("root_cause", ""),
+                solution=kwargs.get("solution", ""),
+                user_id=user_id
+            )
+        }
+    elif action == "extract_instagram":
+        return {
+            "result": await extract_instagram_post(
+                url=kwargs.get("url", "")
+            )
+        }
+    else:
+        return {"error": f"Unknown action: {action}"}
 
 
 # ── 工具 1：query_memory ──────────────────────────────────────────────
