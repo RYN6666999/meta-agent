@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zero-Trust Rebuild Diagrams</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: { curve: 'basis', useMaxWidth: true }
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --line: #e5e7eb;
+      --accent: #0f766e;
+    }
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: linear-gradient(180deg, #f7f8fa 0%, #eef2f7 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .title {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+    .sub {
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+    h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      color: var(--accent);
+    }
+    p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .mermaid {
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">零信任重構圖面（Zero-Trust Rebuild Visuals）</h1>
+    <p class="sub">可視化版：程序圖（觸發到反饋 / Trigger to Feedback）與系統架構圖（分層架構 / Layered Architecture）。</p>
+
+    <section class="card">
+      <h2>1) 工程版程序圖</h2>
+      <p>從觸發、對帳、放行、執行、驗證、恢復、RAG 回灌到 KPI 更新的完整流程。</p>
+      <div class="mermaid">
+  graph TD
+      KPI --> PDCA[PDCA Feedback\nupdate next Plan]
+      PDCA --> GAP[狀態檢查與距離核心使命評估\nStatus Check & Mission Gap Assessment\n(agent/mcp/skill/json rule)]
+      GAP --> JUDGE[收斂判斷\nConvergence Decision\n(gap>0: continue, gap=0: closeout)]
+      JUDGE -->|gap>0| T[re-enter trigger loop]
+      JUDGE -->|gap=0| CLOSE[結案 Closeout]
+    
+      %% 失敗閉環
+      Q1 -->|fail| Q1F[Reject high-risk usage\nknowledge not trusted]
+      Q1F --> CAPA[Open CAPA + systemic check\npause related feature expansion]
+      CAPA --> PDCA
+    
+      %% 手動降級
+      R2 -->|no| R4[Degrade to manual\nopen CAPA item]
+      R4 --> PMQ
+      PMQ --> MH1[Manual action submit\nowner + deadline + acceptance criteria]
+      MH1 --> V1
+      V1 -->|manual_fail| C1[Bug Closeout\nerror-log + truth-source]
+      V1 -->|manual_pass| K1
+      C1 --> K1
+      K1 --> Q1[Quality Gates\nmetadata>=98%\ntraceability=100%]
+      Q1 -->|pass| REP[Decision Report\nwith decision_id]
+      REP --> KPI[KPI Update\nMSS, drift, MTTR, false-positive, coverage]
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2) 系統架構圖</h2>
+      <p>零信任分層：Trigger、Control、Verify、Execute、Data、Knowledge、Observer。</p>
+      <div class="mermaid">
+flowchart LR
+  subgraph Trigger[觸發層 Trigger Layer]
+    T1[Webhook]
+    T2[排程 Scheduler]
+    T3[人工請求 Human Request]
+    end
+
+  subgraph Control[控制層 Control Plane]
+    C1[法則與策略引擎 Law / Policy Engine]
+    C2[決策協調器 Decision Orchestrator]
+    C3[風險門檻 Risk Gate P0 P1 P2]
+    end
+
+  subgraph Verify[驗證層 Verify Plane]
+    V1[MSS 同步檢查 MSS Sync Check]
+    V2[六角驗證器 Six-Angle Verifier]
+    V3[前後置條件 Pre/Post Conditions]
+    end
+
+  subgraph Execute[執行層 Execute Plane]
+    E1[檢查點註冊表 Checkpoint Registry]
+    E2[原子動作 Atomic Actions]
+    E3[自動恢復 Auto Recovery]
+    end
+
+  subgraph Data[資料層 Data Plane]
+    D1[狀態分片 Status Shards]
+    D2[決策報告 Decision Reports]
+    D3[錯誤與真理文件 Error/Truth Documents]
+    D4[血緣存儲 Lineage Store]
+    end
+
+  subgraph Knowledge[知識層 Knowledge Plane]
+    K1[LightRAG]
+    K2[Metadata 索引 Metadata Index]
+    K3[去重與生命週期 Dedup + TTL/GC]
+    end
+
+  subgraph Observe[觀測層 Observer Plane]
+    O1[健康探針 Health Probes]
+    O2[E2E 執行器 E2E Runner]
+    O3[KPI 儀表板 KPI Dashboard]
+    end
+
+    T1 --> V1
+    T2 --> V1
+    T3 --> V1
+
+    V1 --> C2
+    C1 --> C2
+    C2 --> C3
+    C3 --> E1
+    E1 --> E2
+    E2 --> V3
+    V3 --> E3
+
+    E2 --> D1
+    V3 --> D2
+    E3 --> D3
+    D3 --> K1
+    D4 --> K1
+    K1 --> K2
+    K2 --> K3
+
+    O1 --> D1
+    O2 --> D2
+    O3 --> D2
+    O3 --> C2
+      </div>
+    </section>
+  </div>
+</body>
+</html>
