@@ -18,5 +18,6 @@
 | 2026-03-18 | auto-git-score | git-score 自動 commit（score=115），含重要變更 [commit:HEAD~1..HEAD] | 250 | 其他變更 docs/architecture-debt-analysis.md +10; 其他變更 docs/mission-verification.md +10 | pending |
 | 2026-03-18 | auto-git-score | git-score 自動 commit（score=100），含重要變更 [commit:HEAD~1..HEAD] | 200 | 其他變更 docs/project-execution-flow.md +10; 其他變更 docs/project-execution-flow.mmd +10 | pending |
 | 2026-03-19 | auto-git-score | git-score 自動 commit（score=170），含重要變更 [commit:HEAD~1..HEAD] | 190 | 其他變更 docs/zero-trust-rebuild-diagrams.html +10; 其他變更 docs/zero-trust-rebuild-plan.md +10 | pending |
+| 2026-03-19 | auto-git-score | git-score 自動 commit（score=160），含重要變更 [commit:HEAD~1..HEAD] | 150 | error-log 新增根因 error-log/2026-03-19-health-check.md +50; 其他變更 error-log/2026-03-19-mobile-bridge-api-down.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 
