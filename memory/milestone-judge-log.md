@@ -334,3 +334,22 @@
   核心腳本變更 scripts/dedup-lightrag.py +40
 
 ---
+
+## 2026-03-19 06:53 | auto-git-score | 分數 190 | 📥 達到閾值（190/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=170），含重要變更
+
+**評分明細：**
+  其他變更 docs/zero-trust-rebuild-diagrams.html +10
+  其他變更 docs/zero-trust-rebuild-plan.md +10
+  其他變更 error-log/2026-03-18-mobile-bridge-api-down.md +10
+  error-log 新增根因 error-log/2026-03-19-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-19-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/turn-count.txt +10
+
+---
