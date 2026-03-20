@@ -399,3 +399,30 @@
   其他變更 memory/truth-xval.log +10
 
 ---
+
+## 2026-03-20 20:51 | auto-git-score | 分數 190 | 📥 達到閾值（190/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=110），含重要變更
+
+**評分明細：**
+  其他變更 docs/bdd-guidelines.md +10
+  其他變更 docs/tdd-guidelines.md +10
+  其他變更 docs/zero-trust-plan-architecture.html +10
+  其他變更 docs/zero-trust-rebuild-plan.md +10
+  其他變更 error-log/2026-03-20-mobile-bridge-api-down.md +10
+  其他變更 genapark/README.md +10
+  其他變更 genapark/app/__init__.py +10
+  其他變更 genapark/cc-agent +10
+  其他變更 genapark/main.py +10
+  其他變更 genapark/requirements.txt +10
+  其他變更 genapark/scripts/init_venv.sh +10
+  其他變更 genapark/scripts/start_server.sh +10
+  其他變更 genapark/tests/test_basic.py +10
+  其他變更 memory/checkpoints/checkpoint-ca9b314a-20260320_200652.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+
+---
