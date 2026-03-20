@@ -426,3 +426,24 @@
   其他變更 memory/turn-count.txt +10
 
 ---
+
+## 2026-03-21 00:51 | auto-git-score | 分數 210 | 📥 達到閾值（210/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=125），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-03-21-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-21-mobile-bridge-tunnel-down.md +50
+  其他變更 genapark/README.md +10
+  其他變更 genapark/app/__init__.py +10
+  其他變更 genapark/cc-agent +10
+  其他變更 genapark/main.py +10
+  其他變更 genapark/requirements.txt +10
+  其他變更 genapark/scripts/init_venv.sh +10
+  其他變更 genapark/scripts/start_server.sh +10
+  其他變更 genapark/tests/test_basic.py +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+
+---
