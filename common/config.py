@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-BASE_DIR = Path("/Users/ryan/meta-agent")
+_env_base = os.environ.get("META_AGENT_BASE_DIR", "").strip()
+BASE_DIR = Path(_env_base) if _env_base else Path(__file__).resolve().parents[1]
 MEMORY_DIR = BASE_DIR / "memory"
 ERROR_LOG_DIR = BASE_DIR / "error-log"
 TRUTH_SOURCE_DIR = BASE_DIR / "truth-source"
