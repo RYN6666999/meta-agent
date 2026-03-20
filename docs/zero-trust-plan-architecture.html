@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Zero-Trust 專案工程與程序架構圖</title>
+  <style>
+    body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif; background: #f8f8fa; margin: 0; padding: 0; }
+    .container { max-width: 1100px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px; }
+    h1, h2 { color: #2a3a4a; }
+    .mermaid { background: #f4f7fa; border-radius: 8px; padding: 16px; }
+    .desc { color: #555; margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <style>
+    body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif; background: #f8f8fa; margin: 0; padding: 0; }
+    .container { max-width: 1100px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px; }
+    h1, h2 { color: #2a3a4a; }
+    .mermaid { background: #f4f7fa; border-radius: 8px; padding: 16px; }
+    .desc { color: #555; margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Zero-Trust 專案工程與程序架構圖</h1>
+  <div class="desc">
+    本頁展示零信任決策閉環系統的工程分層與程序流，所有節點均以中文標註，對應 TDD/BDD 驗證與閉環要求。
+  </div>
+  <h2>一、工程分層架構圖</h2>
+  <pre class="mermaid">
+flowchart LR
+  %% 觸發層
+  T1[Webhook]
+  T2[排程器]
+  T3[人工請求]
+  %% 控制層
+  C1[法規/策略引擎]
+  C2[決策協調器]
+  C3[風險閘(P0/P1/P2)]
+  %% 驗證層
+  V1[MSS 同步檢查]
+  V2[六角驗證器]
+  V3[前/後置條件]
+  %% 執行層
+  E1[檢查點註冊表]
+  E2[原子行動]
+  E3[自動恢復]
+  %% 資料層
+  D1[狀態分片]
+  D2[決策報告]
+  D3[錯誤/真理文件]
+  D4[追溯鏈]
+  %% 知識層
+  K1[LightRAG]
+  K2[Metadata 索引]
+  K3[去重+TTL GC]
+  %% 觀測層
+  O1[健康探針]
+  O2[E2E 驗證器]
+  O3[KPI 儀表板]
+  %% 關聯
+  T1 --> V1
+  T2 --> V1
+  T3 --> V1
+  V1 --> C2
+  C1 --> C2
+  C2 --> C3
+  C3 --> E1
+  E1 --> E2
+  E2 --> V3
+  V3 --> E3
+  E2 --> D1
+  V3 --> D2
+  E3 --> D3
+  D3 --> K1
+  D4 --> K1
+  K1 --> K2
+  K2 --> K3
+  O1 --> D1
+  O2 --> D2
+  O3 --> D2
+  O3 --> C2
+  </pre>
+  <h2>二、程序閉環流程圖</h2>
+  <pre class="mermaid">
+flowchart TD
+  啟動[觸發(Webhook/排程/人工)] --> 同步檢查[MSS 最小同步確認]
+  同步檢查 -- 不一致 --> 對帳[標記 sync_drift→對帳修復]
+  對帳 --> 同步檢查
+  同步檢查 -- 一致 --> 事實採集[Detect 事實採集]
+  事實採集 --> 放行檢查[Policy Gate 放行檢查]
+  放行檢查 -- Blocked --> 人工審查[人工審查隊列]
+  人工審查 --> 結束1[結束]
+  放行檢查 -- Allowed --> 執行[執行原子任務]
+  執行 --> 驗證[前後置驗證]
+  驗證 -- Fail --> 自動恢復[自動恢復/重試/降級]
+  自動恢復 --> Closeout[Closeout 知識沉澱]
+  Closeout --> RAG[RAG 入庫]
+  RAG --> 決策報告[決策報告]
+  決策報告 --> PDCA[PDCA 回灌]
+  PDCA --> 結束2[結束]
+  驗證 -- Pass --> RAG
+  </pre>
+  <div style="margin-top:32px;color:#888;font-size:14px;">
+    <b>說明：</b> 所有節點均對應 TDD/BDD 驗證要求，閉環流程每步皆有自動化測試與知識沉澱。
+  </div>
+</div>
+<script>mermaid.initialize({startOnLoad:true,theme:'default',fontFamily:'Noto Sans TC,Microsoft JhengHei,Arial,sans-serif'});</script>
+</body>
+</html>
