@@ -22,6 +22,7 @@ from slowapi.util import get_remote_address
 
 from api.agent_loop import parse_golem_protocol, run_protocol_loop
 from common.config import BASE_DIR, ENV_FILE, PERSONA_REPORTS_DIR, STATUS_FILE, USERS_DIR
+from common.memory_store import retrieve_memories
 from common.identity import normalize_id
 from common.request_context import RequestContext
 from common.status_store import load_status as shared_load_status
@@ -385,12 +386,57 @@ def _is_persona_local_no_match(result: str) -> bool:
     return normalized.endswith(PERSONA_LOCAL_NO_MATCH)
 
 
+def _retrieve_structured_context(query: str, namespace: str, limit: int = 5) -> str:
+    """
+    Phase 1 structured-first retrieval layer.
+
+    Attempts a keyword match on content first (first 80 chars of query);
+    falls back to recency-ordered retrieval if keyword match returns nothing.
+
+    Returns a formatted string prefix, or "" if no structured records exist.
+    This function never raises — any error returns "".
+    """
+    try:
+        keyword = query[:80].strip()
+        records = retrieve_memories(namespace=namespace, content_contains=keyword, limit=limit)
+        if not records:
+            records = retrieve_memories(namespace=namespace, limit=limit)
+        if not records:
+            return ""
+        lines: list[str] = []
+        for r in records:
+            snippet = r.title if r.title else r.content[:100]
+            lines.append(f"[{r.memory_type}] {snippet}")
+        return "[結構化記憶]\n" + "\n".join(lines)
+    except Exception:
+        return ""
+
+
+def _merge_structured_and_semantic(structured: str, semantic: str) -> str:
+    """
+    Combine structured retrieval prefix with existing semantic result.
+
+    Rules (Phase 1):
+      - structured empty  → return semantic unchanged (zero behavior change)
+      - semantic empty / no-match → return structured only
+      - both present       → structured prefix + semantic section
+    """
+    if not structured:
+        return semantic
+    if not semantic or _is_persona_local_no_match(semantic):
+        return structured
+    return f"{structured}\n\n[語義搜尋]\n{semantic}"
+
+
 async def _query_memory_with_fallback(
     query: str,
     persona_id: str,
     progress: Callable[[str], Awaitable[None]],
 ) -> tuple[str, str, bool]:
     await progress("正在查詢記憶與相關線索")
+
+    # Phase 1: structured-first — query SQLite structured memory layer
+    structured_ctx = _retrieve_structured_context(query, namespace=persona_id)
 
     if hasattr(backend, "query_memory_structured"):
         primary = await backend.query_memory_structured(query, "hybrid", persona_id)
@@ -400,13 +446,14 @@ async def _query_memory_with_fallback(
 
     strategy = TELEGRAM_QUERY_STRATEGY if TELEGRAM_QUERY_STRATEGY in {"smart_fallback", "strict_persona"} else "smart_fallback"
     if strategy == "strict_persona":
-        return result, persona_id, False
+        return _merge_structured_and_semantic(structured_ctx, result), persona_id, False
 
     if persona_id == "default":
-        return result, persona_id, False
+        return _merge_structured_and_semantic(structured_ctx, result), persona_id, False
 
-    if not _is_persona_local_no_match(result):
-        return result, persona_id, False
+    # If structured layer has hits, treat as persona hit → skip shared-memory fallback
+    if structured_ctx or not _is_persona_local_no_match(result):
+        return _merge_structured_and_semantic(structured_ctx, result), persona_id, False
 
     await progress("目前記憶未命中，改查共享記憶")
     if hasattr(backend, "query_memory_structured"):

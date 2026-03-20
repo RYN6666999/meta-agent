@@ -16,7 +16,8 @@ import json
 import sqlite3
 import uuid
 from datetime import datetime
-from typing import Literal, Optional
+from pathlib import Path
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -192,6 +193,91 @@ def record_to_row(record: MemoryRecord) -> tuple:
         _dt_str(record.created_at),
         _dt_str(record.updated_at),
     )
+
+
+def retrieve_memories(
+    *,
+    namespace: str,
+    subject_ref: str | None = None,
+    memory_type: str | None = None,
+    content_contains: str | None = None,
+    status: str = "active",
+    limit: int = 20,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
+    db_path: str | None = None,
+) -> list[MemoryRecord]:
+    """
+    Query structured memory records from SQLite.
+
+    Filters (all optional except namespace):
+      namespace        — required; enforces subject isolation (indexed column)
+      subject_ref      — SubjectRef.id value; matched via JSON LIKE on subject_refs column
+      memory_type      — exact match on memory_type column (indexed)
+      content_contains — case-insensitive substring match on content
+      status           — default 'active'; only returns records with this lifecycle status
+      limit            — max records returned, ordered by created_at DESC (default 20)
+      time_from/to     — filter on created_at (ISO 8601, lexicographically sortable)
+                         chosen because it is the most stable audit timestamp
+
+    Returns [] if:
+      - DB file does not yet exist (avoids creating empty file)
+      - Table is not yet initialized (OperationalError)
+      - Any other SQLite error
+
+    Limitation (Phase 1): subject_ref matching uses LIKE; values containing
+    double-quote characters are not supported and will silently return no match.
+    """
+    path = db_path or str(STRUCTURED_MEMORY_DB)
+
+    # Do not auto-create an empty DB — return empty list until init_db() is called.
+    if not Path(path).exists():
+        return []
+
+    clauses: list[str] = ["namespace = ?"]
+    params: list[Any] = [namespace]
+
+    if subject_ref is not None:
+        # subject_refs is stored as a JSON array of dicts serialized with json.dumps
+        # (default separator ", "), so each element looks like:
+        #   {"type": "user", "id": "ryan123", "namespace": "default"}
+        clauses.append('subject_refs LIKE ?')
+        params.append(f'%"id": "{subject_ref}"%')
+
+    if memory_type is not None:
+        clauses.append("memory_type = ?")
+        params.append(memory_type)
+
+    clauses.append("status = ?")
+    params.append(status)
+
+    if time_from is not None:
+        clauses.append("created_at >= ?")
+        params.append(time_from.isoformat())
+
+    if time_to is not None:
+        clauses.append("created_at <= ?")
+        params.append(time_to.isoformat())
+
+    if content_contains is not None:
+        clauses.append("LOWER(content) LIKE ?")
+        params.append(f"%{content_contains.lower()}%")
+
+    where = " AND ".join(clauses)
+    sql = (
+        "SELECT memory_id, memory_type, subject_refs, namespace, title, content, "
+        "source_type, source_ref, captured_at, importance, confidence, "
+        "freshness_state, status, supersedes, expires_at, created_at, updated_at "
+        f"FROM memory_records WHERE {where} ORDER BY created_at DESC LIMIT ?"
+    )
+    params.append(limit)
+
+    try:
+        with sqlite3.connect(path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [row_to_record(row) for row in rows]
+    except (sqlite3.OperationalError, sqlite3.DatabaseError):
+        return []
 
 
 def row_to_record(row: sqlite3.Row | tuple) -> MemoryRecord:
