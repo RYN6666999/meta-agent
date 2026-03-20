@@ -13,6 +13,7 @@ PERSONA_REPORTS_DIR = MEMORY_DIR / "persona-reports"
 STATUS_FILE = MEMORY_DIR / "system-status.json"
 ENV_FILE = BASE_DIR / ".env"
 LAW_JSON = BASE_DIR / "law.json"
+STRUCTURED_MEMORY_DB = MEMORY_DIR / "structured_memory.db"
 
 LIGHTRAG_API = os.environ.get("LIGHTRAG_API", "http://127.0.0.1:9631")
 N8N_API = "http://localhost:5678"

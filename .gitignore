@@ -14,6 +14,9 @@ memory/on-stop-state.json
 memory/*.json.lock
 memory/status/*.json.lock
 
+# Phase 1 structured memory DB (runtime artifact)
+memory/structured_memory.db
+
 # Runtime generated high-churn artifacts
 memory/git-score-error.log
 memory/git-score-log.md
