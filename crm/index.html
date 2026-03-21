@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM 人脈樹</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0d1117;
+  --surface:#161b22;
+  --surface2:#21262d;
+  --border:#30363d;
+  --border-hover:#6e7681;
+  --text:#e6edf3;
+  --text-muted:#8b949e;
+  --text-subtle:#6e7681;
+  --green:#3fb950;
+  --green-bg:rgba(63,185,80,.13);
+  --green-border:rgba(63,185,80,.3);
+  --yellow:#d29922;
+  --yellow-bg:rgba(210,153,34,.13);
+  --yellow-border:rgba(210,153,34,.3);
+  --red:#f85149;
+  --red-bg:rgba(248,81,73,.13);
+  --red-border:rgba(248,81,73,.3);
+  --gray:#6e7681;
+  --gray-bg:rgba(110,118,129,.13);
+  --gray-border:rgba(110,118,129,.3);
+  --accent:#388bfd;
+  --accent-hover:#58a6ff;
+  --node-w:156px;
+  --node-gap-h:28px;
+  --node-gap-v:72px;
+}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* ── Header ── */
+.header{position:fixed;top:0;left:0;right:0;height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px;z-index:200}
+.header-logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.header-logo svg{color:var(--accent);opacity:.9}
+.header-sep{width:1px;height:20px;background:var(--border)}
+.header-stats{font-size:12px;color:var(--text-muted);display:flex;gap:12px}
+.stat{display:flex;align-items:center;gap:5px}
+.stat-dot{width:7px;height:7px;border-radius:50%}
+.header-actions{margin-left:auto;display:flex;gap:7px}
+
+/* ── Buttons ── */
+.btn{padding:5px 13px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;font-family:inherit}
+.btn:hover{border-color:var(--border-hover)}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-accent:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn-danger{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.btn-danger:hover{background:rgba(248,81,73,.22)}
+
+/* ── App scroll area ── */
+#app{position:relative;overflow:auto;height:100vh;padding-top:54px}
+
+/* ── Tree wrapper ── */
+.tree-wrapper{padding:40px 60px 80px;display:flex;justify-content:center;min-width:max-content;position:relative}
+#lines-svg{position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible}
+.tree-line{fill:none;stroke:var(--border);stroke-width:1.5}
+#tree-root{position:relative;z-index:2}
+
+/* ── Tree layout ── */
+.tree-level{display:flex;flex-direction:column;align-items:center}
+.tree-children{display:flex;flex-direction:row;align-items:flex-start;gap:var(--node-gap-h);margin-top:var(--node-gap-v);position:relative}
+
+/* ── Node card ── */
+.node-card{width:var(--node-w);background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px 12px 11px;cursor:default;transition:transform .15s,border-color .15s,box-shadow .15s;position:relative;z-index:2}
+.node-card:hover{border-color:var(--border-hover);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.node-card.selected{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(56,139,253,.18)}
+.node-root>.node-card{background:var(--surface2);border-color:var(--border-hover)}
+
+/* node header row */
+.node-header{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.node-avatar{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text-muted);flex-shrink:0}
+.node-name{font-weight:600;font-size:13px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:color .1s}
+.node-name:hover{color:var(--accent-hover)}
+
+/* status pill */
+.status-pill{display:flex;align-items:center;justify-content:center;gap:5px;padding:4px 10px;border-radius:20px;cursor:pointer;transition:filter .15s;font-size:11px;font-weight:500;border:1px solid transparent;user-select:none}
+.status-pill:hover{filter:brightness(1.15)}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+.status-green .status-pill{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.status-green .status-dot{background:var(--green);animation:pulse 2s infinite}
+.status-yellow .status-pill{background:var(--yellow-bg);border-color:var(--yellow-border);color:var(--yellow)}
+.status-yellow .status-dot{background:var(--yellow);animation:pulse 2.5s infinite}
+.status-red .status-pill{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.status-red .status-dot{background:var(--red)}
+.status-gray .status-pill{background:var(--gray-bg);border-color:var(--gray-border);color:var(--gray)}
+.status-gray .status-dot{background:var(--gray)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* node footer */
+.node-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.node-meta{font-size:10px;color:var(--text-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.node-actions{display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.node-card:hover .node-actions{opacity:1}
+.act-btn{width:20px;height:20px;border-radius:5px;border:none;background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;line-height:1;padding:0}
+.act-btn:hover{background:var(--surface2);color:var(--text)}
+.act-btn.del:hover{color:var(--red)}
+
+/* collapse toggle */
+.collapse-toggle{display:block;margin:7px auto 0;font-size:10px;color:var(--text-subtle);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .1s}
+.collapse-toggle:hover{background:var(--surface2);color:var(--text-muted)}
+
+/* ── Side panel ── */
+.side-panel{position:fixed;top:54px;right:0;width:348px;height:calc(100vh - 54px);background:var(--surface);border-left:1px solid var(--border);z-index:150;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+.side-panel.open{transform:translateX(0)}
+
+.panel-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0}
+.panel-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.panel-title{font-size:15px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-close{width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--text-muted);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.panel-close:hover{background:var(--surface2);color:var(--text)}
+
+.panel-body{padding:18px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px}
+
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.form-input,.form-textarea,.form-select{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 11px;color:var(--text);font-size:13px;font-family:inherit;transition:border-color .15s;outline:none;width:100%}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--accent)}
+.form-textarea{resize:vertical;min-height:90px;line-height:1.55}
+.form-select option{background:var(--surface2)}
+
+/* status selector */
+.status-selector{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.status-option{padding:6px 8px;border-radius:7px;border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;transition:all .15s;background:transparent;color:var(--text-muted)}
+.status-option:hover{border-color:var(--border-hover)}
+.status-option.sel-green{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.status-option.sel-yellow{background:var(--yellow-bg);border-color:var(--yellow);color:var(--yellow)}
+.status-option.sel-red{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+.status-option.sel-gray{background:var(--gray-bg);border-color:var(--gray);color:var(--gray)}
+.so-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* tags */
+.tags-area{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;min-height:34px;cursor:text;transition:border-color .15s}
+.tags-area:focus-within{border-color:var(--accent)}
+.tag-chip{padding:2px 7px;border-radius:12px;background:rgba(56,139,253,.14);border:1px solid rgba(56,139,253,.28);color:var(--accent-hover);font-size:11px;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.tag-rm{cursor:pointer;opacity:.6;font-size:12px;line-height:1}
+.tag-rm:hover{opacity:1}
+.tag-input{border:none;background:none;color:var(--text);font-size:12px;outline:none;min-width:70px;flex:1;padding:1px 2px}
+
+.panel-footer{padding:13px 18px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
+.panel-section-title{font-size:11px;font-weight:500;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.5px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+
+/* ── Legend ── */
+.legend{position:fixed;bottom:18px;left:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 13px;display:flex;flex-direction:column;gap:5px;z-index:100;font-size:11px;pointer-events:none}
+.legend-item{display:flex;align-items:center;gap:7px;color:var(--text-muted)}
+.legend-dot{width:7px;height:7px;border-radius:50%}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:16px;right:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 15px;font-size:13px;z-index:400;transform:translateY(80px);opacity:0;transition:all .22s;pointer-events:none;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── Dialog ── */
+.dialog-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:center;justify-content:center}
+.dialog-bg.open{display:flex}
+.dialog{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:300px;display:flex;flex-direction:column;gap:14px}
+.dialog-title{font-size:15px;font-weight:600}
+.dialog-body{color:var(--text-muted);font-size:13px;line-height:1.55}
+.dialog-actions{display:flex;gap:7px;justify-content:flex-end}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+      <line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="13" x2="5.5" y2="16.5"/>
+      <line x1="12" y1="13" x2="18.5" y2="16.5"/>
+    </svg>
+    CRM 人脈樹
+  </div>
+  <div class="header-sep"></div>
+  <div class="header-stats" id="header-stats"></div>
+  <div class="header-actions">
+    <button class="btn" onclick="exportData()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>匯出
+    </button>
+    <label class="btn" style="cursor:pointer">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>匯入
+      <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+    </label>
+    <button class="btn btn-accent" onclick="addRootChild()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新增聯繫人
+    </button>
+  </div>
+</div>
+
+<!-- Tree -->
+<div id="app">
+  <div class="tree-wrapper" id="tree-wrapper">
+    <svg id="lines-svg"></svg>
+    <div id="tree-root"></div>
+  </div>
+</div>
+
+<!-- Side panel -->
+<div class="side-panel" id="side-panel">
+  <div class="panel-header">
+    <div class="panel-status-dot" id="panel-sdot"></div>
+    <div class="panel-title" id="panel-title">聯繫人資訊</div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-footer">
+    <button class="btn btn-accent" style="flex:1" onclick="savePanel()">儲存</button>
+    <button class="btn" onclick="closePanel()">關閉</button>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>活躍</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--yellow);animation:pulse 2.5s infinite"></div>待聯繫</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>暫不跟進</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gray)"></div>斷聯/略過</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg width="13" height="13" id="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"></svg>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- Delete dialog -->
+<div class="dialog-bg" id="del-dialog">
+  <div class="dialog">
+    <div class="dialog-title">確認刪除</div>
+    <div class="dialog-body" id="del-msg"></div>
+    <div class="dialog-actions">
+      <button class="btn" onclick="closeDelDialog()">取消</button>
+      <button class="btn btn-danger" onclick="confirmDel()">刪除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════
+const STATUS_CYCLE = ['green','yellow','red','gray'];
+const STATUS_LABELS = {green:'活躍',yellow:'待聯繫',red:'暫不跟進',gray:'斷聯'};
+const STATUS_COLORS = {green:'#3fb950',yellow:'#d29922',red:'#f85149',gray:'#6e7681'};
+
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+function uid(){ return Math.random().toString(36).slice(2,9) }
+
+function newNode(name='新聯繫人'){
+  return {
+    id:uid(), name, status:'yellow',
+    info:{ company:'',phone:'',email:'',lastContact:'',source:'',priority:'',tags:[],notes:'' },
+    children:[], collapsed:false
+  };
+}
+
+const DEMO = {
+  id:'root', name:'我的人脈', status:null,
+  info:{ company:'',phone:'',email:'',lastContact:'',source:'',priority:'',tags:[],notes:'' },
+  children:[
+    { id:uid(), name:'張偉明', status:'green',
+      info:{ company:'ABC科技',phone:'0912-345-678',email:'zhang@abc.com',lastContact:'2026-03-15',source:'LinkedIn',priority:'高',tags:['客戶','VIP'],notes:'本月底約見面，對新方案興趣濃厚。' },
+      collapsed:false,
+      children:[
+        { id:uid(), name:'李曉華', status:'yellow',
+          info:{ company:'ABC科技',phone:'',email:'li@abc.com',lastContact:'2026-02-20',source:'轉介',priority:'中',tags:['介紹人'],notes:'透過張偉明介紹，尚未確認需求。' },
+          collapsed:false, children:[] }
+      ]
+    },
+    { id:uid(), name:'王淑芬', status:'yellow',
+      info:{ company:'DEF顧問',phone:'0987-111-222',email:'wang@def.com',lastContact:'2026-03-01',source:'展覽',priority:'中',tags:['潛在客戶'],notes:'展覽認識，有興趣了解更多，等待回覆。' },
+      collapsed:false, children:[] },
+    { id:uid(), name:'陳建國', status:'red',
+      info:{ company:'GHI集團',phone:'0987-654-321',email:'chen@ghi.com',lastContact:'2025-12-01',source:'老客戶',priority:'低',tags:['前客戶'],notes:'合作暫停，Q3 再評估。' },
+      collapsed:false,
+      children:[
+        { id:uid(), name:'林志偉', status:'gray',
+          info:{ company:'GHI集團',phone:'',email:'',lastContact:'2025-10-15',source:'陳建國介紹',priority:'',tags:['無效'],notes:'電話無法接通，Email 退信。' },
+          collapsed:false, children:[] }
+      ]
+    }
+  ],
+  collapsed:false
+};
+
+let tree = JSON.parse(localStorage.getItem('crm-v2')||'null') || DEMO;
+function saveData(){ localStorage.setItem('crm-v2',JSON.stringify(tree)) }
+
+function findNode(id, node=tree){
+  if(node.id===id) return node;
+  for(const c of node.children||[]){ const f=findNode(id,c); if(f) return f; }
+  return null;
+}
+function findParent(id, node=tree, par=null){
+  if(node.id===id) return par;
+  for(const c of node.children||[]){ const f=findParent(id,c,node); if(f!==undefined) return f; }
+  return undefined;
+}
+function delNode(id){ const p=findParent(id); if(!p) return; p.children=p.children.filter(c=>c.id!==id); }
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+let selId=null, panelId=null, pendingDelId=null;
+
+function render(){
+  document.getElementById('tree-root').innerHTML = buildNode(tree, true);
+  bindEvents();
+  updateStats();
+  requestAnimationFrame(()=>requestAnimationFrame(drawLines));
+}
+
+function avatarLetter(name){
+  const s=String(name||'?').trim();
+  return s.length>0 ? s[0] : '?';
+}
+
+function buildNode(n, isRoot=false){
+  const hasKids = n.children && n.children.length>0;
+  const sc = n.status ? 'status-'+n.status : '';
+  const sel = selId===n.id ? ' selected':'';
+  const meta = n.info.company || (n.info.tags&&n.info.tags[0]) || '';
+  return `
+<div class="tree-level${isRoot?' node-root':''}" data-id="${n.id}">
+  <div class="node-card ${sc}${sel}" data-id="${n.id}">
+    <div class="node-header">
+      <div class="node-avatar">${avatarLetter(n.name)}</div>
+      <div class="node-name" data-a="open" data-id="${n.id}">${esc(n.name)}</div>
+    </div>
+    ${n.status ? `
+    <div class="status-pill" data-a="status" data-id="${n.id}">
+      <span class="status-dot"></span>${STATUS_LABELS[n.status]}
+    </div>` : `<div style="text-align:center;font-size:10px;color:var(--text-subtle);margin-top:2px">根節點</div>`}
+    <div class="node-footer">
+      <div class="node-meta" title="${esc(meta)}">${esc(meta)}</div>
+      <div class="node-actions">
+        <button class="act-btn" data-a="add" data-id="${n.id}" title="新增子節點">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        ${!isRoot?`<button class="act-btn del" data-a="del" data-id="${n.id}" title="刪除">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>`:''}
+      </div>
+    </div>
+    ${hasKids?`<button class="collapse-toggle" data-a="collapse" data-id="${n.id}">${n.collapsed?'▼ 展開 ('+n.children.length+')':'▲ 收起'}</button>`:''}
+  </div>
+  ${hasKids&&!n.collapsed?`
+  <div class="tree-children" data-parent="${n.id}">
+    ${n.children.map(c=>buildNode(c)).join('')}
+  </div>`:''}
+</div>`;
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function bindEvents(){
+  document.querySelectorAll('[data-a]').forEach(el=>{
+    el.addEventListener('click',e=>{
+      e.stopPropagation();
+      const a=el.dataset.a, id=el.dataset.id;
+      if(a==='open') openPanel(id);
+      else if(a==='status') cycleStatus(id);
+      else if(a==='add') addChild(id);
+      else if(a==='del') promptDel(id);
+      else if(a==='collapse') toggleCollapse(id);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  SVG LINES
+// ═══════════════════════════════════════════════════════
+function drawLines(){
+  const svg=document.getElementById('lines-svg');
+  const wrapper=document.getElementById('tree-wrapper');
+  svg.setAttribute('width',wrapper.scrollWidth);
+  svg.setAttribute('height',wrapper.scrollHeight);
+  svg.innerHTML='';
+  const wr=wrapper.getBoundingClientRect();
+  const app=document.getElementById('app');
+  drawNodeLines(tree, svg, wr, app);
+}
+
+function drawNodeLines(n, svg, wr, app){
+  if(!n.children||!n.children.length||n.collapsed) return;
+  const pc=document.querySelector(`.node-card[data-id="${n.id}"]`);
+  if(!pc) return;
+  const pr=pc.getBoundingClientRect();
+  const px=pr.left-wr.left+app.scrollLeft+pr.width/2;
+  const py=pr.top-wr.top+app.scrollTop+pr.height;
+  n.children.forEach(child=>{
+    const cc=document.querySelector(`.node-card[data-id="${child.id}"]`);
+    if(!cc) return;
+    const cr=cc.getBoundingClientRect();
+    const cx=cr.left-wr.left+app.scrollLeft+cr.width/2;
+    const cy=cr.top-wr.top+app.scrollTop;
+    const my=(py+cy)/2;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M ${px} ${py} C ${px} ${my}, ${cx} ${my}, ${cx} ${cy}`);
+    path.setAttribute('class','tree-line');
+    svg.appendChild(path);
+    drawNodeLines(child, svg, wr, app);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════════════
+function countStatuses(n, counts={green:0,yellow:0,red:0,gray:0,total:0}){
+  if(n.status){ counts[n.status]=(counts[n.status]||0)+1; counts.total++; }
+  (n.children||[]).forEach(c=>countStatuses(c,counts));
+  return counts;
+}
+function updateStats(){
+  const c=countStatuses(tree);
+  document.getElementById('header-stats').innerHTML=
+    `<span class="stat"><span class="stat-dot" style="background:var(--green)"></span>${c.green}</span>`+
+    `<span class="stat"><span class="stat-dot" style="background:var(--yellow)"></span>${c.yellow}</span>`+
+    `<span class="stat"><span class="stat-dot" style="background:var(--red)"></span>${c.red}</span>`+
+    `<span class="stat"><span class="stat-dot" style="background:var(--gray)"></span>${c.gray}</span>`+
+    `<span style="color:var(--text-subtle)">/ ${c.total} 人</span>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════════
+function cycleStatus(id){
+  const n=findNode(id); if(!n||!n.status) return;
+  const i=STATUS_CYCLE.indexOf(n.status);
+  n.status=STATUS_CYCLE[(i+1)%STATUS_CYCLE.length];
+  saveData(); render();
+  toast(`狀態 → ${STATUS_LABELS[n.status]}`,'ok');
+}
+
+function addChild(pid){
+  const p=findNode(pid); if(!p) return;
+  const nn=newNode();
+  p.children.push(nn); p.collapsed=false;
+  saveData(); render();
+  openPanel(nn.id);
+}
+
+function addRootChild(){ addChild('root'); }
+
+function toggleCollapse(id){
+  const n=findNode(id); if(!n) return;
+  n.collapsed=!n.collapsed; saveData(); render();
+}
+
+function promptDel(id){
+  const n=findNode(id); if(!n) return;
+  pendingDelId=id;
+  const hasK=n.children&&n.children.length>0;
+  document.getElementById('del-msg').textContent=
+    hasK ? `確定要刪除「${n.name}」及其 ${n.children.length} 個子節點？`
+         : `確定要刪除「${n.name}」？`;
+  document.getElementById('del-dialog').classList.add('open');
+}
+function closeDelDialog(){ pendingDelId=null; document.getElementById('del-dialog').classList.remove('open'); }
+function confirmDel(){
+  if(!pendingDelId) return;
+  if(panelId===pendingDelId) closePanel();
+  delNode(pendingDelId);
+  pendingDelId=null;
+  document.getElementById('del-dialog').classList.remove('open');
+  saveData(); render();
+  toast('已刪除','ok');
+}
+
+// ═══════════════════════════════════════════════════════
+//  PANEL
+// ═══════════════════════════════════════════════════════
+function openPanel(id){
+  const n=findNode(id); if(!n) return;
+  panelId=id; selId=id;
+  document.querySelectorAll('.node-card').forEach(e=>e.classList.remove('selected'));
+  document.querySelector(`.node-card[data-id="${id}"]`)?.classList.add('selected');
+
+  // Header dot
+  const dot=document.getElementById('panel-sdot');
+  dot.style.background = n.status ? STATUS_COLORS[n.status] : 'transparent';
+  document.getElementById('panel-title').textContent=n.name;
+
+  const i=n.info||{};
+  const tags=Array.isArray(i.tags)?i.tags:[];
+
+  document.getElementById('panel-body').innerHTML=`
+<div class="form-group">
+  <label class="form-label">姓名</label>
+  <input class="form-input" id="f-name" value="${esc(n.name)}" placeholder="輸入姓名">
+</div>
+${n.status?`
+<div class="form-group">
+  <label class="form-label">聯繫狀態</label>
+  <div class="status-selector">
+    ${STATUS_CYCLE.map(s=>`
+    <div class="status-option${n.status===s?' sel-'+s:''}" data-s="${s}" onclick="setPanelStatus('${s}')">
+      <div class="so-dot" style="background:${STATUS_COLORS[s]}"></div>${STATUS_LABELS[s]}
+    </div>`).join('')}
+  </div>
+</div>`:''}
+<div class="panel-section-title">基本資料</div>
+<div class="form-group">
+  <label class="form-label">公司 / 組織</label>
+  <input class="form-input" id="f-company" value="${esc(i.company||'')}" placeholder="公司名稱">
+</div>
+<div class="form-group">
+  <label class="form-label">電話</label>
+  <input class="form-input" id="f-phone" value="${esc(i.phone||'')}" placeholder="09XX-XXX-XXX">
+</div>
+<div class="form-group">
+  <label class="form-label">Email</label>
+  <input class="form-input" id="f-email" type="email" value="${esc(i.email||'')}" placeholder="name@example.com">
+</div>
+<div class="panel-section-title">跟進資訊</div>
+<div class="form-group">
+  <label class="form-label">最後聯繫日期</label>
+  <input class="form-input" id="f-date" type="date" value="${esc(i.lastContact||'')}">
+</div>
+<div class="form-group">
+  <label class="form-label">認識管道</label>
+  <input class="form-input" id="f-source" value="${esc(i.source||'')}" placeholder="LinkedIn、展覽、轉介...">
+</div>
+<div class="form-group">
+  <label class="form-label">優先程度</label>
+  <select class="form-select" id="f-priority">
+    <option value="" ${!i.priority?'selected':''}>-- 未設定 --</option>
+    <option value="高" ${i.priority==='高'?'selected':''}>🔴 高</option>
+    <option value="中" ${i.priority==='中'?'selected':''}>🟡 中</option>
+    <option value="低" ${i.priority==='低'?'selected':''}>🟢 低</option>
+  </select>
+</div>
+<div class="form-group">
+  <label class="form-label">標籤</label>
+  <div class="tags-area" id="tags-area" onclick="document.getElementById('tag-inp').focus()">
+    ${tags.map(t=>`<span class="tag-chip">${esc(t)}<span class="tag-rm" onclick="rmTag('${esc(t)}')">×</span></span>`).join('')}
+    <input id="tag-inp" class="tag-input" placeholder="輸入後按 Enter" onkeydown="handleTag(event)">
+  </div>
+</div>
+<div class="form-group">
+  <label class="form-label">備注 / 筆記</label>
+  <textarea class="form-textarea" id="f-notes" placeholder="互動歷史、需求、下一步行動...">${esc(i.notes||'')}</textarea>
+</div>`;
+
+  document.getElementById('side-panel').classList.add('open');
+}
+
+function closePanel(){
+  document.getElementById('side-panel').classList.remove('open');
+  panelId=null; selId=null;
+  document.querySelectorAll('.node-card').forEach(e=>e.classList.remove('selected'));
+}
+
+function savePanel(){
+  if(!panelId) return;
+  const n=findNode(panelId); if(!n) return;
+  const nm=document.getElementById('f-name')?.value.trim();
+  if(nm) n.name=nm;
+  n.info.company  = document.getElementById('f-company')?.value||'';
+  n.info.phone    = document.getElementById('f-phone')?.value||'';
+  n.info.email    = document.getElementById('f-email')?.value||'';
+  n.info.lastContact = document.getElementById('f-date')?.value||'';
+  n.info.source   = document.getElementById('f-source')?.value||'';
+  n.info.priority = document.getElementById('f-priority')?.value||'';
+  n.info.notes    = document.getElementById('f-notes')?.value||'';
+  // tags saved in real-time
+  saveData();
+  const sid=panelId;
+  render();
+  // keep selection
+  panelId=sid; selId=sid;
+  document.querySelector(`.node-card[data-id="${sid}"]`)?.classList.add('selected');
+  // update panel header
+  document.getElementById('panel-title').textContent=n.name;
+  const dot=document.getElementById('panel-sdot');
+  dot.style.background=n.status?STATUS_COLORS[n.status]:'transparent';
+  toast('已儲存','ok');
+}
+
+function setPanelStatus(s){
+  const n=findNode(panelId); if(!n) return;
+  n.status=s;
+  document.querySelectorAll('.status-option').forEach(el=>{
+    el.className='status-option'+(el.dataset.s===s?' sel-'+s:'');
+  });
+  // Update header dot live
+  document.getElementById('panel-sdot').style.background=STATUS_COLORS[s];
+}
+
+// Tags
+function reRenderTags(){
+  const n=findNode(panelId); if(!n) return;
+  const tags=Array.isArray(n.info.tags)?n.info.tags:[];
+  const area=document.getElementById('tags-area'); if(!area) return;
+  area.innerHTML=
+    tags.map(t=>`<span class="tag-chip">${esc(t)}<span class="tag-rm" onclick="rmTag('${esc(t)}')">×</span></span>`).join('')+
+    `<input id="tag-inp" class="tag-input" placeholder="輸入後按 Enter" onkeydown="handleTag(event)">`;
+}
+function rmTag(t){
+  const n=findNode(panelId); if(!n) return;
+  n.info.tags=(n.info.tags||[]).filter(x=>x!==t);
+  reRenderTags();
+}
+function handleTag(e){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const v=e.target.value.trim(); if(!v) return;
+    const n=findNode(panelId); if(!n) return;
+    if(!Array.isArray(n.info.tags)) n.info.tags=[];
+    if(!n.info.tags.includes(v)) n.info.tags.push(v);
+    e.target.value='';
+    reRenderTags();
+    document.getElementById('tag-inp')?.focus();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════
+function exportData(){
+  const b=new Blob([JSON.stringify(tree,null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');
+  a.href=u; a.download=`crm-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(u);
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{ tree=JSON.parse(e.target.result); saveData(); render(); toast('匯入成功','ok'); }
+    catch{ toast('格式錯誤','err'); }
+  };
+  r.readAsText(f); ev.target.value='';
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+let _tt;
+function toast(msg, type='ok'){
+  const el=document.getElementById('toast');
+  const ic=document.getElementById('toast-icon');
+  document.getElementById('toast-msg').textContent=msg;
+  if(type==='ok') ic.innerHTML='<polyline points="20 6 9 17 4 12" stroke-width="2.5"/>';
+  else ic.innerHTML='<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>';
+  ic.style.color=type==='ok'?'var(--green)':'var(--red)';
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ═══════════════════════════════════════════════════════
+//  RESIZE / SCROLL
+// ═══════════════════════════════════════════════════════
+let _rt;
+window.addEventListener('resize',()=>{ clearTimeout(_rt); _rt=setTimeout(drawLines,80); });
+document.getElementById('app').addEventListener('scroll',()=>{ clearTimeout(_rt); _rt=setTimeout(drawLines,40); });
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
