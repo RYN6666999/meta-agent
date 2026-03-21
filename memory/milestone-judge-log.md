@@ -501,3 +501,39 @@
   其他變更 tools/crm/index.html +10
 
 ---
+
+## 2026-03-21 17:00 | auto-git-score | 分數 850 | 📥 達到閾值（850/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=85），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-21-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-21-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  核心腳本變更 scripts/crm/.gitignore +40
+  核心腳本變更 scripts/crm/README.md +40
+  核心腳本變更 scripts/crm/eslint.config.js +40
+  核心腳本變更 scripts/crm/index.html +40
+  核心腳本變更 scripts/crm/package-lock.json +40
+  核心腳本變更 scripts/crm/package.json +40
+  核心腳本變更 scripts/crm/public/favicon.svg +40
+  核心腳本變更 scripts/crm/public/icons.svg +40
+  核心腳本變更 scripts/crm/src/App.css +40
+  核心腳本變更 scripts/crm/src/App.tsx +40
+  核心腳本變更 scripts/crm/src/assets/hero.png +40
+  核心腳本變更 scripts/crm/src/assets/react.svg +40
+  核心腳本變更 scripts/crm/src/assets/vite.svg +40
+  核心腳本變更 scripts/crm/src/index.css +40
+  核心腳本變更 scripts/crm/src/main.tsx +40
+  核心腳本變更 scripts/crm/tsconfig.app.json +40
+  核心腳本變更 scripts/crm/tsconfig.json +40
+  核心腳本變更 scripts/crm/tsconfig.node.json +40
+  核心腳本變更 scripts/crm/vite.config.ts +40
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/index.html +10
+  其他變更 tools/crm/personal-memory.json +10
+
+---
