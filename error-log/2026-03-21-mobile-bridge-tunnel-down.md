@@ -17,3 +17,13 @@ restart cloudflared via watchdog
 
 ## 背景
 pattern=cloudflared tunnel run --token mode=named
+
+## 2026-03-21 15:15:28
+- root_cause: cloudflared tunnel process not running
+- solution: restart cloudflared via watchdog
+- context: pattern=cloudflared tunnel run --token mode=named
+
+## 2026-03-21 15:46:02
+- root_cause: cloudflared tunnel process not running
+- solution: restart cloudflared via watchdog
+- context: pattern=cloudflared tunnel run --token mode=named

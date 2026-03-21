@@ -464,3 +464,23 @@
   其他變更 memory/turn-count.txt +10
 
 ---
+
+## 2026-03-21 15:00 | auto-git-score | 分數 120 | 📥 達到閾值（120/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=100），含重要變更
+
+**評分明細：**
+  其他變更 .claude/launch.json +10
+  其他變更 .claude/skills/frontend-design/SKILL.md +10
+  其他變更 crm/index.html +10
+  其他變更 error-log/2026-03-21-mobile-bridge-api-down.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/README.md +10
+  其他變更 tools/crm/index.html +10
+  其他變更 tools/memory-mcp/server.py +10
+
+---

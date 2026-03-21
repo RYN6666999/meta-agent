@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRM 人脈樹</title>
+<title>房多多經營系統</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230d1117'/><circle cx='16' cy='9' r='4' fill='%23388bfd'/><circle cx='7' cy='24' r='3.5' fill='%233fb950'/><circle cx='25' cy='24' r='3.5' fill='%23d29922'/><line x1='16' y1='13' x2='16' y2='18' stroke='%23444c56' stroke-width='1.5'/><line x1='16' y1='18' x2='7' y2='21' stroke='%23444c56' stroke-width='1.5'/><line x1='16' y1='18' x2='25' y2='21' stroke='%23444c56' stroke-width='1.5'/></svg>">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -96,8 +96,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .page{display:none;position:fixed;top:54px;left:0;right:0;bottom:0}
 
 /* ── Canvas CRM Page ── */
-#page-crm{overflow:hidden}
-#canvas-container{overflow:hidden;position:relative;width:100%;height:100%;cursor:default;background:radial-gradient(circle at 1px 1px,var(--canvas-dot) 1px,transparent 0) 0 0/24px 24px,var(--bg)}
+#page-crm{overflow:hidden;display:flex;flex-direction:column}
+#canvas-container{overflow:hidden;position:relative;width:100%;flex:1;cursor:default;background:radial-gradient(circle at 1px 1px,var(--canvas-dot) 1px,transparent 0) 0 0/24px 24px,var(--bg)}
+#crm-list-container{position:absolute;top:38px;left:0;right:0;bottom:0;overflow:hidden;display:none}
 #canvas{position:absolute;top:0;left:0;transform-origin:0 0;transform:translate(0px,0px) scale(1)}
 #edges-svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:0;width:1px;height:1px}
 #nodes-layer{position:relative;z-index:1}
@@ -141,10 +142,153 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .canvas-controls button{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
 .canvas-controls button:hover{border-color:var(--border-hover)}
 #zoom-label{color:var(--text-muted);min-width:38px;text-align:center;font-size:11px}
-.shortcuts-hint{position:fixed;bottom:20px;left:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:11px;color:var(--text-muted);display:flex;gap:10px;z-index:50;pointer-events:none;flex-wrap:wrap;max-width:560px}
-.shortcuts-hint kbd{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:10px;color:var(--text)}
+.shortcuts-hint{position:fixed;bottom:12px;left:14px;background:transparent;border:none;border-radius:6px;padding:4px 8px;font-size:10px;color:var(--text-subtle,rgba(128,128,128,.45));display:flex;gap:8px;z-index:50;pointer-events:none;flex-wrap:wrap;max-width:480px;opacity:.5;transition:opacity .2s}
+.shortcuts-hint:hover{opacity:1}
+.shortcuts-hint kbd{background:transparent;border:none;border-radius:3px;padding:0 2px;font-family:monospace;font-size:9px;color:inherit}
 /* ── Settings Page ── */
 .settings-page{max-width:680px;margin:0 auto;padding:32px 24px;overflow-y:auto;height:100%}
+/* ── Daily Report / 日報表 page ── */
+#page-daily{overflow:hidden}
+.daily-page{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.daily-header{flex-shrink:0;padding:14px 24px 10px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:var(--surface)}
+.daily-header-title{font-size:16px;font-weight:700}
+.daily-date-nav{display:flex;align-items:center;gap:6px;margin-left:auto}
+.daily-date-nav button{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.daily-date-nav button:hover{border-color:var(--accent);color:var(--accent)}
+.daily-date-nav input[type=date]{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:4px 10px;font-size:13px;cursor:pointer}
+.daily-body{flex:1;overflow-y:auto;padding:16px 24px 32px;display:flex;flex-direction:column;gap:16px}
+.daily-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;flex-shrink:0}
+.daily-section-header{padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface2);font-size:13px;font-weight:600}
+.daily-section-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.daily-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.daily-kpi-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.daily-kpi-label{font-size:11px;color:var(--text-muted)}
+.daily-kpi-val{font-size:20px;font-weight:700;color:var(--accent)}
+.daily-kpi-target{font-size:11px;color:var(--text-muted)}
+.daily-kpi-card.exceeded .daily-kpi-val{color:var(--green)}
+.daily-kpi-card.warning .daily-kpi-val{color:var(--yellow)}
+.daily-fu-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.daily-fu-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .12s}
+.daily-fu-item:hover{border-color:var(--border-hover)}
+.daily-fu-item.done{opacity:.5}
+.daily-fu-item.done .daily-fu-name{text-decoration:line-through}
+.daily-fu-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.daily-fu-check.checked{background:var(--green);border-color:var(--green);color:#fff}
+.daily-fu-name{font-size:13px;flex:1;font-weight:500}
+.daily-fu-role{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted)}
+.daily-fu-region{font-size:10px;color:var(--text-muted)}
+.daily-fu-search{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.daily-fu-search input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 12px;font-size:13px}
+.daily-fu-search input:focus{outline:none;border-color:var(--accent)}
+.daily-activity-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.daily-act-item{display:flex;flex-direction:column;gap:4px}
+.daily-act-label{font-size:11px;color:var(--text-muted)}
+.daily-act-input{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:6px 10px;font-size:18px;font-weight:700;width:100%;text-align:center;transition:border-color .12s}
+.daily-act-input:focus{outline:none;border-color:var(--accent)}
+.daily-goal-row{display:flex;align-items:center;gap:8px}
+.daily-goal-row label{font-size:12px;color:var(--text-muted);width:70px;flex-shrink:0}
+.daily-goal-row input[type=number]{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:5px 10px;font-size:13px;font-weight:600;width:80px}
+.daily-goal-row input[type=number]:focus{outline:none;border-color:var(--accent)}
+.daily-goal-row .daily-goal-progress{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+.daily-goal-bar{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
+.daily-goal-bar.full{background:var(--green)}
+.daily-notes-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;min-height:80px;resize:vertical;font-family:inherit}
+.daily-notes-input:focus{outline:none;border-color:var(--accent)}
+/* CRM view mode buttons */
+.crm-view-bar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.crm-view-btn{padding:4px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .12s}
+.crm-view-btn:hover{border-color:var(--border-hover);color:var(--text)}
+.crm-view-btn.active{background:rgba(56,139,253,.13);border-color:var(--accent);color:var(--accent)}
+.crm-sort-btn{padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:12px;cursor:pointer;margin-left:4px;transition:all .12s}
+.crm-sort-btn:hover{border-color:var(--accent);color:var(--accent)}
+.crm-list-view{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px}
+.crm-list-group-header{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;padding:6px 2px 3px;letter-spacing:.05em;border-bottom:1px solid var(--border);margin-top:6px}
+.crm-list-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .12s}
+.crm-list-row:hover{border-color:var(--border-hover);background:var(--surface2)}
+.crm-list-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.crm-list-name{font-size:13px;font-weight:600;flex:1}
+.crm-list-meta{font-size:11px;color:var(--text-muted);flex:1}
+.crm-list-tags{display:flex;gap:4px;flex-wrap:wrap}
+/* ── Sales / 業績 page ── */
+#page-sales{overflow:hidden}
+.sales-page{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.sales-header{flex-shrink:0;padding:14px 24px 10px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);background:var(--surface)}
+.sales-month-nav{display:flex;align-items:center;gap:8px}
+.sales-month-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.sales-month-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sales-month-label{font-size:15px;font-weight:600;min-width:100px;text-align:center}
+.sales-body{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:20px}
+/* KPI bar */
+.kpi-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.kpi-total::before{background:linear-gradient(90deg,var(--accent),#60a5fa)}
+.kpi-card.kpi-net::before{background:linear-gradient(90deg,var(--green),#34d399)}
+.kpi-card.kpi-count::before{background:linear-gradient(90deg,var(--yellow),#fbbf24)}
+.kpi-label{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:.04em}
+.kpi-value{font-size:26px;font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.02em}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+/* Product grid */
+.prod-section-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.prod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:600px){.prod-grid{grid-template-columns:repeat(2,1fr)}}
+.prod-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.prod-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.2);border-color:var(--prod-color,var(--accent))}
+.prod-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--prod-color,var(--accent));opacity:.5}
+.prod-card:hover::after{opacity:1}
+.prod-name{font-size:13px;font-weight:600;color:var(--text)}
+.prod-price{font-size:18px;font-weight:700;color:var(--prod-color,var(--accent))}
+.prod-desc{font-size:10px;color:var(--text-muted)}
+.prod-add-icon{position:absolute;top:10px;right:12px;font-size:18px;opacity:.3}
+.prod-card:hover .prod-add-icon{opacity:.8}
+/* Sale log */
+.sale-log-header{display:grid;grid-template-columns:90px 1fr 120px 110px 90px 32px;gap:8px;padding:6px 12px;font-size:11px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)}
+.sale-row{display:grid;grid-template-columns:90px 1fr 120px 110px 90px 32px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .1s}
+.sale-row:hover{background:var(--surface2)}
+.sale-row:last-child{border-bottom:none}
+.sale-amount{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.sale-net{font-weight:500;color:var(--green);font-variant-numeric:tabular-nums}
+.sale-del{width:24px;height:24px;border-radius:5px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transition:all .12s}
+.sale-row:hover .sale-del{opacity:1}
+.sale-del:hover{background:var(--red);color:#fff}
+.sale-badge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:var(--prod-bg,var(--surface2));color:var(--prod-color,var(--accent))}
+.sale-empty{text-align:center;padding:32px;color:var(--text-muted);font-size:13px}
+/* Add sale modal */
+.sale-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:center;justify-content:center}
+.sale-modal.open{display:flex}
+.sale-modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:460px;max-height:85vh;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+.sale-modal-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sale-product-badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.sale-type-row{display:flex;gap:8px}
+.sale-type-radio{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;user-select:none}
+.sale-type-radio:has(input:checked){border-color:var(--accent);background:rgba(56,139,253,.13);color:var(--accent)}
+.sale-type-radio input{display:none}
+/* Node role + region */
+.node-role-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-bottom:4px;border:1px solid transparent}
+.role-prospect{background:rgba(245,158,11,.12);color:#f59e0b;border-color:rgba(245,158,11,.3)}
+.role-referral{background:rgba(139,92,246,.12);color:#8b5cf6;border-color:rgba(139,92,246,.3)}
+.role-student{background:rgba(16,185,129,.12);color:#10b981;border-color:rgba(16,185,129,.3)}
+.role-agent{background:rgba(56,139,253,.12);color:var(--accent);border-color:rgba(56,139,253,.3)}
+.node-region-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px}
+.node-region-tag{padding:1px 6px;border-radius:4px;font-size:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted)}
+
+/* Docs page */
+.docs-page{max-width:860px;margin:0 auto;padding:24px;height:100%;overflow-y:auto}
+.docs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.docs-title{font-size:18px;font-weight:600}
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.doc-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative;transition:box-shadow .15s}
+.doc-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.doc-card-img{width:100%;height:140px;object-fit:cover;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:40px}
+.doc-card-body{padding:12px}
+.doc-card-name{font-size:13px;font-weight:500;margin-bottom:4px}
+.doc-card-type{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+.doc-card-link{font-size:12px;color:var(--accent);word-break:break-all;cursor:pointer;text-decoration:underline}
+.doc-card-del{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:5px;border:none;background:rgba(0,0,0,.4);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+.doc-card:hover .doc-card-del{opacity:1}
+.doc-add-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none;align-items:center;justify-content:center}
+.doc-add-modal.open{display:flex}
+.doc-add-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:440px;padding:24px;display:flex;flex-direction:column;gap:14px}
 .settings-title{font-size:20px;font-weight:700;margin-bottom:24px;color:var(--text)}
 .settings-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:16px}
 .settings-card-title{font-size:14px;font-weight:600;margin-bottom:6px}
@@ -231,10 +375,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .cal-cell.today .cal-day-num{color:var(--accent);font-weight:700}
 .cal-chip{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--accent);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;flex-shrink:0}
 .cal-chip:hover{opacity:.85}
-.cal-chip.status-green{background:var(--green)}
-.cal-chip.status-yellow{background:var(--yellow);color:#000}
-.cal-chip.status-red{background:var(--red)}
-.cal-chip.status-gray{background:var(--gray)}
+.cal-chip[data-type="分享會"]{background:#3a7d44;color:#fff}
+.cal-chip[data-type="專場"]{background:#b07d00;color:#fff}
+.cal-chip[data-type="訓練"]{background:#1a6aaf;color:#fff}
+.cal-chip[data-type="二對一"]{background:#8a3aaf;color:#fff}
+.ev-participants{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:150px;overflow-y:auto}
+.ev-pax{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;user-select:none;transition:all .12s;display:flex;align-items:center;gap:5px}
+.ev-pax:hover{border-color:var(--accent)}
+.ev-pax.selected{border-color:var(--accent);background:rgba(56,139,253,.15);color:var(--accent);font-weight:500}
+.ev-pax .sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sdot.green,.ev-pax .sdot.green{background:var(--green)}
+.sdot.yellow,.ev-pax .sdot.yellow{background:var(--yellow)}
+.sdot.red,.ev-pax .sdot.red{background:var(--red)}
+.sdot.gray,.ev-pax .sdot.gray{background:var(--gray)}
 .cal-more{font-size:10px;color:var(--text-muted);padding:1px 4px}
 .event-badge{padding:3px 8px;border-radius:5px;font-size:11px;font-weight:500}
 .badge-upcoming{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
@@ -282,12 +435,15 @@ select.field-input option{background:var(--surface2)}
 <div class="header">
   <div class="header-logo">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-    CRM 人脈樹
+    房多多經營系統
   </div>
   <div class="header-sep"></div>
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchPage('crm')">🌳 人脈樹</button>
-    <button class="tab-btn" onclick="switchPage('events')">📅 分享會日程</button>
+    <button class="tab-btn" onclick="switchPage('daily')">📋 日報表</button>
+    <button class="tab-btn" onclick="switchPage('events')">📅 日程</button>
+    <button class="tab-btn" onclick="switchPage('docs')">📁 文件</button>
+    <button class="tab-btn" onclick="switchPage('sales')">💰 業績</button>
     <button class="tab-btn" onclick="switchPage('ai')">🤖 AI助理</button>
     <button class="tab-btn" onclick="switchPage('settings')">⚙️ 設定</button>
   </div>
@@ -299,6 +455,13 @@ select.field-input option{background:var(--surface2)}
 
 <!-- CRM Page -->
 <div class="page" id="page-crm">
+  <div class="crm-view-bar">
+    <button class="crm-view-btn active" id="vbtn-tree" onclick="setCrmView('tree')">🌳 樹狀圖</button>
+    <button class="crm-view-btn" id="vbtn-region" onclick="setCrmView('region')">📍 地區</button>
+    <button class="crm-view-btn" id="vbtn-status" onclick="setCrmView('status')">🔵 狀態</button>
+    <button class="crm-view-btn" id="vbtn-contact" onclick="setCrmView('contact')">📅 最近聯繫</button>
+    <button class="crm-sort-btn" id="crm-sort-dir-btn" onclick="toggleCrmSortDir()" title="排序方向" style="display:none">↑ 升冪</button>
+  </div>
   <div id="canvas-container">
     <div id="canvas" style="position:absolute;top:0;left:0;transform-origin:0 0;transform:translate(0px,0px) scale(1)">
       <svg id="edges-svg" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:0;width:1px;height:1px"></svg>
@@ -310,9 +473,13 @@ select.field-input option{background:var(--surface2)}
     <span id="zoom-label">100%</span>
     <button onclick="zoomBy(0.87)" title="縮小 (Ctrl+-)">−</button>
     <button onclick="fitView()" title="適合視窗 (F)">⊡</button>
+    <button onclick="forceLayout()" title="整理排列" style="font-size:12px">⚡整理</button>
     <button onclick="openSkModal()" title="快捷鍵設定">⌨</button>
   </div>
   <div class="shortcuts-hint" id="shortcuts-hint"></div>
+  <div id="crm-list-container">
+    <div class="crm-list-view" id="crm-list-view"></div>
+  </div>
 </div>
 
 <!-- Events Page -->
@@ -359,6 +526,165 @@ select.field-input option{background:var(--surface2)}
 </div>
 
 <!-- Settings Page -->
+<!-- Sales / 業績 page -->
+<div class="page" id="page-sales">
+  <div class="sales-page">
+    <div class="sales-header">
+      <div class="sales-month-nav">
+        <button class="sales-month-btn" onclick="salesPrevMonth()">‹</button>
+        <div class="sales-month-label" id="sales-month-label">—</div>
+        <button class="sales-month-btn" onclick="salesNextMonth()">›</button>
+      </div>
+      <button class="sales-month-btn" onclick="salesGoToday()" style="width:auto;padding:0 10px;font-size:12px">本月</button>
+      <div style="margin-left:auto">
+        <button class="btn btn-accent" onclick="openSaleModal(null)">＋ 新增成交</button>
+      </div>
+    </div>
+    <div class="sales-body" id="sales-body"></div>
+  </div>
+</div>
+
+<!-- Add Sale Modal -->
+<div class="sale-modal" id="sale-modal">
+  <div class="sale-modal-box">
+    <div class="sale-modal-title">
+      <span id="sale-modal-product-badge" class="sale-product-badge">—</span>
+      <span id="sale-modal-title-text">新增成交</span>
+    </div>
+    <!-- 新業績 / 舊單轉讓 -->
+    <div class="sale-type-row">
+      <label class="sale-type-radio">
+        <input type="radio" name="sale-type" value="new" checked onchange="onSaleTypeChange()">💰 新業績
+      </label>
+      <label class="sale-type-radio">
+        <input type="radio" name="sale-type" value="transfer" onchange="onSaleTypeChange()">🔄 舊單轉讓
+      </label>
+    </div>
+    <div id="sale-product-group">
+      <div class="field-group">
+        <div class="field-label">產品</div>
+        <select class="field-input" id="sale-product" onchange="onSaleProductChange()">
+          <option value="student">學員 — NT$ 79,800</option>
+          <option value="member">會員服務 — NT$ 200,000</option>
+          <option value="vip">VIP買房服務 — NT$ 300,000</option>
+          <option value="asst_mgr_pkg">襄理批貨 — NT$ 478,800</option>
+          <option value="manager_pkg">經理批貨 — NT$ 1,197,000</option>
+          <option value="consult">協談+ — NT$ 2,394／人</option>
+        </select>
+      </div>
+      <div class="field-group" id="sale-qty-group" style="display:none">
+        <div class="field-label">人數</div>
+        <input class="field-input" type="number" id="sale-qty" min="1" value="1" placeholder="人數" oninput="onSaleProductChange()">
+      </div>
+      <!-- 批貨來源 (only for asst_mgr_pkg / manager_pkg) -->
+      <div class="field-group" id="sale-batchby-group" style="display:none">
+        <div class="field-label">批貨對象</div>
+        <div style="display:flex;gap:14px">
+          <label class="sale-type-radio"><input type="radio" name="sale-batchby" value="self" checked onchange="onSaleProductChange()"> 本人批貨</label>
+          <label class="sale-type-radio"><input type="radio" name="sale-batchby" value="student" onchange="onSaleProductChange()"> 傘下學員批貨</label>
+        </div>
+      </div>
+      <div class="field-group" id="sale-student-rank-group" style="display:none">
+        <div class="field-label">學員現職職級</div>
+        <select class="field-input" id="sale-student-rank" onchange="onSaleProductChange()">
+          <option value="director">主任 (15%)</option>
+          <option value="asst_mgr">襄理 (20%)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <div class="field-label">日期</div>
+        <input class="field-input" type="date" id="sale-date">
+      </div>
+      <div class="field-group">
+        <div class="field-label">業績金額</div>
+        <input class="field-input" id="sale-amount-display" readonly style="font-weight:600;color:var(--accent)">
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">客戶（人脈節點）</div>
+      <div class="ev-participants" id="sale-pax"></div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">備注</div>
+      <input class="field-input" id="sale-notes" placeholder="備注">
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:4px">
+      <div>我的所得：<strong id="sale-income-preview" style="color:var(--accent)">—</strong></div>
+      <div>稅金 12.11%：<strong id="sale-tax-preview" style="color:var(--red)">—</strong>
+      &nbsp;&nbsp;稅後實得：<strong id="sale-net-preview" style="color:var(--green)">—</strong></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeSaleModal()">取消</button>
+      <button class="btn btn-accent" onclick="saveSale()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Report page -->
+<div class="page" id="page-daily">
+  <div class="daily-page">
+    <div class="daily-header">
+      <div class="daily-header-title">📋 日報表</div>
+      <div class="daily-date-nav">
+        <button onclick="dailyPrev()">‹</button>
+        <input type="date" id="daily-date-input" onchange="renderDailyPage()">
+        <button onclick="dailyNext()">›</button>
+        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="dailyToday()">今天</button>
+      </div>
+      <button class="btn btn-accent" style="margin-left:8px" onclick="saveDailyReport()">儲存</button>
+    </div>
+    <div class="daily-body" id="daily-body">
+      <!-- Rendered by renderDailyPage() -->
+    </div>
+  </div>
+</div>
+
+<!-- Docs page -->
+<div class="page" id="page-docs">
+  <div class="docs-page">
+    <div class="docs-header">
+      <div class="docs-title">📁 常用文件</div>
+      <button class="btn btn-accent" onclick="openDocModal()">＋ 新增文件</button>
+    </div>
+    <div class="docs-grid" id="docs-grid"></div>
+  </div>
+</div>
+
+<!-- Doc add modal -->
+<div class="doc-add-modal" id="doc-add-modal">
+  <div class="doc-add-box">
+    <div style="font-size:15px;font-weight:600">新增文件</div>
+    <div class="field-group">
+      <div class="field-label">類型</div>
+      <select class="field-input" id="doc-type">
+        <option value="poster">🖼 海報圖片</option>
+        <option value="form">📋 問卷連結</option>
+        <option value="link">🔗 其他連結</option>
+        <option value="file">📄 文件檔案</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">名稱</div>
+      <input class="field-input" id="doc-name" placeholder="文件名稱">
+    </div>
+    <div class="field-group" id="doc-url-group">
+      <div class="field-label">連結 / URL</div>
+      <input class="field-input" id="doc-url" placeholder="https://…">
+    </div>
+    <div class="field-group" id="doc-img-group" style="display:none">
+      <div class="field-label">圖片檔案</div>
+      <input class="field-input" type="file" accept="image/*" id="doc-img-file" onchange="previewDocImg(this)">
+      <img id="doc-img-preview" style="display:none;max-height:120px;border-radius:8px;margin-top:8px;object-fit:cover;width:100%">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeDocModal()">取消</button>
+      <button class="btn btn-accent" onclick="saveDoc()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <div class="page" id="page-settings">
   <div class="settings-page">
     <h2 class="settings-title">⚙️ 設定</h2>
@@ -415,6 +741,17 @@ select.field-input option{background:var(--surface2)}
       <div class="settings-card-desc">點擊按鍵欄位後按下新按鍵即可重新綁定。</div>
       <div id="settings-sk-body"></div>
       <button class="btn" style="margin-top:12px" onclick="resetShortcuts();renderSettingsPage()">恢復預設快捷鍵</button>
+    </div>
+
+    <!-- Obsidian -->
+    <div class="settings-card">
+      <div class="settings-card-title">🗂 Obsidian 連結</div>
+      <div class="settings-card-desc">設定 Obsidian Vault 目錄路徑，Agent 可調用相關筆記擴充人脈資料。</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input class="field-input" id="obsidian-path" placeholder="/Users/你的名字/ObsidianVault" style="flex:1;min-width:200px" oninput="saveObsidianPath()">
+        <button class="btn btn-accent" onclick="openObsidianVault()">📂 開啟 Vault</button>
+      </div>
+      <div id="obsidian-status" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
     </div>
 
     <!-- Backup -->
@@ -505,7 +842,8 @@ function newNode(){
       eventDate:'',eventName:'',referrer:'',recommender:'',
       formNotes:'',
       company:'',phone:'',email:'',lastContact:'',
-      source:'',priority:'',tags:[],notes:''
+      source:'',priority:'',tags:[],notes:'',
+      role:'',regions:[]
     }
   };
 }
@@ -630,6 +968,33 @@ function autoLayout(){
   });
 }
 
+// Force re-layout: ignore current positions
+function forceLayout(){
+  function forceFrom(id,cx,y){
+    const n=findNode(id);if(!n)return;
+    n.x=cx-NODE_W/2; n.y=y;
+    const kids=getChildren(id).filter(c=>!n.collapsed);
+    if(!kids.length)return;
+    const totalW=kids.reduce((s,c)=>s+subtreeW(c.id),0);
+    let lx=cx-totalW/2;
+    kids.forEach(c=>{
+      const cw=subtreeW(c.id);
+      forceFrom(c.id,lx+cw/2,y+NODE_H_EST+GAP_V);
+      lx+=cw;
+    });
+  }
+  const roots=getRoots();
+  const totalW=roots.reduce((s,r)=>s+subtreeW(r.id),0);
+  let lx=-(totalW/2);
+  roots.forEach(r=>{
+    const rw=subtreeW(r.id);
+    forceFrom(r.id,lx+rw/2,0);
+    lx+=rw;
+  });
+  saveData(); renderNodes(); fitView();
+  toast('排列已整理');
+}
+
 /* ═══════════════════════════════════════
    CANVAS STATE
 ═══════════════════════════════════════ */
@@ -698,6 +1063,9 @@ function renderNodes(){
     const kids=getChildren(n.id);
     const hasKids=kids.length>0;
     const meta=n.info.company||(n.info.tags&&n.info.tags[0])||'';
+    const ROLE_MAP={潛在客戶:'role-prospect',轉介紹中心:'role-referral',學員:'role-student',從業人員:'role-agent'};
+    const roleHtml=n.info.role?`<div class="node-role-pill ${ROLE_MAP[n.info.role]||''}">${n.info.role}</div>`:'';
+    const regionsHtml=(n.info.regions&&n.info.regions.length)?`<div class="node-region-tags">${n.info.regions.map(r=>`<span class="node-region-tag">${r}</span>`).join('')}</div>`:'';
 
     const wrap=document.createElement('div');
     wrap.className='node-wrap'+(n.status&&!isRoot?' status-'+n.status:'')+(selId===n.id?' selected':'');
@@ -725,6 +1093,8 @@ function renderNodes(){
           <div class="node-name" data-a="open" data-id="${n.id}" title="${n.name}">${n.name}</div>
         </div>
         ${statusHtml}
+        ${roleHtml}
+        ${regionsHtml}
         <div class="node-footer">
           <div class="node-meta">${meta}</div>
           <div class="node-actions">
@@ -761,13 +1131,18 @@ function renderNodes(){
       e.stopPropagation();
       if(isDragging)return; // ignore click after drag
       const a=e.target.closest('[data-a]');
-      if(!a)return;
+      if(!a)return; // click card body → just keep selection (no panel)
       const act=a.dataset.a,id=a.dataset.id;
       if(act==='open'){openPanel(id);}
       else if(act==='status'){cycleStatus(id);}
       else if(act==='add'){addChild(id);}
       else if(act==='del'){promptDel(id);}
       else if(act==='collapse'){toggleCollapse(id);}
+    });
+    // Double-click card body → open panel
+    wrap.addEventListener('dblclick',e=>{
+      e.stopPropagation();
+      openPanel(n.id);
     });
 
     layer.appendChild(wrap);
@@ -1234,6 +1609,10 @@ function savePanel(){
   const needsChecked=[];
   body.querySelectorAll('[data-need].checked').forEach(el=>needsChecked.push(el.dataset.need));
   n.info.needs=needsChecked;
+  // regions checkboxes
+  const regionsChecked=[];
+  body.querySelectorAll('[data-region].checked').forEach(el=>regionsChecked.push(el.dataset.region));
+  n.info.regions=regionsChecked;
 
   document.getElementById('panel-title').textContent=n.name||'聯繫人資料';
   saveData();
@@ -1246,6 +1625,20 @@ function savePanel(){
     if(avatar)avatar.textContent=(n.name||'?')[0];
     const meta=wrap.querySelector('.node-meta');
     if(meta)meta.textContent=n.info.company||(n.info.tags&&n.info.tags[0])||'';
+    // update role pill
+    const ROLE_MAP={潛在客戶:'role-prospect',轉介紹中心:'role-referral',學員:'role-student',從業人員:'role-agent'};
+    let rolePill=wrap.querySelector('.node-role-pill');
+    if(n.info.role){
+      if(!rolePill){rolePill=document.createElement('div');rolePill.className='node-role-pill';wrap.querySelector('.node-card').insertBefore(rolePill,wrap.querySelector('.node-footer'));}
+      rolePill.className='node-role-pill '+(ROLE_MAP[n.info.role]||'');
+      rolePill.textContent=n.info.role;
+    } else if(rolePill){rolePill.remove();}
+    // update region tags
+    let regionDiv=wrap.querySelector('.node-region-tags');
+    if(n.info.regions&&n.info.regions.length){
+      if(!regionDiv){regionDiv=document.createElement('div');regionDiv.className='node-region-tags';wrap.querySelector('.node-card').insertBefore(regionDiv,wrap.querySelector('.node-footer'));}
+      regionDiv.innerHTML=n.info.regions.map(r=>`<span class="node-region-tag">${r}</span>`).join('');
+    } else if(regionDiv){regionDiv.remove();}
   }
   updateStats();
 }
@@ -1258,12 +1651,28 @@ function renderPanel(n){
   const needsHtml=needsOptions.map(nd=>`<div class="cb-item${(inf.needs||[]).includes(nd)?' checked':''}" data-need="${nd}" onclick="toggleNeed(this,'${nd}')">${nd}</div>`).join('');
 
   const tagsVal=(inf.tags||[]).join(', ');
+  const REGION_OPTIONS=['台北','新北','桃園','新竹','台中','彰化','台南','高雄','其他'];
+  const regionsHtml=REGION_OPTIONS.map(r=>`<div class="cb-item${(inf.regions||[]).includes(r)?' checked':''}" data-region="${r}" onclick="toggleRegion(this,'${r}')">${r}</div>`).join('');
+  const ROLES=['潛在客戶','轉介紹中心','學員','從業人員'];
 
   body.innerHTML=`
     <!-- 基本資料 -->
     <div class="field-group">
       <div class="field-label">姓名</div>
       <input class="field-input" data-field="name" value="${escHtml(n.name)}" oninput="savePanel()" placeholder="姓名">
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <div class="field-label">身份標籤</div>
+        <select class="field-input" data-info="role" onchange="savePanel()">
+          <option value="">— 未設定 —</option>
+          ${ROLES.map(r=>`<option value="${r}"${inf.role===r?' selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">地區（可複選）</div>
+        <div class="cb-group" style="flex-wrap:wrap;gap:4px;display:flex">${regionsHtml}</div>
+      </div>
     </div>
 
     <div class="accordion open">
@@ -1375,6 +1784,11 @@ function renderPanel(n){
 }
 
 function toggleNeed(el,need){
+  el.classList.toggle('checked');
+  savePanel();
+}
+
+function toggleRegion(el,region){
   el.classList.toggle('checked');
   savePanel();
 }
@@ -1496,7 +1910,7 @@ function renderCalendar(){
     const dateStr=`${c.year}-${String(c.month+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}`;
     const isToday=dateStr===today;
     const dayEvents=events.filter(ev=>ev.date===dateStr);
-    const chips=dayEvents.slice(0,3).map(ev=>`<div class="cal-chip" onclick="event.stopPropagation();openEventModal('${ev.id}')">${escHtml(ev.name||'活動')}</div>`).join('');
+    const chips=dayEvents.slice(0,3).map(ev=>`<div class="cal-chip" data-type="${ev.type||''}" onclick="event.stopPropagation();openEventModal('${ev.id}')">${escHtml(ev.type||ev.name||'活動')}</div>`).join('');
     const more=dayEvents.length>3?`<div class="cal-more">+${dayEvents.length-3} 更多</div>`:'';
     return`<div class="cal-cell${c.other?' other-month':''}${isToday?' today':''}" onclick="openEventModal(null,'${dateStr}')">
       <div class="cal-day-num">${c.day}</div>
@@ -1505,19 +1919,29 @@ function renderCalendar(){
   }).join('');
 }
 
+const EV_TYPES=['分享會','專場','訓練','二對一'];
 function openEventModal(id,defaultDate){
   editingEventId=id||null;
   const ev=id?events.find(e=>e.id===id):null;
   document.getElementById('event-modal-title').textContent=ev?'編輯活動':'新增活動';
   const dateVal=ev?.date||defaultDate||'';
+  const selPax=ev?.participants||[];
+  const contactNodes=nodes.filter(n=>n.status!==null&&n.name&&n.name!=='新聯繫人');
+  const typeOpts=EV_TYPES.map(t=>`<option value="${t}"${(ev?.type||'分享會')===t?' selected':''}>${t}</option>`).join('');
+  const paxTags=contactNodes.length?contactNodes.map(n=>`
+    <div class="ev-pax${selPax.includes(n.id)?' selected':''}" data-nid="${n.id}" onclick="this.classList.toggle('selected')">
+      <span class="sdot ${n.status||'gray'}"></span>${escHtml(n.name)}
+    </div>`).join(''):'<span style="color:var(--text-muted);font-size:12px">尚無人脈節點</span>';
   document.getElementById('event-modal-body').innerHTML=`
-    <div class="field-group"><div class="field-label">活動名稱</div><input class="field-input" id="ev-name" value="${escHtml(ev?.name||'')}" placeholder="活動名稱"></div>
     <div class="field-row">
+      <div class="field-group"><div class="field-label">類型</div><select class="field-input" id="ev-type">${typeOpts}</select></div>
       <div class="field-group"><div class="field-label">日期</div><input class="field-input" type="date" id="ev-date" value="${dateVal}"></div>
-      <div class="field-group"><div class="field-label">時間</div><input class="field-input" type="time" id="ev-time" value="${ev?.time||''}"></div>
     </div>
-    <div class="field-group"><div class="field-label">地點</div><input class="field-input" id="ev-location" value="${escHtml(ev?.location||'')}" placeholder="地點"></div>
-    <div class="field-group"><div class="field-label">預計人數</div><input class="field-input" type="number" id="ev-attendees" value="${ev?.attendees||''}" placeholder="人數"></div>
+    <div class="field-row">
+      <div class="field-group"><div class="field-label">時間</div><input class="field-input" type="time" id="ev-time" value="${ev?.time||''}"></div>
+      <div class="field-group"><div class="field-label">地點</div><input class="field-input" id="ev-location" value="${escHtml(ev?.location||'')}" placeholder="地點"></div>
+    </div>
+    <div class="field-group"><div class="field-label">邀約人脈</div><div class="ev-participants">${paxTags}</div></div>
     <div class="field-group"><div class="field-label">備注</div><textarea class="field-input field-textarea" id="ev-notes" placeholder="備注">${escHtml(ev?.notes||'')}</textarea></div>
     ${ev?`<div style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="deleteEvent('${ev.id}');closeEventModal()">🗑 刪除此活動</button></div>`:''}
   `;
@@ -1530,15 +1954,16 @@ function closeEventModal(){
 }
 
 function saveEvent(){
-  const name=document.getElementById('ev-name').value.trim();
-  if(!name){toast('請輸入活動名稱');return;}
+  const type=document.getElementById('ev-type').value;
+  const participants=[...document.querySelectorAll('#event-modal .ev-pax.selected')].map(el=>el.dataset.nid);
   const ev={
     id:editingEventId||uid(),
-    name,
+    type,
+    name:type,
     date:document.getElementById('ev-date').value,
     time:document.getElementById('ev-time').value,
     location:document.getElementById('ev-location').value,
-    attendees:parseInt(document.getElementById('ev-attendees').value)||0,
+    participants,
     notes:document.getElementById('ev-notes').value,
   };
   if(editingEventId){
@@ -1776,7 +2201,7 @@ async function sendChat(){
    PAGE SWITCHING
 ═══════════════════════════════════════ */
 // display type each page needs when visible
-const PAGE_DISPLAY={crm:'block',events:'flex',ai:'flex',settings:'block'};
+const PAGE_DISPLAY={crm:'flex',daily:'block',events:'flex',docs:'block',sales:'block',ai:'flex',settings:'block'};
 
 function switchPage(page){
   currentPage=page;
@@ -1787,16 +2212,789 @@ function switchPage(page){
   if(el) el.style.display=PAGE_DISPLAY[page]||'block';
   // Update tab highlights
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  const idx={crm:0,events:1,ai:2,settings:3}[page]??0;
+  const idx={crm:0,daily:1,events:2,docs:3,sales:4,ai:5,settings:6}[page]??0;
   document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
   if(page==='crm'){setTimeout(()=>{drawEdges();},50);}
+  if(page==='daily'){renderDailyPage();}
   if(page==='events'){renderCalendar();}
+  if(page==='docs'){renderDocs();}
+  if(page==='sales'){renderSales();}
   if(page==='ai'){renderChat();updateAiModelBadge();}
   if(page==='settings'){renderSettingsPage();}
 }
 
+/* ══════════════════════════════════════
+   SALES / 業績 PAGE
+══════════════════════════════════════ */
+const SALES_TAX = 0.1211;
+const TRANSFER_AMOUNT = 75440; // 舊單轉讓固定金額
+const RANK_RATES = {
+  director:    0.15, // 主任
+  asst_mgr:    0.20, // 襄理
+  manager:     0.20, // 經理
+  shareholder: 0.20, // 店股東
+  owner35:     0.35, // 店長 35%
+  owner45:     0.45, // 店長 45%
+};
+const RANK_LABELS = {
+  director:'主任(15%)', asst_mgr:'襄理(20%)', manager:'經理(20%)',
+  shareholder:'店股東(20%)', owner35:'店長(35%)', owner45:'店長(45%)',
+};
+function getMyRank(){ return localStorage.getItem('crm-profile-rank')||'director'; }
+function getMyRate(){ return RANK_RATES[getMyRank()]||0.15; }
+
+const SALES_PRODUCTS = {
+  student:  { name:'學員',       price:79800,           color:'#3b82f6', bg:'rgba(59,130,246,.12)' },
+  member:   { name:'會員服務',   price:200000,          color:'#8b5cf6', bg:'rgba(139,92,246,.12)' },
+  vip:      { name:'VIP買房服務',price:300000,          color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
+  asst_mgr_pkg: { name:'襄理批貨', price:79800*6,       color:'#10b981', bg:'rgba(16,185,129,.12)' },
+  manager_pkg:  { name:'經理批貨', price:79800*15,      color:'#ef4444', bg:'rgba(239,68,68,.12)'  },
+  consult:  { name:'協談+',      price:Math.round(79800*0.03), color:'#06b6d4', bg:'rgba(6,182,212,.12)', perPerson:true },
+};
+
+let salesData = JSON.parse(localStorage.getItem('crm-sales')||'[]');
+let salesYear  = new Date().getFullYear();
+let salesMonth = new Date().getMonth(); // 0-based
+
+function saveSalesData(){ localStorage.setItem('crm-sales', JSON.stringify(salesData)); }
+function salesPrevMonth(){ salesMonth--; if(salesMonth<0){salesMonth=11;salesYear--;} renderSales(); }
+function salesNextMonth(){ salesMonth++; if(salesMonth>11){salesMonth=0;salesYear++;} renderSales(); }
+function salesGoToday(){ salesYear=new Date().getFullYear(); salesMonth=new Date().getMonth(); renderSales(); }
+
+function fmtMoney(n){ return 'NT$ '+Math.round(n).toLocaleString('zh-TW'); }
+
+function renderSales(){
+  const label = document.getElementById('sales-month-label');
+  if(!label) return;
+  const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  label.textContent = `${salesYear} 年 ${MONTHS[salesMonth]}`;
+
+  const prefix = `${salesYear}-${String(salesMonth+1).padStart(2,'0')}`;
+  const monthSales = salesData.filter(s => s.date && s.date.startsWith(prefix));
+
+  // 分類計算
+  const myRate = getMyRate();
+  const newSales     = monthSales.filter(s=>s.saleType!=='transfer');
+  const transfers    = monthSales.filter(s=>s.saleType==='transfer');
+  const newGross     = newSales.reduce((a,s)=>a+s.amount,0);
+  const transferTotal= transfers.reduce((a,s)=>a+s.amount,0);
+  const myIncome     = newSales.reduce((a,s)=>{
+    const isBatchStudent = s.batchby==='student' && s.studentRank;
+    const rate = isBatchStudent ? Math.max(0, myRate-(RANK_RATES[s.studentRank]||0)) : myRate;
+    return a + s.amount*rate;
+  },0) + transferTotal;
+  const incomeTax    = myIncome * SALES_TAX;
+  const netIncome    = myIncome - incomeTax;
+
+  const body = document.getElementById('sales-body');
+  if(!body) return;
+
+  // KPI cards
+  const rankLabel = RANK_LABELS[getMyRank()]||'主任(15%)';
+  const kpiHtml = `
+  <div class="kpi-bar">
+    <div class="kpi-card kpi-total">
+      <div class="kpi-label">業績量（新業績）</div>
+      <div class="kpi-value">${fmtMoney(newGross)}</div>
+      <div class="kpi-sub">${newSales.length} 筆 · 舊單轉讓 ${fmtMoney(transferTotal)}</div>
+    </div>
+    <div class="kpi-card kpi-net">
+      <div class="kpi-label">我的所得 <span style="font-size:10px;font-weight:400">${rankLabel}</span></div>
+      <div class="kpi-value">${fmtMoney(myIncome)}</div>
+      <div class="kpi-sub">稅金 ${fmtMoney(incomeTax)}</div>
+    </div>
+    <div class="kpi-card kpi-count">
+      <div class="kpi-label">稅後實得</div>
+      <div class="kpi-value">${fmtMoney(netIncome)}</div>
+      <div class="kpi-sub">${monthSales.length} 筆成交</div>
+    </div>
+  </div>`;
+
+  // 舊單轉讓快速按鈕 + 產品卡片
+  const prodHtml = `
+  <div>
+    <div class="prod-section-title">快速新增成交</div>
+    <div class="prod-grid">
+      <div class="prod-card" style="--prod-color:#f97316" onclick="openSaleModal('transfer')">
+        <span class="prod-add-icon">＋</span>
+        <div class="prod-name">舊單轉讓</div>
+        <div class="prod-price" style="color:#f97316">${fmtMoney(TRANSFER_AMOUNT)}</div>
+        <div class="prod-desc">固定金額</div>
+      </div>
+      ${Object.entries(SALES_PRODUCTS).map(([id,p])=>`
+        <div class="prod-card" style="--prod-color:${p.color}" onclick="openSaleModal('${id}')">
+          <span class="prod-add-icon">＋</span>
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-price">${fmtMoney(p.price)}${p.perPerson?'／人':''}</div>
+          ${id==='asst_mgr_pkg'?'<div class="prod-desc">79,800 × 6</div>':
+            id==='manager_pkg'?'<div class="prod-desc">79,800 × 15</div>':
+            id==='consult'?'<div class="prod-desc">79,800 × 3%</div>':''}
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // Sales log — 7 columns now (add 所得 column)
+  const sorted = [...monthSales].sort((a,b)=>b.date.localeCompare(a.date));
+  const logHtml = `
+  <div>
+    <div class="prod-section-title">成交記錄</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:88px 1fr 110px 100px 100px 90px 32px;gap:8px;padding:6px 12px;font-size:11px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+        <span>日期</span><span>客戶</span><span>類別</span><span>業績量</span><span>所得</span><span>稅後</span><span></span>
+      </div>
+      ${sorted.length ? sorted.map(s=>{
+        const isTransfer = s.saleType==='transfer';
+        const p = isTransfer
+          ? {name:'舊單轉讓',color:'#f97316',bg:'rgba(249,115,22,.12)'}
+          : (SALES_PRODUCTS[s.product]||{name:s.product,color:'var(--accent)',bg:'var(--surface2)'});
+        const isBatchStudent = !isTransfer && s.batchby==='student' && s.studentRank;
+        const income = isTransfer ? s.amount
+          : isBatchStudent ? s.amount * Math.max(0, myRate - (RANK_RATES[s.studentRank]||0))
+          : s.amount * myRate;
+        const net    = income * (1-SALES_TAX);
+        const clientNames = (s.clients||[]).map(id=>{ const n=findNode(id); return n?n.name:'—'; }).join('、')||'—';
+        return `<div style="display:grid;grid-template-columns:88px 1fr 110px 100px 100px 90px 32px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          <span>${s.date}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${clientNames}">${clientNames}</span>
+          <span><span class="sale-badge" style="--prod-color:${p.color};--prod-bg:${p.bg}">${p.name}</span></span>
+          <span class="sale-amount">${isTransfer?'—':fmtMoney(s.amount)}</span>
+          <span style="font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">${fmtMoney(income)}</span>
+          <span class="sale-net">${fmtMoney(net)}</span>
+          <button class="sale-del" onclick="deleteSale('${s.id}')">✕</button>
+        </div>`;
+      }).join('') : '<div class="sale-empty">本月尚無成交記錄</div>'}
+    </div>
+  </div>`;
+
+  body.innerHTML = kpiHtml + prodHtml + logHtml;
+}
+
+let _editingSaleId = null;
+function openSaleModal(productId){
+  _editingSaleId = null;
+  const isTransfer = productId === 'transfer';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('sale-date').value = today;
+  document.getElementById('sale-notes').value = '';
+  document.getElementById('sale-qty').value = '1';
+  // Set sale type
+  const typeRadios = document.querySelectorAll('input[name="sale-type"]');
+  typeRadios.forEach(r=>{ r.checked = isTransfer ? r.value==='transfer' : r.value==='new'; });
+  onSaleTypeChange();
+  if(!isTransfer && productId) document.getElementById('sale-product').value = productId;
+  // Render pax tags
+  const contactNodes = nodes.filter(n=>n.status!==null&&n.name);
+  document.getElementById('sale-pax').innerHTML = contactNodes.length
+    ? contactNodes.map(n=>`<div class="ev-pax" data-nid="${n.id}" onclick="this.classList.toggle('selected')">
+        <span class="sdot ${n.status||'gray'}"></span>${escHtml(n.name)}</div>`).join('')
+    : '<span style="color:var(--text-muted);font-size:12px">尚無人脈節點</span>';
+  onSaleProductChange();
+  document.getElementById('sale-modal').classList.add('open');
+}
+function closeSaleModal(){ document.getElementById('sale-modal').classList.remove('open'); }
+
+function onSaleTypeChange(){
+  const isTransfer = document.querySelector('input[name="sale-type"]:checked')?.value === 'transfer';
+  document.getElementById('sale-product-group').style.display = isTransfer ? 'none' : '';
+  document.getElementById('sale-qty-group').style.display = 'none';
+  if(isTransfer){
+    document.getElementById('sale-amount-display').value = fmtMoney(TRANSFER_AMOUNT);
+    const myRate = getMyRate();
+    document.getElementById('sale-tax-preview').textContent = fmtMoney(TRANSFER_AMOUNT * SALES_TAX);
+    document.getElementById('sale-net-preview').textContent = fmtMoney(TRANSFER_AMOUNT * (1-SALES_TAX));
+    document.getElementById('sale-modal-product-badge').textContent='舊單轉讓';
+    document.getElementById('sale-modal-product-badge').style.cssText='background:rgba(249,115,22,.15);color:#f97316';
+  } else {
+    onSaleProductChange();
+  }
+}
+
+function onSaleProductChange(){
+  const isTransfer = document.querySelector('input[name="sale-type"]:checked')?.value === 'transfer';
+  if(isTransfer){ onSaleTypeChange(); return; }
+  const pid = document.getElementById('sale-product').value;
+  const p = SALES_PRODUCTS[pid];
+  if(!p) return;
+  const qty = p.perPerson ? (parseInt(document.getElementById('sale-qty').value)||1) : 1;
+  document.getElementById('sale-qty-group').style.display = p.perPerson ? '' : 'none';
+
+  // Batch-by toggle — only for batch packages
+  const isBatch = (pid === 'asst_mgr_pkg' || pid === 'manager_pkg');
+  document.getElementById('sale-batchby-group').style.display = isBatch ? '' : 'none';
+  const batchby = isBatch
+    ? (document.querySelector('input[name="sale-batchby"]:checked')?.value || 'self')
+    : 'self';
+  document.getElementById('sale-student-rank-group').style.display = (isBatch && batchby === 'student') ? '' : 'none';
+
+  const amount = p.price * qty;
+  const myRate = getMyRate();
+  let myIncome, incomeLabel;
+  if(isBatch && batchby === 'student'){
+    const studentRank = document.getElementById('sale-student-rank')?.value || 'director';
+    const studentRate = RANK_RATES[studentRank] || 0.15;
+    const diff = Math.max(0, myRate - studentRate);
+    myIncome = amount * diff;
+    incomeLabel = `${fmtMoney(myIncome)} (差額 ${(diff*100).toFixed(0)}% = ${(myRate*100).toFixed(0)}%-${(studentRate*100).toFixed(0)}%)`;
+  } else {
+    myIncome = amount * myRate;
+    incomeLabel = fmtMoney(myIncome);
+  }
+  document.getElementById('sale-amount-display').value = fmtMoney(amount);
+  document.getElementById('sale-income-preview').textContent = incomeLabel;
+  document.getElementById('sale-tax-preview').textContent = fmtMoney(myIncome * SALES_TAX);
+  document.getElementById('sale-net-preview').textContent = fmtMoney(myIncome * (1-SALES_TAX));
+  const badge = document.getElementById('sale-modal-product-badge');
+  badge.textContent = p.name;
+  badge.style.cssText = `background:${p.bg};color:${p.color}`;
+}
+
+function saveSale(){
+  const isTransfer = document.querySelector('input[name="sale-type"]:checked')?.value === 'transfer';
+  const pid = isTransfer ? 'transfer' : document.getElementById('sale-product').value;
+  const p = SALES_PRODUCTS[pid];
+  const qty = (!isTransfer && p?.perPerson) ? (parseInt(document.getElementById('sale-qty').value)||1) : 1;
+  const amount = isTransfer ? TRANSFER_AMOUNT : (p?.price||0) * qty;
+  const clients = [...document.querySelectorAll('#sale-pax .ev-pax.selected')].map(el=>el.dataset.nid);
+  const date = document.getElementById('sale-date').value;
+  if(!date){ toast('請選擇日期'); return; }
+  // Batch-by
+  const isBatch = (pid === 'asst_mgr_pkg' || pid === 'manager_pkg');
+  const batchby = isBatch ? (document.querySelector('input[name="sale-batchby"]:checked')?.value||'self') : 'self';
+  const studentRank = (isBatch && batchby==='student') ? (document.getElementById('sale-student-rank')?.value||'director') : null;
+  const sale = {
+    id: uid(), saleType: isTransfer?'transfer':'new',
+    product: pid, amount, qty, clients,
+    batchby, studentRank,
+    date, notes: document.getElementById('sale-notes').value,
+  };
+  salesData.push(sale);
+  saveSalesData();
+  closeSaleModal();
+  renderSales();
+  toast(isTransfer ? '舊單轉讓已記錄' : '新業績成交 🎉');
+}
+
+function deleteSale(id){
+  if(!confirm('確定刪除此筆成交？')) return;
+  salesData = salesData.filter(s=>s.id!==id);
+  saveSalesData();
+  renderSales();
+  toast('已刪除');
+}
+
+/* ══════════════════════════════════════
+   CRM VIEW MODES
+══════════════════════════════════════ */
+let crmView='tree'; // 'tree'|'region'|'status'|'contact'
+let crmSortAsc=true;
+
+function setCrmView(v){
+  crmView=v;
+  document.querySelectorAll('.crm-view-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('vbtn-'+v)?.classList.add('active');
+  const sortBtn=document.getElementById('crm-sort-dir-btn');
+  const canvas=document.getElementById('canvas-container');
+  const listCont=document.getElementById('crm-list-container');
+  if(v==='tree'){
+    canvas.style.display='';
+    listCont.style.display='none';
+    sortBtn.style.display='none';
+    setTimeout(()=>{drawEdges();},50);
+  } else {
+    canvas.style.display='none';
+    listCont.style.display='block';
+    sortBtn.style.display='';
+    sortBtn.textContent=(crmSortAsc?'↑ 升冪':'↓ 降冪');
+    renderCrmListView();
+  }
+}
+
+function toggleCrmSortDir(){
+  crmSortAsc=!crmSortAsc;
+  document.getElementById('crm-sort-dir-btn').textContent=(crmSortAsc?'↑ 升冪':'↓ 降冪');
+  renderCrmListView();
+}
+
+function renderCrmListView(){
+  const el=document.getElementById('crm-list-view');
+  if(!el)return;
+  const nonRoot=nodes.filter(n=>n.parentId!==null||n.status!==null);
+  const STATUS_ORDER_LIST=['green','yellow','red','gray'];
+  const STATUS_LABELS_LIST={green:'高意願',yellow:'觀察中',red:'冷淡',gray:'無效'};
+
+  let groups=[];
+  if(crmView==='region'){
+    const allRegions=[...new Set(nonRoot.flatMap(n=>n.info.regions&&n.info.regions.length?n.info.regions:['未設定']))];
+    allRegions.sort((a,b)=>crmSortAsc?a.localeCompare(b,'zh-TW'):b.localeCompare(a,'zh-TW'));
+    groups=allRegions.map(r=>({
+      label:r,
+      items:nonRoot.filter(n=>(n.info.regions&&n.info.regions.includes(r))||((!n.info.regions||!n.info.regions.length)&&r==='未設定'))
+    }));
+  } else if(crmView==='status'){
+    const order=crmSortAsc?STATUS_ORDER_LIST:[...STATUS_ORDER_LIST].reverse();
+    groups=order.map(s=>({
+      label:STATUS_LABELS_LIST[s]||s,
+      items:nonRoot.filter(n=>n.status===s)
+    }));
+  } else if(crmView==='contact'){
+    const sorted=[...nonRoot].sort((a,b)=>{
+      const da=a.info.lastContact||'';
+      const db=b.info.lastContact||'';
+      return crmSortAsc?da.localeCompare(db):db.localeCompare(da);
+    });
+    groups=[{label:'全部（依最近聯繫排序）',items:sorted}];
+  }
+
+  const ROLE_MAP={潛在客戶:'role-prospect',轉介紹中心:'role-referral',學員:'role-student',從業人員:'role-agent'};
+
+  const STATUS_COLORS={green:'var(--green)',yellow:'var(--yellow)',red:'var(--red)',gray:'var(--gray)'};
+  el.innerHTML=groups.filter(g=>g.items.length).map(g=>`
+    <div class="crm-list-group-header">${g.label} (${g.items.length})</div>
+    ${g.items.map(n=>`
+      <div class="crm-list-row" onclick="switchPage('crm');setTimeout(()=>openPanel('${n.id}'),80)">
+        <div class="crm-list-avatar" style="background:${STATUS_COLORS[n.status]||'var(--accent)'}">${(n.name||'?')[0]}</div>
+        <div>
+          <div class="crm-list-name">${escHtml(n.name)}</div>
+          <div class="crm-list-meta">${escHtml(n.info.company||'')}${n.info.lastContact?' · '+n.info.lastContact:''}</div>
+        </div>
+        <div class="crm-list-tags">
+          ${n.info.role?`<span class="node-role-pill ${ROLE_MAP[n.info.role]||''}">${n.info.role}</span>`:''}
+          ${(n.info.regions||[]).map(r=>`<span class="node-region-tag">${r}</span>`).join('')}
+        </div>
+      </div>`).join('')}
+  `).join('');
+}
+
+/* ══════════════════════════════════════
+   DAILY REPORT PAGE
+══════════════════════════════════════ */
+let dailyReports=JSON.parse(localStorage.getItem('crm-daily-reports')||'{}');
+let monthlyGoals=JSON.parse(localStorage.getItem('crm-monthly-goals')||'{}');
+let monthlySalesTargets=JSON.parse(localStorage.getItem('crm-monthly-sales-targets')||'{}'); // 獨立 key
+
+function saveDailyReports(){localStorage.setItem('crm-daily-reports',JSON.stringify(dailyReports));}
+function saveMonthlyGoals(){localStorage.setItem('crm-monthly-goals',JSON.stringify(monthlyGoals));}
+function saveMonthlySalesTargets(){localStorage.setItem('crm-monthly-sales-targets',JSON.stringify(monthlySalesTargets));}
+
+function saveMonthSalesTarget(){
+  const mkey=getMonthKey();
+  const el=document.querySelector('[data-mst="mg-sales"]');
+  if(!el)return;
+  monthlySalesTargets[mkey]=parseInt(el.value.replace(/[^\d]/g,''))||0;
+  saveMonthlySalesTargets();
+  renderMonthlyProgress();
+  toast('業績目標已儲存');
+}
+
+function getMonthKey(dateStr){
+  const d=dateStr||getDailyDateStr();
+  return d.slice(0,7); // "2026-03"
+}
+
+function calcMonthActuals(monthKey){
+  // Sum all daily actuals for this month
+  const totals={invite:0,calls:0,forms:0,followup:0,close:0};
+  Object.entries(dailyReports).forEach(([date,r])=>{
+    if(date.startsWith(monthKey)){
+      totals.invite+=(r['act-invite']||0);
+      totals.calls+=(r['act-calls']||0);
+      totals.forms+=(r['act-forms']||0);
+      totals.followup+=(r['act-followup']||0);
+      totals.close+=(r['act-close']||0);
+    }
+  });
+  return totals;
+}
+
+function saveMonthlyGoalInputs(){
+  const mkey=getMonthKey();
+  const goals=monthlyGoals[mkey]||(monthlyGoals[mkey]={});
+  ['mg-invite','mg-calls','mg-forms','mg-followup','mg-close'].forEach(k=>{
+    const el=document.querySelector(`[data-mg="${k}"]`);
+    if(el)goals[k]=parseInt(el.value)||0;
+  });
+  saveMonthlyGoals();
+  renderMonthlyProgress();
+  toast('本月目標已儲存');
+}
+
+function renderMonthlyProgress(){
+  const mkey=getMonthKey();
+  const goals=monthlyGoals[mkey]||{};
+  const actuals=calcMonthActuals(mkey);
+  const items=[
+    {k:'invite',label:'邀約',goalK:'mg-invite',actual:actuals.invite},
+    {k:'calls', label:'電話',goalK:'mg-calls', actual:actuals.calls},
+    {k:'forms', label:'問卷',goalK:'mg-forms', actual:actuals.forms},
+    {k:'followup',label:'跟進',goalK:'mg-followup',actual:actuals.followup},
+    {k:'close', label:'成交',goalK:'mg-close', actual:actuals.close},
+  ];
+  // 業績目標 (獨立 key: crm-monthly-sales-targets)
+  const salesTarget=monthlySalesTargets[mkey]||0;
+  const prefix=mkey; // "2026-03"
+  const monthActualIncome=salesData.filter(s=>s.date&&s.date.startsWith(prefix)).reduce((a,s)=>{
+    if(s.saleType==='transfer') return a+s.amount;
+    const myRate=getMyRate();
+    const isBatchStudent=s.batchby==='student'&&s.studentRank;
+    const rate=isBatchStudent?Math.max(0,myRate-(RANK_RATES[s.studentRank]||0)):myRate;
+    return a+s.amount*rate;
+  },0);
+  const salesPct=salesTarget?Math.min(100,Math.round(monthActualIncome/salesTarget*100)):0;
+  const salesFull=salesTarget&&monthActualIncome>=salesTarget;
+
+  const container=document.getElementById('monthly-goal-body');
+  if(!container)return;
+  container.innerHTML=`
+    <!-- 業績目標 (獨立 key) -->
+    <div class="daily-kpi-card${salesFull?' exceeded':''}" style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px 14px">
+      <div style="font-size:13px;font-weight:600;white-space:nowrap">💰 本月業績目標</div>
+      <div style="display:flex;align-items:center;gap:6px;flex:1">
+        <span style="font-size:12px;color:var(--text-muted)">NT$</span>
+        <input data-mst="mg-sales" type="number" min="0" value="${salesTarget}"
+          style="width:110px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 8px;font-size:14px;font-weight:700"
+          oninput="saveMonthSalesTarget()">
+        <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)">
+          <div style="height:100%;width:${salesPct}%;background:${salesFull?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">實績 ${fmtMoney(monthActualIncome)} · ${salesPct}%</span>
+      </div>
+    </div>
+    <!-- KPI grid -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
+      ${items.map(it=>{
+        const goal=goals[it.goalK]||0;
+        const pct=goal?Math.min(100,Math.round(it.actual/goal*100)):0;
+        const full=goal&&it.actual>=goal;
+        return`<div class="daily-kpi-card${full?' exceeded':''}">
+          <div class="daily-kpi-label">${it.label}目標</div>
+          <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
+            <input data-mg="${it.goalK}" type="number" min="0" value="${goal}"
+              style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 6px;font-size:14px;font-weight:700;text-align:center"
+              oninput="saveMonthlyGoalInputs()">
+          </div>
+          <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border);margin-bottom:3px">
+            <div style="height:100%;width:${pct}%;background:${full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
+          </div>
+          <div class="daily-kpi-target">實績 ${it.actual} · ${pct}%</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function getDailyDateStr(){
+  const el=document.getElementById('daily-date-input');
+  return el?el.value:new Date().toISOString().slice(0,10);
+}
+
+function dailyToday(){
+  const el=document.getElementById('daily-date-input');
+  if(el){el.value=new Date().toISOString().slice(0,10);renderDailyPage();}
+}
+function dailyPrev(){
+  const el=document.getElementById('daily-date-input');
+  if(!el)return;
+  const d=new Date(el.value||new Date());d.setDate(d.getDate()-1);
+  el.value=d.toISOString().slice(0,10);renderDailyPage();
+}
+function dailyNext(){
+  const el=document.getElementById('daily-date-input');
+  if(!el)return;
+  const d=new Date(el.value||new Date());d.setDate(d.getDate()+1);
+  el.value=d.toISOString().slice(0,10);renderDailyPage();
+}
+
+function saveDailyReport(){
+  const dateStr=getDailyDateStr();
+  const body=document.getElementById('daily-body');
+  if(!body)return;
+  const report=dailyReports[dateStr]||{};
+  // Goals
+  ['goal-invite','goal-calls','goal-forms','goal-followup','goal-close'].forEach(k=>{
+    const el=body.querySelector(`[data-daily="${k}"]`);
+    if(el)report[k]=parseInt(el.value)||0;
+  });
+  // Activity
+  ['act-invite','act-calls','act-forms','act-followup','act-close'].forEach(k=>{
+    const el=body.querySelector(`[data-daily="${k}"]`);
+    if(el)report[k]=parseInt(el.value)||0;
+  });
+  // Follow-up checked
+  const fuChecked=[...body.querySelectorAll('.daily-fu-check.checked')].map(el=>el.dataset.nid);
+  report.fuChecked=fuChecked;
+  // Notes
+  const notesEl=body.querySelector('[data-daily="notes"]');
+  if(notesEl)report.notes=notesEl.value;
+  dailyReports[dateStr]=report;
+  saveDailyReports();
+  renderDailyKpiCards(report);
+  toast('日報已儲存');
+}
+
+function renderDailyKpiCards(report){
+  ['invite','visit','show','close'].forEach(k=>{
+    const goal=report['goal-'+k]||0;
+    const act=report['act-'+k+'s']||0;
+    // reuse shorthand
+  });
+}
+
+function renderDailyPage(){
+  const el=document.getElementById('daily-date-input');
+  if(el&&!el.value)el.value=new Date().toISOString().slice(0,10);
+  const dateStr=getDailyDateStr();
+  const report=dailyReports[dateStr]||{};
+  const body=document.getElementById('daily-body');
+  if(!body)return;
+
+  // Follow-up nodes: all non-root CRM nodes
+  const fuNodes=nodes.filter(n=>n.status!==null&&n.name&&n.name!=='新聯繫人');
+  const fuChecked=report.fuChecked||[];
+
+  const kpiItems=[
+    {label:'邀約數',  actKey:'act-invite',  goalKey:'goal-invite'},
+    {label:'電話數',  actKey:'act-calls',   goalKey:'goal-calls'},
+    {label:'問卷數',  actKey:'act-forms',   goalKey:'goal-forms'},
+    {label:'跟進數',  actKey:'act-followup',goalKey:'goal-followup'},
+    {label:'成交數',  actKey:'act-close',   goalKey:'goal-close'},
+  ];
+
+  const mkey=getMonthKey(dateStr);
+  const mLabel=mkey.replace('-','年')+'月';
+
+  body.innerHTML=`
+    <!-- Monthly Goal -->
+    <div class="daily-section">
+      <div class="daily-section-header">
+        <span>🗓 ${mLabel}目標</span>
+        <span style="font-size:11px;color:var(--text-muted)">設定後自動儲存</span>
+      </div>
+      <div class="daily-section-body" id="monthly-goal-body"></div>
+    </div>
+
+    <!-- KPI Overview -->
+    <div class="daily-section">
+      <div class="daily-section-header">
+        <span>📊 今日目標達成</span>
+      </div>
+      <div class="daily-section-body">
+        <div class="daily-kpi-grid">
+          ${kpiItems.map(item=>{
+            const goal=report[item.goalKey]||0;
+            const act=report[item.actKey]||0;
+            const pct=goal?Math.min(100,Math.round(act/goal*100)):0;
+            const cls=act>=goal&&goal>0?'exceeded':act>0?'':'';
+            return`<div class="daily-kpi-card ${cls}">
+              <div class="daily-kpi-label">${item.label}</div>
+              <div class="daily-kpi-val">${act}</div>
+              <div class="daily-kpi-target">目標 ${goal} · ${pct}%</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Goals -->
+    <div class="daily-section">
+      <div class="daily-section-header"><span>🎯 今日目標設定</span></div>
+      <div class="daily-section-body">
+        <div class="daily-activity-grid">
+          ${[{k:'goal-invite',label:'邀約目標'},{k:'goal-calls',label:'電話目標'},{k:'goal-forms',label:'問卷目標'},{k:'goal-followup',label:'跟進目標'},{k:'goal-close',label:'成交目標'}].map(item=>`
+            <div class="daily-act-item">
+              <div class="daily-act-label">${item.label}</div>
+              <input class="daily-act-input" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}" oninput="renderDailyProgress(this)">
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="daily-section">
+      <div class="daily-section-header"><span>📞 今日實績記錄</span></div>
+      <div class="daily-section-body">
+        <div class="daily-activity-grid">
+          ${[{k:'act-invite',label:'邀約數'},{k:'act-calls',label:'電話數'},{k:'act-forms',label:'問卷數'},{k:'act-followup',label:'跟進數'},{k:'act-close',label:'成交數'}].map(item=>`
+            <div class="daily-act-item">
+              <div class="daily-act-label">${item.label}</div>
+              <input class="daily-act-input" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}">
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Follow-up Targets -->
+    <div class="daily-section">
+      <div class="daily-section-header">
+        <span>👥 今日跟進對象</span>
+        <span style="font-size:11px;color:var(--text-muted)">${fuChecked.length}/${fuNodes.length} 已跟進</span>
+      </div>
+      <div class="daily-section-body">
+        <div class="daily-fu-search">
+          <input type="text" placeholder="搜尋人脈…" id="daily-fu-search-input" oninput="filterDailyFu(this.value)">
+        </div>
+        <div class="daily-fu-list" id="daily-fu-list">
+          ${fuNodes.length?fuNodes.map(n=>{
+            const done=fuChecked.includes(n.id);
+            const regions=(n.info.regions||[]).join('、');
+            return`<div class="daily-fu-item${done?' done':''}" data-nid="${n.id}">
+              <div class="daily-fu-check${done?' checked':''}" data-nid="${n.id}" onclick="toggleDailyFu(event,'${n.id}')">
+                ${done?'✓':''}
+              </div>
+              <span class="sdot ${n.status||'gray'}" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+              <span class="daily-fu-name" onclick="switchPage('crm');setTimeout(()=>openPanel('${n.id}'),80)">${escHtml(n.name)}</span>
+              ${n.info.role?`<span class="daily-fu-role">${n.info.role}</span>`:''}
+              ${regions?`<span class="daily-fu-region">${regions}</span>`:''}
+              <span style="font-size:11px;color:var(--text-muted)">${n.info.lastContact||''}</span>
+            </div>`;
+          }).join(''):'<span style="color:var(--text-muted);font-size:13px">尚無人脈節點</span>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="daily-section">
+      <div class="daily-section-header"><span>📝 今日反思 / 備注</span></div>
+      <div class="daily-section-body">
+        <textarea class="daily-notes-input" data-daily="notes" placeholder="今天做了什麼？有什麼收穫？明天重點是什麼？">${escHtml(report.notes||'')}</textarea>
+      </div>
+    </div>
+  `;
+  // Render monthly goals after body is set
+  renderMonthlyProgress();
+}
+
+function toggleDailyFu(e,nid){
+  e.stopPropagation();
+  const dateStr=getDailyDateStr();
+  const report=dailyReports[dateStr]||(dailyReports[dateStr]={});
+  if(!report.fuChecked)report.fuChecked=[];
+  const idx=report.fuChecked.indexOf(nid);
+  if(idx>=0)report.fuChecked.splice(idx,1);
+  else report.fuChecked.push(nid);
+  saveDailyReports();
+  // Update DOM
+  const item=document.querySelector(`.daily-fu-item[data-nid="${nid}"]`);
+  const check=document.querySelector(`.daily-fu-check[data-nid="${nid}"]`);
+  if(item&&check){
+    const done=report.fuChecked.includes(nid);
+    item.classList.toggle('done',done);
+    check.classList.toggle('checked',done);
+    check.textContent=done?'✓':'';
+  }
+  // Update count
+  const total=document.querySelectorAll('.daily-fu-item').length;
+  const doneCount=report.fuChecked.length;
+  const header=document.querySelector('.daily-section-header span[style]');
+  if(header)header.textContent=`${doneCount}/${total} 已跟進`;
+}
+
+function filterDailyFu(q){
+  const ql=q.toLowerCase();
+  document.querySelectorAll('.daily-fu-item').forEach(el=>{
+    const name=el.querySelector('.daily-fu-name')?.textContent||'';
+    el.style.display=(!q||name.toLowerCase().includes(ql))?'':'none';
+  });
+}
+
+/* ══════════════════════════════════════
+   DOCS PAGE
+══════════════════════════════════════ */
+let docsData=JSON.parse(localStorage.getItem('crm-docs')||'[]');
+const DOC_ICONS={poster:'🖼',form:'📋',link:'🔗',file:'📄'};
+
+function saveDocs(){localStorage.setItem('crm-docs',JSON.stringify(docsData));}
+
+function renderDocs(){
+  const grid=document.getElementById('docs-grid');
+  if(!grid)return;
+  if(!docsData.length){
+    grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:40px 0">尚無文件，點擊「新增文件」開始</div>';
+    return;
+  }
+  grid.innerHTML=docsData.map(d=>`
+    <div class="doc-card">
+      ${d.type==='poster'&&d.imgData
+        ?`<img class="doc-card-img" src="${d.imgData}" alt="${escHtml(d.name)}">`
+        :`<div class="doc-card-img">${DOC_ICONS[d.type]||'📄'}</div>`}
+      <div class="doc-card-body">
+        <div class="doc-card-name">${escHtml(d.name)}</div>
+        <div class="doc-card-type">${DOC_ICONS[d.type]||''} ${{poster:'海報圖片',form:'問卷連結',link:'其他連結',file:'文件檔案'}[d.type]||d.type}</div>
+        ${d.url?`<div class="doc-card-link" onclick="window.open('${escHtml(d.url)}','_blank')">${escHtml(d.url)}</div>`:''}
+      </div>
+      <button class="doc-card-del" onclick="deleteDoc('${d.id}')">✕</button>
+    </div>`).join('');
+}
+
+let _docImgData=null;
+function openDocModal(){
+  _docImgData=null;
+  document.getElementById('doc-name').value='';
+  document.getElementById('doc-url').value='';
+  document.getElementById('doc-img-file').value='';
+  document.getElementById('doc-img-preview').style.display='none';
+  onDocTypeChange();
+  document.getElementById('doc-add-modal').classList.add('open');
+}
+function closeDocModal(){document.getElementById('doc-add-modal').classList.remove('open');}
+
+function onDocTypeChange(){
+  const t=document.getElementById('doc-type').value;
+  document.getElementById('doc-url-group').style.display=t==='poster'?'none':'';
+  document.getElementById('doc-img-group').style.display=t==='poster'?'':'none';
+}
+// wire type change
+document.getElementById('doc-type')?.addEventListener('change',onDocTypeChange);
+
+function previewDocImg(input){
+  const f=input.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _docImgData=e.target.result;
+    const prev=document.getElementById('doc-img-preview');
+    prev.src=_docImgData; prev.style.display='block';
+  };
+  reader.readAsDataURL(f);
+}
+
+function saveDoc(){
+  const name=document.getElementById('doc-name').value.trim();
+  if(!name){toast('請輸入文件名稱');return;}
+  const type=document.getElementById('doc-type').value;
+  const url=document.getElementById('doc-url').value.trim();
+  const d={id:uid(),name,type,url,imgData:type==='poster'?_docImgData:null};
+  docsData.push(d);
+  saveDocs();
+  closeDocModal();
+  renderDocs();
+  toast('文件已新增');
+}
+
+function deleteDoc(id){
+  if(!confirm('確定刪除此文件？'))return;
+  docsData=docsData.filter(d=>d.id!==id);
+  saveDocs();
+  renderDocs();
+  toast('已刪除');
+}
+
+/* ── Obsidian ── */
+function saveObsidianPath(){
+  const p=document.getElementById('obsidian-path').value.trim();
+  localStorage.setItem('crm-obsidian-path',p);
+  const s=document.getElementById('obsidian-status');
+  if(s)s.textContent=p?`已儲存路徑：${p}`:'';
+}
+function openObsidianVault(){
+  const p=localStorage.getItem('crm-obsidian-path')||'';
+  if(!p){toast('請先設定 Obsidian Vault 路徑');return;}
+  window.open('obsidian://open?path='+encodeURIComponent(p),'_blank');
+}
+
 /* ── Settings page ── */
 function renderSettingsPage(){
+  // Load obsidian path
+  const obsEl=document.getElementById('obsidian-path');
+  if(obsEl) obsEl.value=localStorage.getItem('crm-obsidian-path')||'';
   renderAiSettingsCard();
   // Theme grid
   const curTheme=document.documentElement.getAttribute('data-theme')||'dark';
@@ -1893,7 +3091,7 @@ function init(){
   // Initialize page display via JS (not CSS class) to avoid specificity conflicts
   document.querySelectorAll('.page').forEach(p=>{p.style.display='none';});
   const initPage=document.getElementById('page-crm');
-  if(initPage)initPage.style.display='block';
+  if(initPage)initPage.style.display=PAGE_DISPLAY['crm']||'flex';
 
   const needsLayout=nodes.some(n=>n.x===undefined||n.x===null);
   if(needsLayout){
