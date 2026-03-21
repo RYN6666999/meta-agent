@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "meta-agent API",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["api.server:app", "--host", "127.0.0.1", "--port", "9901", "--reload"],
+      "port": 9901
+    },
+    {
+      "name": "LightRAG compat server",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["scripts/lightrag_compat_server.py"],
+      "port": 9631
+    },
+    {
+      "name": "CRM (static)",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "tools/crm"],
+      "port": 8080
+    },
+    {
+      "name": "n8n (Docker)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "n8n"],
+      "port": 5678
+    }
+  ]
+}
