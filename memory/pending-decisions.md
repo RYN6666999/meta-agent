@@ -27,5 +27,6 @@
 | 2026-03-21 | auto-git-score | git-score 自動 commit（score=100），含重要變更 [commit:HEAD~1..HEAD] | 120 | 其他變更 .claude/launch.json +10; 其他變更 .claude/skills/frontend-design/SKILL.md +10 | pending |
 | 2026-03-21 | auto-git-score | git-score 自動 commit（score=95），含重要變更 [commit:HEAD~1..HEAD] | 90 | 其他變更 error-log/2026-03-21-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-21-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-03-21 | auto-git-score | git-score 自動 commit（score=85），含重要變更 [commit:HEAD~1..HEAD] | 850 | 其他變更 error-log/2026-03-21-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-21-mobile-bridge-tunnel-down.md +10 | pending |
+| 2026-03-22 | auto-git-score | git-score 自動 commit（score=250），含重要變更 [commit:HEAD~1..HEAD] | 260 | 其他變更 error-log/2026-03-21-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-21-mobile-bridge-tunnel-down.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 
