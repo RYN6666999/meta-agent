@@ -1,79 +1,66 @@
----
-date: 2026-03-21
-type: error_fix
-status: active
-last_triggered: 2026-03-21
-expires_after_days: 365
-topic: mobile-bridge-tunnel-down
----
+# mobile-bridge-tunnel-down incident log
 
-# Error: cloudflared tunnel process not running
-
-## 根本原因
-cloudflared tunnel process not running
-
-## 解決方案
-restart cloudflared via watchdog
-
-## 背景
-pattern=cloudflared tunnel run --token mode=named
-
-## 2026-03-21 15:15:28
+## 2026-03-22 00:32:05
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 15:46:02
+## 2026-03-22 04:01:12
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 16:16:38
+## 2026-03-22 05:49:35
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 16:47:16
+## 2026-03-22 08:02:29
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 17:17:55
+## 2026-03-22 09:03:31
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 17:56:40
+## 2026-03-22 09:51:09
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 18:40:52
+## 2026-03-22 11:05:00
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 19:37:05
+## 2026-03-22 12:06:02
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 20:07:37
+## 2026-03-22 13:07:04
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 20:51:33
+## 2026-03-22 14:08:07
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 22:29:43
+## 2026-03-22 15:09:27
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
 
-## 2026-03-21 23:31:03
+## 2026-03-22 16:10:29
+- root_cause: cloudflared tunnel process not running
+- solution: restart cloudflared via watchdog
+- context: pattern=cloudflared tunnel run --token mode=named
+
+## 2026-03-22 17:11:31
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named

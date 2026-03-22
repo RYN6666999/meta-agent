@@ -1,21 +1,21 @@
 ---
-date: 2026-03-21
-session: meta-agent — Session 65
+date: 2026-03-22
+session: meta-agent — Session 66
 status: 建設中
-generated: 2026-03-21 15:57
+generated: 2026-03-22 00:04
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-21 15:57 自動生成）
+## 系統狀態（2026-03-22 00:04 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：123
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(88120) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**Turn 計數**：124
 
 ---
 
@@ -30,12 +30,12 @@ generated: 2026-03-21 15:57
 ---
 
 ## 最近 Git 提交
+- `e356e43 auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
+- `77af926 auto: [error_fix+misc] score=85 超過閾值 50 自動備份`
+- `f34f07b auto: [error_fix+misc] score=95 超過閾值 50 自動備份`
 - `f0782e3 auto: [error_fix+misc] score=100 超過閾值 50 自動備份`
 - `4bb3dc3 auto: [error_fix+misc] score=135 超過閾值 50 自動備份`
 - `008d488 auto: [misc] score=50 超過閾值 50 自動備份`
-- `8c7f1d3 feat(memory): add structured retrieval with semantic fallback`
-- `55a2e21 fix(config): make BASE_DIR portable across environments`
-- `3f9a6c4 auto: [misc] score=60 超過閾值 50 自動備份`
 
 ## 最近 Error Log
 - 2026-03-21-mobile-bridge-tunnel-down.md
