@@ -103,8 +103,7 @@
   </div>
 </div>
 
-<!-- Settings Page -->
-<!-- Sales / 業績 page -->
+<!-- Sales / 業績 Page -->
 <div class="page" id="page-sales">
   <div class="sales-page">
     <div class="sales-header">
@@ -129,7 +128,6 @@
       <span id="sale-modal-product-badge" class="sale-product-badge">—</span>
       <span id="sale-modal-title-text">新增成交</span>
     </div>
-    <!-- 新業績 / 舊單轉讓 -->
     <div class="sale-type-row">
       <label class="sale-type-radio">
         <input type="radio" name="sale-type" value="new" checked onchange="onSaleTypeChange()">💰 新業績
@@ -154,7 +152,6 @@
         <div class="field-label">人數</div>
         <input class="field-input" type="number" id="sale-qty" min="1" value="1" placeholder="人數" oninput="onSaleProductChange()">
       </div>
-      <!-- 批貨來源 (only for asst_mgr_pkg / manager_pkg) -->
       <div class="field-group" id="sale-batchby-group" style="display:none">
         <div class="field-label">批貨對象</div>
         <div style="display:flex;gap:14px">
@@ -162,7 +159,6 @@
           <label class="sale-type-radio"><input type="radio" name="sale-batchby" value="student" onchange="onSaleProductChange()"> 傘下學員批貨</label>
         </div>
       </div>
-      <!-- 傘下同階業績 1% (only for non-batch products) -->
       <div class="field-group" id="sale-samerank-group" style="display:none">
         <div class="field-label">業績來源</div>
         <div style="display:flex;gap:14px">
@@ -201,7 +197,7 @@
   </div>
 </div>
 
-<!-- Daily Report page -->
+<!-- Daily Report Page -->
 <div class="page" id="page-daily">
   <div class="daily-page">
     <div class="daily-header">
@@ -214,13 +210,11 @@
       </div>
       <button class="btn btn-accent" style="margin-left:8px" onclick="saveDailyReport()">儲存</button>
     </div>
-    <div class="daily-body" id="daily-body">
-      <!-- Rendered by renderDailyPage() -->
-    </div>
+    <div class="daily-body" id="daily-body"></div>
   </div>
 </div>
 
-<!-- Docs page -->
+<!-- Docs Page -->
 <div class="page" id="page-docs">
   <div class="docs-page">
     <div class="docs-header">
@@ -231,7 +225,7 @@
   </div>
 </div>
 
-<!-- Doc add modal -->
+<!-- Doc Add Modal -->
 <div class="doc-add-modal" id="doc-add-modal">
   <div class="doc-add-box">
     <div style="font-size:15px;font-weight:600">新增文件</div>
@@ -264,6 +258,7 @@
   </div>
 </div>
 
+<!-- Settings Page -->
 <div class="page" id="page-settings">
   <div class="settings-page">
     <h2 class="settings-title">⚙️ 設定</h2>
