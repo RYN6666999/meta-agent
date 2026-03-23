@@ -617,3 +617,25 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-23 03:53 | auto-git-score | 分數 220 | 📥 達到閾值（220/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=200），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-22-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-22-mobile-bridge-tunnel-down.md +10
+  error-log 新增根因 error-log/2026-03-23-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-23-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/dedup-error.log +10
+  其他變更 memory/dedup-log.txt +10
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/index.html +10
+
+---

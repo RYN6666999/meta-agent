@@ -1849,9 +1849,10 @@ function renderMonthlyProgress(){
   const monthActualIncome=salesData.filter(s=>s.date&&s.date.startsWith(prefix)).reduce((a,s)=>{
     if(s.saleType==='transfer') return a+s.amount;
     const myRate=getMyRate();
-    const isBatchStudent=s.batchby==='student'&&s.studentRank;
-    const rate=isBatchStudent?Math.max(0,myRate-(RANK_RATES[s.studentRank]||0)):myRate;
-    return a+s.amount*rate;
+    const isBatch=(s.product==='asst_mgr_pkg'||s.product==='manager_pkg');
+    if(isBatch&&s.batchby==='student') return a+s.amount*Math.max(0,myRate-(BATCH_ANCHORS[s.product]||0));
+    if(s.samerank==='samerank') return a+s.amount*0.01;
+    return a+s.amount*myRate;
   },0);
   const salesPct=salesTarget?Math.min(100,Math.round(monthActualIncome/salesTarget*100)):0;
   const salesFull=salesTarget&&monthActualIncome>=salesTarget;
@@ -1941,16 +1942,35 @@ function saveDailyReport(){
   if(notesEl)report.notes=notesEl.value;
   dailyReports[dateStr]=report;
   saveDailyReports();
-  renderDailyKpiCards(report);
+  renderDailyProgress();
+  renderMonthlyProgress();
   toast('日報已儲存');
 }
 
-function renderDailyKpiCards(report){
-  ['invite','visit','show','close'].forEach(k=>{
-    const goal=report['goal-'+k]||0;
-    const act=report['act-'+k+'s']||0;
-    // reuse shorthand
-  });
+function renderDailyProgress(){
+  const dateStr=getDailyDateStr();
+  const report=dailyReports[dateStr]||{};
+  const kpiItems=[
+    {label:'邀約數',actKey:'act-invite',  goalKey:'goal-invite'},
+    {label:'電話數',actKey:'act-calls',   goalKey:'goal-calls'},
+    {label:'問卷數',actKey:'act-forms',   goalKey:'goal-forms'},
+    {label:'跟進數',actKey:'act-followup',goalKey:'goal-followup'},
+    {label:'成交數',actKey:'act-close',   goalKey:'goal-close'},
+  ];
+  const kpiGrid=document.querySelector('.daily-kpi-grid');
+  if(!kpiGrid)return;
+  kpiGrid.innerHTML=kpiItems.map(item=>{
+    const goalEl=document.querySelector(`[data-daily="${item.goalKey}"]`);
+    const goal=goalEl?parseInt(goalEl.value)||0:(report[item.goalKey]||0);
+    const act=report[item.actKey]||0;
+    const pct=goal?Math.min(100,Math.round(act/goal*100)):0;
+    const cls=act>=goal&&goal>0?'exceeded':'';
+    return`<div class="daily-kpi-card ${cls}">
+      <div class="daily-kpi-label">${item.label}</div>
+      <div class="daily-kpi-val">${act}</div>
+      <div class="daily-kpi-target">目標 ${goal} · ${pct}%</div>
+    </div>`;
+  }).join('');
 }
 
 function renderDailyPage(){
