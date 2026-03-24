@@ -541,19 +541,26 @@ function renderNodes(){
     // ── 純文字便條 ──────────────────────────
     if(n.nodeType==='note'){
       const nc=NOTE_COLORS.find(c=>c.id===(n.noteColor||'yellow'))||NOTE_COLORS[0];
+      const nfs=Math.max(10,Math.min(20,n.noteFontSize||12));
       wrap.className='node-wrap note-node'+(selId===n.id?' selected':'');
       wrap.innerHTML=`
         <div class="node-card note-card" style="background:${nc.bg};border-color:${nc.border}${selId===n.id?';box-shadow:0 0 0 2px '+nc.text+'55':''}" >
           <div class="node-drag-handle" title="拖曳移動">⠿</div>
-          <div class="note-content" style="color:${nc.text}"
+          <div class="note-content" style="color:${nc.text};font-size:${nfs}px"
                contenteditable="true"
                data-id="${n.id}"
                onblur="saveNoteContent(this)"
                onkeydown="if(event.key==='Escape')this.blur()"
                spellcheck="false">${escHtml(n.content||'').replace(/\n/g,'<br>')}</div>
           <div class="node-footer">
-            <div class="note-color-picker">
-              ${NOTE_COLORS.map(c=>`<div class="note-color-dot${(n.noteColor||'yellow')===c.id?' active':''}" style="background:${c.text}" onclick="setNoteColor('${n.id}','${c.id}');event.stopPropagation()" title="${c.id}"></div>`).join('')}
+            <div class="note-footer-tools">
+              <div class="note-color-picker">
+                ${NOTE_COLORS.map(c=>`<div class="note-color-dot${(n.noteColor||'yellow')===c.id?' active':''}" style="background:${c.text}" onclick="setNoteColor('${n.id}','${c.id}');event.stopPropagation()" title="${c.id}"></div>`).join('')}
+              </div>
+              <div class="note-font-ctrl">
+                <button class="note-font-btn" onclick="setNoteFontSize('${n.id}',${nfs}-1);event.stopPropagation()" title="縮小">A−</button>
+                <button class="note-font-btn" onclick="setNoteFontSize('${n.id}',${nfs}+1);event.stopPropagation()" title="放大">A+</button>
+              </div>
             </div>
             <div class="node-actions">
               <button class="act-btn" data-a="add" data-id="${n.id}" title="新增子節點">+</button>
@@ -727,6 +734,10 @@ function createNoteNodeAt(cx,cy){
 function setNoteColor(id,colorId){
   const n=findNode(id);if(!n)return;
   n.noteColor=colorId;saveData();renderNodes();
+}
+function setNoteFontSize(id,size){
+  const n=findNode(id);if(!n)return;
+  n.noteFontSize=Math.max(10,Math.min(20,size));saveData();renderNodes();
 }
 
 function headerAddNote(){
