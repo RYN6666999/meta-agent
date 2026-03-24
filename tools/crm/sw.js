@@ -1,25 +1,22 @@
 /* ═══════════════════════════════════════
    房多多經營系統 — Service Worker
-   策略：Cache-First（全離線可用）
+   策略：HTML/JS/CSS → Network-First（部署後立即生效）
+         圖片/字型   → Cache-First（離線可用）
 ═══════════════════════════════════════ */
-const CACHE = 'fdd-crm-v4';
-const ASSETS = [
-  './',
-  './index.html',
-  './login.html',
-  './admin.html',
-  './crm.css',
-  './crm.js',
-  './manifest.json',
+const CACHE = 'fdd-crm-v5';
+const PRECACHE = [
   './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './manifest.json',
 ];
 
-/* 安裝：預快取所有靜態資源 */
+/* 安裝：只預快取靜態圖示，不快取 HTML/JS */
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
+    caches.open(CACHE).then(c => c.addAll(PRECACHE))
   );
-  self.skipWaiting(); // 立即接管
+  self.skipWaiting();
 });
 
 /* 啟動：清掉舊快取 */
@@ -32,9 +29,31 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-/* 攔截請求：Cache-First */
+/* 攔截請求 */
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+  const url = new URL(e.request.url);
+
+  // 只處理同源請求
+  if (url.origin !== location.origin) return;
+
+  const isNav = e.request.mode === 'navigate';
+  const isAsset = /\.(js|css|html)(\?.*)?$/.test(url.pathname);
+
+  if (isNav || isAsset) {
+    // Network-First：先走網路，失敗才用快取（確保部署後立即生效）
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+  } else {
+    // Cache-First：圖片等靜態資源
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request))
+    );
+  }
 });
