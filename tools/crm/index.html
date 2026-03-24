@@ -345,16 +345,9 @@
     <h2 class="settings-title">⚙️ 設定</h2>
 
     <!-- PWA Install -->
-    <div class="settings-card">
+    <div class="settings-card" id="pwa-card">
       <div class="settings-card-title">📲 安裝 App</div>
-      <div class="settings-card-desc">安裝到主畫面，離線也可使用。</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button id="pwa-install-btn" class="btn btn-accent" style="display:none"
-          onclick="(function(){if(window._pwaInstallPrompt){window._pwaInstallPrompt.prompt();window._pwaInstallPrompt.userChoice.then(function(r){if(r.outcome==='accepted'){document.getElementById('pwa-install-btn').style.display='none';}window._pwaInstallPrompt=null;});}})()">
-          ⬇️ 安裝到主畫面
-        </button>
-        <span id="pwa-install-status" style="font-size:12px;color:var(--text-muted)">偵測中…</span>
-      </div>
+      <div id="pwa-install-area"></div>
     </div>
 
     <!-- Google Calendar -->

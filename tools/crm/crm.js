@@ -3281,17 +3281,31 @@ function init(){
   loadTheme();
   loadData();
   initDrafts();
-  // PWA install status
+  // PWA install UI
   (function(){
-    const s=document.getElementById('pwa-install-status');
-    if(!s)return;
-    if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){
-      s.textContent='✅ 已安裝';
-    } else if(window._pwaInstallPrompt){
-      document.getElementById('pwa-install-btn').style.display='inline-flex';
-      s.textContent='';
+    const area=document.getElementById('pwa-install-area');
+    if(!area)return;
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+    if(isStandalone){
+      area.innerHTML='<span style="font-size:13px;color:var(--text-muted)">✅ 已安裝為 App</span>';
+      return;
+    }
+    if(window._pwaInstallPrompt){
+      area.innerHTML='<button class="btn btn-accent" id="pwa-install-btn">⬇️ 安裝到主畫面</button>';
+      document.getElementById('pwa-install-btn').onclick=function(){
+        window._pwaInstallPrompt.prompt();
+        window._pwaInstallPrompt.userChoice.then(function(r){
+          if(r.outcome==='accepted') area.innerHTML='<span style="font-size:13px;color:var(--text-muted)">✅ 已安裝為 App</span>';
+          window._pwaInstallPrompt=null;
+        });
+      };
+      return;
+    }
+    const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(isIOS){
+      area.innerHTML='<span style="font-size:13px;color:var(--text-muted)">Safari → 點底部 <b>分享</b> 圖示 → 「加入主畫面」</span>';
     } else {
-      s.textContent='請用瀏覽器「加入主畫面」功能安裝';
+      area.innerHTML='<span style="font-size:13px;color:var(--text-muted)">Chrome：點網址列右側 <b>安裝</b> 圖示，或選單 → 「安裝房多多經營系統」</span>';
     }
   })();
 
