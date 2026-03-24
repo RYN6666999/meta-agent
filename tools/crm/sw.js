@@ -2,7 +2,7 @@
    房多多經營系統 — Service Worker
    策略：Cache-First（全離線可用）
 ═══════════════════════════════════════ */
-const CACHE = 'fdd-crm-v3';
+const CACHE = 'fdd-crm-v4';
 const ASSETS = [
   './',
   './index.html',

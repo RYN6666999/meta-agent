@@ -344,6 +344,19 @@
   <div class="settings-page">
     <h2 class="settings-title">⚙️ 設定</h2>
 
+    <!-- PWA Install -->
+    <div class="settings-card">
+      <div class="settings-card-title">📲 安裝 App</div>
+      <div class="settings-card-desc">安裝到主畫面，離線也可使用。</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="pwa-install-btn" class="btn btn-accent" style="display:none"
+          onclick="(function(){if(window._pwaInstallPrompt){window._pwaInstallPrompt.prompt();window._pwaInstallPrompt.userChoice.then(function(r){if(r.outcome==='accepted'){document.getElementById('pwa-install-btn').style.display='none';}window._pwaInstallPrompt=null;});}})()">
+          ⬇️ 安裝到主畫面
+        </button>
+        <span id="pwa-install-status" style="font-size:12px;color:var(--text-muted)">偵測中…</span>
+      </div>
+    </div>
+
     <!-- Google Calendar -->
     <div class="settings-card">
       <div class="settings-card-title">📅 Google 日曆連結</div>
@@ -480,7 +493,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<script src="crm.js?v=10"></script>
+<script src="crm.js?v=11"></script>
 <script>
   (function(){
     try{
@@ -492,6 +505,22 @@
       }
     }catch(e){}
   })();
+
+  // PWA install prompt
+  window._pwaInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    window._pwaInstallPrompt = e;
+    var btn = document.getElementById('pwa-install-btn');
+    if(btn) btn.style.display = 'inline-flex';
+  });
+  window.addEventListener('appinstalled', function(){
+    window._pwaInstallPrompt = null;
+    var btn = document.getElementById('pwa-install-btn');
+    if(btn) btn.style.display = 'none';
+    var status = document.getElementById('pwa-install-status');
+    if(status) status.textContent = '✅ 已安裝';
+  });
 </script>
 </body>
 </html>

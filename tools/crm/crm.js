@@ -3281,6 +3281,20 @@ function init(){
   loadTheme();
   loadData();
   initDrafts();
+  // PWA install status
+  (function(){
+    const s=document.getElementById('pwa-install-status');
+    if(!s)return;
+    if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){
+      s.textContent='✅ 已安裝';
+    } else if(window._pwaInstallPrompt){
+      document.getElementById('pwa-install-btn').style.display='inline-flex';
+      s.textContent='';
+    } else {
+      s.textContent='請用瀏覽器「加入主畫面」功能安裝';
+    }
+  })();
+
   // Init GIS lazily; if token already valid, refresh calendar events
   ensureGisLoaded(()=>{
     GCAL.updateStatus();
