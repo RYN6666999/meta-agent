@@ -2585,7 +2585,7 @@ function getMonthKey(dateStr){
 function saveMonthlyGoalInputs(){
   const mkey=getMonthKey();
   const goals=monthlyGoals[mkey]||(monthlyGoals[mkey]={});
-  ['mg-invite','mg-calls','mg-forms','mg-followup','mg-close','mg-consult'].forEach(k=>{
+  ['mg-invite','mg-calls','mg-forms','mg-followup','mg-close'].forEach(k=>{
     const el=document.querySelector(`[data-mg="${k}"]`);
     if(el)goals[k]=parseInt(el.value)||0;
   });
@@ -2610,44 +2610,35 @@ function updateMonthlyProgressBars(){
 }
 
 function renderMonthlyProgress(){
-  const mkey  = getMonthKey();
-  const goals = monthlyGoals[mkey] || {};
-  // ── CALC handles all arithmetic ──
-  const actuals = CALC.monthActuals(dailyReports, mkey);
-  const items   = CALC.progressItems(actuals, goals);
-  const sp      = CALC.salesProgress(salesData, STORE.getMyRate(), mkey, monthlySalesTargets[mkey]||0);
-
-  const container = document.getElementById('monthly-goal-body');
-  if(!container) return;
-  container.innerHTML = `
-    <div class="daily-kpi-card${sp.full?' exceeded':''}" style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px 14px">
-      <div style="font-size:13px;font-weight:600;white-space:nowrap">💰 本月業績目標</div>
-      <div style="display:flex;align-items:center;gap:6px;flex:1">
-        <span style="font-size:12px;color:var(--text-muted)">NT$</span>
-        <input data-mst="mg-sales" data-nodraft="true" type="number" min="0" value="${monthlySalesTargets[mkey]||0}"
-          style="width:110px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 8px;font-size:14px;font-weight:700"
-          oninput="saveMonthSalesTarget()"
-          onblur="renderMonthlyProgress()">
-        <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)">
-          <div data-progress-bar style="height:100%;width:${sp.pct}%;background:${sp.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
-        </div>
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">實績 ${fmtMoney(sp.income)} · ${sp.pct}%</span>
+  const mkey=getMonthKey();
+  const goals=monthlyGoals[mkey]||{};
+  const actuals=CALC.monthActuals(dailyReports,mkey);
+  const items=CALC.progressItems(actuals,goals).filter(i=>i.k!=='consult');
+  const sp=CALC.salesProgress(salesData,STORE.getMyRate(),mkey,monthlySalesTargets[mkey]||0);
+  const container=document.getElementById('monthly-goal-body');
+  if(!container)return;
+  container.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:700;white-space:nowrap;color:var(--text-muted)">💰 業績目標</span>
+      <input data-mst="mg-sales" data-nodraft="true" type="number" min="0" value="${monthlySalesTargets[mkey]||0}"
+        style="width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 8px;font-size:13px;font-weight:700;font-family:inherit"
+        oninput="saveMonthSalesTarget()">
+      <div style="flex:1;min-width:60px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)">
+        <div data-progress-bar style="height:100%;width:${sp.pct}%;background:${sp.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
       </div>
+      <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fmtMoney(sp.income)} · ${sp.pct}%</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
       ${items.map(it=>`
-        <div class="daily-kpi-card${it.full?' exceeded':''}">
-          <div class="daily-kpi-label">${it.label}目標</div>
-          <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
-            <input data-mg="${it.goalK}" data-nodraft="true" type="number" min="0" value="${it.goal}"
-              style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 6px;font-size:14px;font-weight:700;text-align:center"
-              oninput="saveMonthlyGoalInputs()"
-              onblur="renderMonthlyProgress()">
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:3px">${it.label}</div>
+          <input data-mg="${it.goalK}" data-nodraft="true" type="number" min="0" value="${it.goal}"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 6px;font-size:14px;font-weight:700;text-align:center;font-family:inherit"
+            oninput="saveMonthlyGoalInputs()">
+          <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:4px;border:1px solid var(--border)">
+            <div data-progress-bar style="height:100%;width:${it.pct}%;background:${it.full?'var(--green)':'var(--accent)'};border-radius:2px;transition:width .3s"></div>
           </div>
-          <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border);margin-bottom:3px">
-            <div data-progress-bar style="height:100%;width:${it.pct}%;background:${it.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
-          </div>
-          <div class="daily-kpi-target" data-progress-label>實績 ${it.actual} · ${it.pct}%</div>
+          <div style="font-size:10px;color:${it.full?'var(--green)':'var(--text-muted)'};margin-top:2px;font-weight:600" data-progress-label>${it.actual}/${it.goal}</div>
         </div>`).join('')}
     </div>`;
 }
@@ -2674,183 +2665,237 @@ function dailyNext(){
   el.value=d.toISOString().slice(0,10);renderDailyPage();
 }
 
-function saveDailyReport(){
-  const dateStr=getDailyDateStr();
-  const body=document.getElementById('daily-body');
-  if(!body)return;
-  const report=dailyReports[dateStr]||{};
-  // Goals
-  ['goal-invite','goal-calls','goal-forms','goal-followup','goal-close','goal-consult'].forEach(k=>{
-    const el=body.querySelector(`[data-daily="${k}"]`);
-    if(el)report[k]=parseInt(el.value)||0;
-  });
-  // Activity
-  ['act-invite','act-calls','act-forms','act-followup','act-close','act-consult'].forEach(k=>{
-    const el=body.querySelector(`[data-daily="${k}"]`);
-    if(el)report[k]=parseInt(el.value)||0;
-  });
-  // Follow-up checked
-  const fuChecked=[...body.querySelectorAll('.daily-fu-check.checked')].map(el=>el.dataset.nid);
-  report.fuChecked=fuChecked;
-  // Notes
-  const notesEl=body.querySelector('[data-daily="notes"]');
-  if(notesEl)report.notes=notesEl.value;
-  dailyReports[dateStr]=report;
+/* ── Daily v2 constants & helpers ── */
+const DAILY_TIMES=['08:00','09:00','09:30','10:00','10:30','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
+const DAILY_KPI=[
+  {k:'act-invite',  label:'邀約',mk:'mg-invite'},
+  {k:'act-calls',   label:'電話',mk:'mg-calls'},
+  {k:'act-forms',   label:'問卷',mk:'mg-forms'},
+  {k:'act-followup',label:'跟進',mk:'mg-followup'},
+  {k:'act-close',   label:'成交',mk:'mg-close'},
+];
+function _getDR(ds){
+  const r=dailyReports[ds]||{};
+  return {
+    schedule: r.schedule||DAILY_TIMES.map(t=>({time:t,planned:'',achieved:'',review:''})),
+    bigThree: r.bigThree||Array(3).fill(null).map(()=>({task:'',goal:'',verify:''})),
+    connections: r.connections||[{who:'',topic:'',nextStep:'',hasGoal:false}],
+    gratitude: r.gratitude||Array(5).fill(''),
+    optimize:  r.optimize ||Array(5).fill(''),
+    tomorrow:  r.tomorrow ||'',
+    ...Object.fromEntries(DAILY_KPI.map(i=>[i.k,r[i.k]||0])),
+  };
+}
+function _dr(ds,patch){
+  if(!dailyReports[ds])dailyReports[ds]={};
+  Object.assign(dailyReports[ds],patch);
   saveDailyReports();
-  renderDailyProgress();
-  renderMonthlyProgress();
-  toast('日報已儲存');
+}
+function updateScheduleSlot(idx,field,value){
+  const ds=getDailyDateStr(),r=dailyReports[ds]||(dailyReports[ds]={});
+  if(!r.schedule)r.schedule=DAILY_TIMES.map(t=>({time:t,planned:'',achieved:'',review:''}));
+  if(r.schedule[idx])r.schedule[idx][field]=value;
+  saveDailyReports();
+}
+function updateBigThree(idx,field,value){
+  const ds=getDailyDateStr(),r=dailyReports[ds]||(dailyReports[ds]={});
+  if(!r.bigThree)r.bigThree=Array(3).fill(null).map(()=>({task:'',goal:'',verify:''}));
+  if(r.bigThree[idx])r.bigThree[idx][field]=value;
+  saveDailyReports();
+}
+function updateDailyConn(idx,field,value){
+  const ds=getDailyDateStr(),r=dailyReports[ds]||(dailyReports[ds]={});
+  if(!r.connections)r.connections=[];
+  while(r.connections.length<=idx)r.connections.push({who:'',topic:'',nextStep:'',hasGoal:false});
+  r.connections[idx][field]=value;
+  saveDailyReports();
+}
+function addDailyConn(){
+  const ds=getDailyDateStr(),r=dailyReports[ds]||(dailyReports[ds]={});
+  if(!r.connections)r.connections=[];
+  r.connections.push({who:'',topic:'',nextStep:'',hasGoal:false});
+  saveDailyReports();renderDailyPage();
+}
+function removeDailyConn(idx){
+  const ds=getDailyDateStr();if(!dailyReports[ds])return;
+  (dailyReports[ds].connections||[]).splice(idx,1);
+  saveDailyReports();renderDailyPage();
+}
+function updateReflect(type,idx,value){
+  const ds=getDailyDateStr(),r=dailyReports[ds]||(dailyReports[ds]={});
+  if(!r[type])r[type]=Array(5).fill('');
+  r[type][idx]=value;saveDailyReports();
+}
+function saveDailyActInline(el){
+  const k=el.dataset.daily;if(!k)return;
+  _dr(getDailyDateStr(),{[k]:parseInt(el.value)||0});
+}
+function loadYestTomorrow(){
+  const ds=getDailyDateStr();
+  const prev=new Date(ds);prev.setDate(prev.getDate()-1);
+  const ps=prev.toISOString().slice(0,10);
+  const yr=dailyReports[ps];
+  if(!yr||!yr.tomorrow||!yr.tomorrow.trim()){toast('昨日無「明天要做」記錄');return;}
+  const r=dailyReports[ds]||(dailyReports[ds]={});
+  if(!r.schedule)r.schedule=DAILY_TIMES.map(t=>({time:t,planned:'',achieved:'',review:''}));
+  const slot=r.schedule.find(s=>!s.planned.trim());
+  if(slot)slot.planned='[昨]'+yr.tomorrow.split('\n')[0].slice(0,18);
+  saveDailyReports();renderDailyPage();toast('✅ 已帶入昨日計畫');
 }
 
-function renderDailyProgress(){
-  const dateStr=getDailyDateStr();
-  const report=dailyReports[dateStr]||{};
-  const kpiItems=[
-    {label:'邀約數',actKey:'act-invite',  goalKey:'goal-invite'},
-    {label:'電話數',actKey:'act-calls',   goalKey:'goal-calls'},
-    {label:'問卷數',actKey:'act-forms',   goalKey:'goal-forms'},
-    {label:'跟進數',actKey:'act-followup',goalKey:'goal-followup'},
-    {label:'成交數',actKey:'act-close',   goalKey:'goal-close'},
-    {label:'協談數',actKey:'act-consult', goalKey:'goal-consult'},
-  ];
-  const kpiGrid=document.querySelector('.daily-kpi-grid');
-  if(!kpiGrid)return;
-  kpiGrid.innerHTML=kpiItems.map(item=>{
-    const goalEl=document.querySelector(`[data-daily="${item.goalKey}"]`);
-    const goal=goalEl?parseInt(goalEl.value)||0:(report[item.goalKey]||0);
-    const act=report[item.actKey]||0;
-    const pct=goal?Math.min(100,Math.round(act/goal*100)):0;
-    const cls=act>=goal&&goal>0?'exceeded':'';
-    return`<div class="daily-kpi-card ${cls}">
-      <div class="daily-kpi-label">${item.label}</div>
-      <div class="daily-kpi-val">${act}</div>
-      <div class="daily-kpi-target">目標 ${goal} · ${pct}%</div>
-    </div>`;
-  }).join('');
+function saveDailyReport(){
+  const ds=getDailyDateStr();
+  const body=document.getElementById('daily-body');if(!body)return;
+  DAILY_KPI.forEach(i=>{
+    const el=body.querySelector(`[data-daily="${i.k}"]`);
+    if(el)_dr(ds,{[i.k]:parseInt(el.value)||0});
+  });
+  renderMonthlyProgress();
+  toast('✅ 已儲存');
 }
+function renderDailyProgress(){ /* replaced — monthly stats handled by renderMonthlyProgress */ }
 
 function renderDailyPage(){
   const el=document.getElementById('daily-date-input');
   if(el&&!el.value)el.value=new Date().toISOString().slice(0,10);
-  const dateStr=getDailyDateStr();
-  const report=dailyReports[dateStr]||{};
+  const ds=getDailyDateStr();
+  const rpt=_getDR(ds);
   const body=document.getElementById('daily-body');
   if(!body)return;
-
-  // Follow-up nodes: all non-root CRM nodes
-  const fuNodes=nodes.filter(n=>n.status!==null&&n.name&&n.name!=='新聯繫人');
-  const fuChecked=report.fuChecked||[];
-
-  const kpiItems=[
-    {label:'邀約數',  actKey:'act-invite',  goalKey:'goal-invite'},
-    {label:'電話數',  actKey:'act-calls',   goalKey:'goal-calls'},
-    {label:'問卷數',  actKey:'act-forms',   goalKey:'goal-forms'},
-    {label:'跟進數',  actKey:'act-followup',goalKey:'goal-followup'},
-    {label:'成交數',  actKey:'act-close',   goalKey:'goal-close'},
-    {label:'協談數',  actKey:'act-consult', goalKey:'goal-consult'},
-  ];
-
-  const mkey=getMonthKey(dateStr);
-  const mLabel=mkey.replace('-','年')+'月';
+  const mkey=getMonthKey(ds);
+  const mLabel=`${mkey.slice(0,4)}年${parseInt(mkey.slice(5))}月`;
 
   body.innerHTML=`
-    <!-- Monthly Goal -->
+<datalist id="drn-list">
+  ${nodes.filter(n=>n.name&&!n.nodeType).map(n=>`<option value="${escHtml(n.name)}">`).join('')}
+</datalist>
+<div class="daily-two-col">
+
+  <!-- LEFT -->
+  <div class="daily-col">
     <div class="daily-section">
       <div class="daily-section-header">
-        <span>🗓 ${mLabel}目標</span>
-        <span style="font-size:11px;color:var(--text-muted)">設定後自動儲存</span>
+        <span>📊 ${mLabel}月統計</span>
+        <span style="font-size:10px;color:var(--text-muted)">目標可直接修改</span>
       </div>
-      <div class="daily-section-body" id="monthly-goal-body"></div>
+      <div class="daily-section-body" id="monthly-goal-body" style="padding:10px 12px"></div>
     </div>
 
-    <!-- KPI Overview -->
+    <div class="daily-section">
+      <div class="daily-section-header"><span>⏰ 時間安排</span></div>
+      <div class="daily-section-body" style="padding:6px 10px">
+        <div class="daily-sched-grid">
+          <div class="dsgh"></div>
+          <div class="dsgh">📋 預定</div>
+          <div class="dsgh">✅ 成就</div>
+          <div class="dsgh">🔍 復盤</div>
+          ${rpt.schedule.map((s,i)=>`
+            <div class="dsgt">${s.time}</div>
+            <input class="dsgi" value="${escHtml(s.planned)}" placeholder="—" oninput="updateScheduleSlot(${i},'planned',this.value)">
+            <input class="dsgi" value="${escHtml(s.achieved)}" placeholder="—" oninput="updateScheduleSlot(${i},'achieved',this.value)">
+            <input class="dsgi dsgi-r" value="${escHtml(s.review)}" placeholder="—" oninput="updateScheduleSlot(${i},'review',this.value)">
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
     <div class="daily-section">
       <div class="daily-section-header">
-        <span>📊 今日目標達成</span>
+        <span>📞 今日實績</span>
+        <span style="font-size:10px;color:var(--text-muted)">輸入後自動儲存</span>
       </div>
-      <div class="daily-section-body">
-        <div class="daily-kpi-grid">
-          ${kpiItems.map(item=>{
-            const goal=report[item.goalKey]||0;
-            const act=report[item.actKey]||0;
-            const pct=goal?Math.min(100,Math.round(act/goal*100)):0;
-            const cls=act>=goal&&goal>0?'exceeded':act>0?'':'';
-            return`<div class="daily-kpi-card ${cls}">
-              <div class="daily-kpi-label">${item.label}</div>
-              <div class="daily-kpi-val">${act}</div>
-              <div class="daily-kpi-target">目標 ${goal} · ${pct}%</div>
-            </div>`;
-          }).join('')}
+      <div class="daily-section-body" style="padding:10px 12px">
+        <div style="display:flex;gap:8px">
+          ${DAILY_KPI.map(i=>`
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="font-size:10px;color:var(--text-muted);font-weight:600">${i.label}</div>
+              <input class="daily-act-input" type="number" min="0" data-daily="${i.k}" value="${rpt[i.k]||0}" oninput="saveDailyActInline(this)">
+            </div>
+          `).join('')}
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Daily Goals -->
+  <!-- RIGHT -->
+  <div class="daily-col">
     <div class="daily-section">
-      <div class="daily-section-header"><span>🎯 今日目標設定</span></div>
+      <div class="daily-section-header"><span>🎯 三件大事</span></div>
       <div class="daily-section-body">
-        <div class="daily-activity-grid">
-          ${[{k:'goal-invite',label:'邀約目標'},{k:'goal-calls',label:'電話目標'},{k:'goal-forms',label:'問卷目標'},{k:'goal-followup',label:'跟進目標'},{k:'goal-close',label:'成交目標'},{k:'goal-consult',label:'協談目標'}].map(item=>`
-            <div class="daily-act-item">
-              <div class="daily-act-label">${item.label}</div>
-              <input class="daily-act-input" data-nodraft="true" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}" oninput="renderDailyProgress(this)">
-            </div>`).join('')}
+        <div class="daily-bt-hdr">
+          <div></div><div>項目名稱</div><div>目標</div><div>如何驗證</div>
         </div>
+        ${rpt.bigThree.map((item,i)=>`
+          <div class="daily-bt-row">
+            <div class="daily-bt-num">${i+1}</div>
+            <input class="daily-bt-inp" value="${escHtml(item.task)}" placeholder="事項" oninput="updateBigThree(${i},'task',this.value)">
+            <input class="daily-bt-inp" value="${escHtml(item.goal)}" placeholder="目標" oninput="updateBigThree(${i},'goal',this.value)">
+            <input class="daily-bt-inp" value="${escHtml(item.verify)}" placeholder="如何驗證" oninput="updateBigThree(${i},'verify',this.value)">
+          </div>
+        `).join('')}
       </div>
     </div>
 
-    <!-- Activity Log -->
-    <div class="daily-section">
-      <div class="daily-section-header"><span>📞 今日實績記錄</span></div>
-      <div class="daily-section-body">
-        <div class="daily-activity-grid">
-          ${[{k:'act-invite',label:'邀約數'},{k:'act-calls',label:'電話數'},{k:'act-forms',label:'問卷數'},{k:'act-followup',label:'跟進數'},{k:'act-close',label:'成交數'},{k:'act-consult',label:'協談數'}].map(item=>`
-            <div class="daily-act-item">
-              <div class="daily-act-label">${item.label}</div>
-              <input class="daily-act-input" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}">
-            </div>`).join('')}
-        </div>
-      </div>
-    </div>
-
-    <!-- Follow-up Targets -->
     <div class="daily-section">
       <div class="daily-section-header">
-        <span>👥 今日跟進對象</span>
-        <span style="font-size:11px;color:var(--text-muted)">${fuChecked.length}/${fuNodes.length} 已跟進</span>
+        <span>🤝 今日與誰連結</span>
+        <button class="btn" style="font-size:11px;padding:3px 10px" onclick="addDailyConn()">+ 新增</button>
       </div>
       <div class="daily-section-body">
-        <div class="daily-fu-search">
-          <input type="text" placeholder="搜尋人脈…" id="daily-fu-search-input" oninput="filterDailyFu(this.value)">
+        <div class="daily-conn-hdr">
+          <div>誰</div><div>主題</div><div>下一步</div><div style="text-align:center">目標?</div><div></div>
         </div>
-        <div class="daily-fu-list" id="daily-fu-list">
-          ${fuNodes.length?fuNodes.map(n=>{
-            const done=fuChecked.includes(n.id);
-            const regions=(n.info.regions||[]).join('、');
-            return`<div class="daily-fu-item${done?' done':''}" data-nid="${n.id}">
-              <div class="daily-fu-check${done?' checked':''}" data-nid="${n.id}" onclick="toggleDailyFu(event,'${n.id}')">
-                ${done?'✓':''}
-              </div>
-              <span class="sdot ${n.status||'gray'}" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
-              <span class="daily-fu-name" onclick="switchPage('crm');setTimeout(()=>openPanel('${n.id}'),80)">${escHtml(n.name)}</span>
-              ${n.info.role?`<span class="daily-fu-role">${n.info.role}</span>`:''}
-              ${regions?`<span class="daily-fu-region">${regions}</span>`:''}
-              <span style="font-size:11px;color:var(--text-muted)">${n.info.lastContact||''}</span>
-            </div>`;
-          }).join(''):'<span style="color:var(--text-muted);font-size:13px">尚無人脈節點</span>'}
+        ${rpt.connections.map((c,i)=>`
+          <div class="daily-conn-row">
+            <input class="daily-conn-inp" list="drn-list" value="${escHtml(c.who)}" placeholder="姓名" oninput="updateDailyConn(${i},'who',this.value)">
+            <input class="daily-conn-inp" value="${escHtml(c.topic)}" placeholder="主題" oninput="updateDailyConn(${i},'topic',this.value)">
+            <input class="daily-conn-inp" value="${escHtml(c.nextStep)}" placeholder="下一步" oninput="updateDailyConn(${i},'nextStep',this.value)">
+            <label class="daily-conn-goal">
+              <input type="checkbox" ${c.hasGoal?'checked':''} onchange="updateDailyConn(${i},'hasGoal',this.checked)">
+              <span class="daily-conn-goal-dot"></span>
+            </label>
+            <button class="daily-conn-del" onclick="removeDailyConn(${i})">×</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="daily-section">
+      <div class="daily-section-header"><span>🌙 今日復盤</span></div>
+      <div class="daily-section-body">
+        <div class="daily-reflect-2col">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);margin-bottom:6px">🙏 值得感謝的五件事</div>
+            ${rpt.gratitude.map((v,i)=>`
+              <div class="daily-rf-item">
+                <span class="daily-rf-num">${i+1}</span>
+                <input class="daily-rf-inp" value="${escHtml(v)}" placeholder="…" onblur="updateReflect('gratitude',${i},this.value)">
+              </div>`).join('')}
+          </div>
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);margin-bottom:6px">💡 值得優化的五件事</div>
+            ${rpt.optimize.map((v,i)=>`
+              <div class="daily-rf-item">
+                <span class="daily-rf-num">${i+1}</span>
+                <input class="daily-rf-inp" value="${escHtml(v)}" placeholder="…" onblur="updateReflect('optimize',${i},this.value)">
+              </div>`).join('')}
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Notes -->
     <div class="daily-section">
-      <div class="daily-section-header"><span>📝 今日反思 / 備注</span></div>
+      <div class="daily-section-header">
+        <span>📋 明天要做的事</span>
+        <button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadYestTomorrow()">← 帶入昨日</button>
+      </div>
       <div class="daily-section-body">
-        <textarea class="daily-notes-input" data-daily="notes" placeholder="今天做了什麼？有什麼收穫？明天重點是什麼？">${escHtml(report.notes||'')}</textarea>
+        <textarea class="daily-notes-input" placeholder="明天的首要任務…" onblur="_dr(getDailyDateStr(),{tomorrow:this.value})">${escHtml(rpt.tomorrow)}</textarea>
       </div>
     </div>
-  `;
-  // Render monthly goals after body is set
+  </div>
+
+</div>`;
   renderMonthlyProgress();
 }
 
