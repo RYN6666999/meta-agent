@@ -923,3 +923,20 @@
   其他變更 "truth-source/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
 
 ---
+
+## 2026-03-24 19:47 | auto-git-score | 分數 90 | 📥 達到閾值（90/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=80），含重要變更
+
+**評分明細：**
+  其他變更 "error-log/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
+  其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/index.html +10
+  其他變更 "truth-source/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
+
+---

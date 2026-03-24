@@ -1,4 +1,29 @@
 ---
+date: 2026-03-24
+type: dedup_report
+mode: dry_run
+---
+
+# LightRAG 去重報告 2026-03-24 19:47:31
+
+**模式**：DRY RUN（只分析，未修改）
+**總實體數**：59
+**發現重複對**：0
+**同名重複群組**：3
+
+## 同名重複摘要
+
+- `Error Fix: cloudflared tunnel process not running` x29
+- `對話重點摘要` x21
+- `Error Fix: telegram setWebhook failed` x3
+
+## 重複實體清單
+
+✅ 未發現重複實體
+
+---
+
+---
 date: 2026-03-18
 type: dedup_report
 mode: dry_run
