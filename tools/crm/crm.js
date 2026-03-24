@@ -3146,8 +3146,9 @@ function clearAllData(){
 /* ── Google Calendar — GIS Token Flow (純瀏覽器，不需後端) ── */
 const GCAL={
   SCOPE:'https://www.googleapis.com/auth/calendar.readonly',
+  CLIENT_ID:'858813478882-732hlp76l1mb1cfod932vcrgtkke3f29.apps.googleusercontent.com',
   tokenClient:null,
-  getClientId(){ return localStorage.getItem('gcal-client-id')||''; },
+  getClientId(){ return this.CLIENT_ID; },
   getToken(){
     try{ return JSON.parse(localStorage.getItem('gcal-token')||'null'); }
     catch(e){ return null; }
@@ -3162,14 +3163,11 @@ const GCAL={
   },
   clearToken(){
     localStorage.removeItem('gcal-token');
-    localStorage.removeItem('gcal-client-id');
   },
   updateStatus(){
     const el=document.getElementById('gcal-status');
     if(!el)return;
-    if(this.isTokenValid()) el.textContent='✅ 已連結';
-    else if(this.getClientId()) el.textContent='未連結（點擊重新授權）';
-    else el.textContent='未連結';
+    el.textContent=this.isTokenValid()?'✅ 已連結':'未連結';
   },
   initClient(cid){
     if(!window.google?.accounts?.oauth2){ toast('GIS 尚未載入，請稍後再試'); return; }
@@ -3192,12 +3190,8 @@ const GCAL={
 };
 
 function startGoogleOAuth(){
-  let cid=GCAL.getClientId();
-  if(!cid){
-    cid=(prompt('請輸入 Google OAuth Client ID（到 Google Cloud Console > 憑證 取得）')||'').trim();
-    if(!cid){ toast('未提供 Client ID'); return; }
-    localStorage.setItem('gcal-client-id',cid);
-  }
+  const cid=GCAL.getClientId();
+  if(!cid){ toast('尚未設定 Google Client ID，請聯繫管理員'); return; }
   GCAL.initClient(cid);
   GCAL.requestToken();
 }
