@@ -852,3 +852,39 @@
   其他變更 tools/crm/index.html +10
 
 ---
+
+## 2026-03-24 18:00 | auto-git-score | 分數 280 | 📥 達到閾值（280/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=185），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-Mf9Fut/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-Mf9Fut/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-k8o2AX/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-k8o2AX/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-qDrq1x/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-qDrq1x/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-ztgcqy/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-ztgcqy/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ZAlLlI/functionsWorker-0.04449953689085029.js +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ZAlLlI/functionsWorker-0.04449953689085029.js.map +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ya0w5f/functionsWorker-0.16946459475081954.js +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ya0w5f/functionsWorker-0.16946459475081954.js.map +10
+  其他變更 tools/crm/.wrangler/tmp/pages-bqEA9X/functionsRoutes-0.41491694367792054.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-bqEA9X/functionsWorker-0.04449953689085029.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-bqEA9X/functionsWorker-0.04449953689085029.mjs.map +10
+  其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsRoutes-0.02164222538735161.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsWorker-0.16946459475081954.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsWorker-0.16946459475081954.mjs.map +10
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/index.html +10
+
+---

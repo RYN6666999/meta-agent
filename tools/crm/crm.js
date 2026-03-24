@@ -492,7 +492,8 @@ function _attachNodeDrag(wrap, n){
   wrap.addEventListener('click',e=>{
     e.stopPropagation();
     if(isDragging)return;
-    const a=e.target.closest('[data-a]');
+    // setPointerCapture redirects e.target to wrap; use composedPath to find actual clicked element
+    const a=(e.composedPath&&e.composedPath().find(el=>el instanceof Element&&el.dataset&&el.dataset.a))||e.target.closest('[data-a]');
     if(!a)return;
     const act=a.dataset.a,id=a.dataset.id;
     if(act==='open'){openPanel(id);}
@@ -759,13 +760,10 @@ function cycleStatus(id){
   const idx=STATUS_ORDER.indexOf(n.status);
   n.status=STATUS_ORDER[(idx+1)%STATUS_ORDER.length];
   saveData();
-  const wrap=document.querySelector(`.node-wrap[data-id="${id}"]`);
-  if(wrap){
-    STATUS_ORDER.forEach(s=>wrap.classList.remove('status-'+s));
-    wrap.classList.add('status-'+n.status);
-    const pill=wrap.querySelector('.status-pill');
-    if(pill)pill.lastChild.textContent=STATUS_LABELS[n.status];
-  }
+  renderNodes();
+  updateStats();
+  // Keep panel open if it was showing this node
+  if(panelNodeId===id) selectNode(id);
 }
 
 function toggleCollapse(id){
@@ -1123,10 +1121,16 @@ function updateStats(){
   const yellow=nodes.filter(n=>n.status==='yellow').length;
   const red=nodes.filter(n=>n.status==='red').length;
   document.getElementById('header-stats').innerHTML=`
-    <div class="stat"><span class="stat-dot" style="background:var(--green)"></span>${green} 高意願</div>
-    <div class="stat"><span class="stat-dot" style="background:var(--yellow)"></span>${yellow} 觀察中</div>
-    <div class="stat"><span class="stat-dot" style="background:var(--red)"></span>${red} 冷淡</div>
-    <div class="stat"><span class="stat-dot" style="background:var(--border-hover)"></span>${total} 總計</div>`;
+    <div class="stat stat-btn" onclick="jumpToStatus('green')" title="查看高意願聯繫人"><span class="stat-dot" style="background:var(--green)"></span>${green} 高意願</div>
+    <div class="stat stat-btn" onclick="jumpToStatus('yellow')" title="查看觀察中聯繫人"><span class="stat-dot" style="background:var(--yellow)"></span>${yellow} 觀察中</div>
+    <div class="stat stat-btn" onclick="jumpToStatus('red')" title="查看冷淡聯繫人"><span class="stat-dot" style="background:var(--red)"></span>${red} 冷淡</div>
+    <div class="stat stat-btn" onclick="jumpToStatus(null)" title="查看全部聯繫人"><span class="stat-dot" style="background:var(--border-hover)"></span>${total} 總計</div>`;
+}
+
+function jumpToStatus(status){
+  crmStatusFilter=status;
+  switchPage('crm');
+  setCrmView('status');
 }
 
 /* ═══════════════════════════════════════
@@ -2427,6 +2431,7 @@ function deleteSale(id){
    CRM VIEW MODES
 ══════════════════════════════════════ */
 let crmView='tree'; // 'tree'|'region'|'status'|'contact'
+let crmStatusFilter=null; // null=全部, 'green'|'yellow'|'red'|'gray'
 let crmSortAsc=true;
 
 function setCrmView(v){
@@ -2477,7 +2482,8 @@ function renderCrmListView(){
     }));
   } else if(crmView==='status'){
     const order=crmSortAsc?STATUS_ORDER_LIST:[...STATUS_ORDER_LIST].reverse();
-    groups=order.map(s=>({
+    const filteredOrder=crmStatusFilter?order.filter(s=>s===crmStatusFilter):order;
+    groups=filteredOrder.map(s=>({
       label:STATUS_LABELS_LIST[s]||s,
       items:nonRoot.filter(n=>n.status===s)
     }));
@@ -3255,11 +3261,12 @@ const THEMES = [
   { id:'light-warm', label:'暖色',      icon:'🌤' },
   { id:'sage-gold',  label:'清新金綠',   icon:'🛫'  },
   { id:'impact',     label:'Impact',    icon:'⚡'  },
+  { id:'neuo',       label:'浮凸 2.5D',  icon:'🪨'  },
 ];
 function applyTheme(id){
   document.documentElement.setAttribute('data-theme', id);
   localStorage.setItem(STORE.K.theme, id);
-  const isLight = id==='light'||id==='light-warm'||id==='sage-gold';
+  const isLight = id==='light'||id==='light-warm'||id==='sage-gold'||id==='neuo';
   document.documentElement.style.setProperty('--node-shadow', isLight ? '0 2px 8px rgba(0,0,0,.12)' : '0 2px 8px rgba(0,0,0,.4)');
 }
 function loadTheme(){
