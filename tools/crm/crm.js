@@ -132,6 +132,7 @@ const CALC = {
   // IN: sale{saleType,product,amount,batchby,samerank}, myRate:number  OUT: number
   saleIncome(sale, myRate) {
     if (sale.saleType === 'transfer') return sale.amount;
+    if (sale.saleType === 'bonus') return sale.amount;
     const isBatch = sale.product === 'asst_mgr_pkg' || sale.product === 'manager_pkg';
     if (isBatch && sale.batchby === 'student')
       return sale.amount * Math.max(0, myRate - (BATCH_ANCHORS[sale.product] || 0));
@@ -142,19 +143,21 @@ const CALC = {
   // OUT: {gross, transferTotal, income, tax, net, newCount, totalCount, sorted}
   monthSummary(salesData, myRate, monthPrefix) {
     const ms       = salesData.filter(s => s.date && s.date.startsWith(monthPrefix));
-    const newSales = ms.filter(s => s.saleType !== 'transfer');
+    const newSales = ms.filter(s => s.saleType === 'new');
     const transfers= ms.filter(s => s.saleType === 'transfer');
+    const bonuses  = ms.filter(s => s.saleType === 'bonus');
     const gross        = newSales.reduce((a,s) => a + s.amount, 0);
     const transferTotal= transfers.reduce((a,s) => a + s.amount, 0);
+    const bonusTotal   = bonuses.reduce((a,s) => a + s.amount, 0);
     const income = ms.reduce((a,s) => a + CALC.saleIncome(s, myRate), 0);
     const tax    = income * SALES_TAX;
     const net    = income - tax;
     const sorted = [...ms].sort((a,b) => b.date.localeCompare(a.date));
-    return { gross, transferTotal, income, tax, net, newCount: newSales.length, totalCount: ms.length, sorted };
+    return { gross, transferTotal, bonusTotal, income, tax, net, newCount: newSales.length, bonusCount: bonuses.length, totalCount: ms.length, sorted };
   },
   // IN: dailyReports{}, monthKey "2026-03"  OUT: {invite,calls,forms,followup,close}
   monthActuals(dailyReports, monthKey) {
-    const t = { invite:0, calls:0, forms:0, followup:0, close:0 };
+    const t = { invite:0, calls:0, forms:0, followup:0, close:0, consult:0 };
     Object.entries(dailyReports).forEach(([date,r]) => {
       if (date.startsWith(monthKey)) {
         t.invite   += (r['act-invite']   || 0);
@@ -162,6 +165,7 @@ const CALC = {
         t.forms    += (r['act-forms']    || 0);
         t.followup += (r['act-followup'] || 0);
         t.close    += (r['act-close']    || 0);
+        t.consult  += (r['act-consult']  || 0);
       }
     });
     return t;
@@ -175,6 +179,7 @@ const CALC = {
       { k:'forms',    label:'問卷', goalK:'mg-forms'    },
       { k:'followup', label:'跟進', goalK:'mg-followup' },
       { k:'close',    label:'成交', goalK:'mg-close'    },
+      { k:'consult',  label:'協談', goalK:'mg-consult'  },
     ].map(d => {
       const goal   = goals[d.goalK] || 0;
       const actual = actuals[d.k]   || 0;
@@ -212,6 +217,9 @@ const STORE = {
     theme:               'crm-theme',
     shortcuts:           'crm-shortcuts',
     docs:                'crm-docs',
+    cmdMode:             'crm-cmd-mode',
+    cmdWhite:            'crm-cmd-white',
+    cmdBlack:            'crm-cmd-black',
     profileRank:         'crm-profile-rank',
     obsidianPath:        'crm-obsidian-path',
     aiProvider:          'crm-ai-provider',
@@ -228,9 +236,53 @@ const STORE = {
   saveMonthlySalesTargets() { localStorage.setItem(STORE.K.monthlySalesTargets, JSON.stringify(monthlySalesTargets)); },
   saveShortcuts()           { localStorage.setItem(STORE.K.shortcuts,           JSON.stringify(sk)); },
   saveDocs()                { localStorage.setItem(STORE.K.docs,                JSON.stringify(docsData)); },
+  saveCmd()                 { localStorage.setItem(STORE.K.cmdMode, CMD.mode); localStorage.setItem(STORE.K.cmdWhite, JSON.stringify([...CMD.white])); localStorage.setItem(STORE.K.cmdBlack, JSON.stringify([...CMD.black])); },
   getMyRank()               { return localStorage.getItem(STORE.K.profileRank) || 'director'; },
   getMyRate()               { return RANK_RATES[STORE.getMyRank()] || 0.15; },
 };
+
+const COMMANDS = [
+  {id:'node.add',        label:'新增聯繫人'},
+  {id:'note.add',        label:'新增便條'},
+  {id:'event.open',      label:'開啟/新增活動'},
+  {id:'event.save',      label:'儲存活動'},
+  {id:'event.delete',    label:'刪除活動'},
+  {id:'doc.open',        label:'開啟/新增文件'},
+  {id:'doc.save',        label:'儲存文件'},
+  {id:'doc.delete',      label:'刪除文件'},
+  {id:'sales.open',      label:'開啟/新增成交'},
+  {id:'sales.save',      label:'儲存成交'},
+  {id:'sales.delete',    label:'刪除成交'},
+  {id:'backup.export',   label:'匯出備份'},
+  {id:'backup.import',   label:'匯入備份'},
+  {id:'data.clear',      label:'清除所有資料'},
+];
+const CMD = {
+  mode: localStorage.getItem(STORE.K.cmdMode)||'blacklist',
+  white: new Set(JSON.parse(localStorage.getItem(STORE.K.cmdWhite)||'[]')),
+  black: new Set(JSON.parse(localStorage.getItem(STORE.K.cmdBlack)||'[]')),
+  allowed(id){
+    if(this.black.has(id)) return false;
+    if(this.mode==='whitelist'){
+      if(this.white.size===0) return false;
+      return this.white.has(id);
+    }
+    return true;
+  },
+  setMode(m){ this.mode=(m==='whitelist')?'whitelist':'blacklist'; STORE.saveCmd(); },
+  toggle(id){
+    if(this.mode==='whitelist'){
+      if(this.white.has(id)) this.white.delete(id); else this.white.add(id);
+    } else {
+      if(this.black.has(id)) this.black.delete(id); else this.black.add(id);
+    }
+    STORE.saveCmd();
+  },
+  reset(){ this.mode='blacklist'; this.white=new Set(); this.black=new Set(); STORE.saveCmd(); }
+};
+function setCmdMode(m){ CMD.setMode(m); renderSettingsPage(); toast('指令模式已更新'); }
+function toggleCmd(id){ CMD.toggle(id); renderSettingsPage(); }
+function resetCmdPolicy(){ CMD.reset(); renderSettingsPage(); toast('已恢復預設指令策略'); }
 
 /* ═══════════════════════════════════════
    DEMO DATA
@@ -333,6 +385,8 @@ let _nodeWasMousedDown=false; // true when mousedown landed on a node wrap
 let selId=null;
 let currentPage='crm';
 let clipboard=null;
+// n8n-style connect state
+let isConnecting=false,connectFromId=null,connectTargetId=null,connectPreviewPath=null;
 
 const container=()=>document.getElementById('canvas-container');
 
@@ -494,6 +548,7 @@ function renderNodes(){
           </div>
         </div>
         ${collapseHtml}
+        <button class="node-port-add" title="拖線建立關係" data-id="${n.id}" onclick="event.stopPropagation()" onpointerdown="startConnect(event,'${n.id}')">+</button>
       </div>`;
 
     _attachNodeDrag(wrap, n);
@@ -559,6 +614,13 @@ function drawEdges(){
   }
 }
 
+/* n8n-like connect interactions */
+function toCanvasXY(cx,cy){const r=document.getElementById('canvas-container').getBoundingClientRect();return{x:(cx-r.left-panX)/zoom,y:(cy-r.top-panY)/zoom};}
+function clearConnectHighlight(){document.querySelectorAll('.node-wrap.connect-target').forEach(el=>el.classList.remove('connect-target'));}
+function startConnect(ev,fromId){ev.preventDefault();ev.stopPropagation();if(isDragging)return;isConnecting=true;connectFromId=fromId;connectTargetId=null;const svg=document.getElementById('edges-svg');connectPreviewPath=document.createElementNS('http://www.w3.org/2000/svg','path');connectPreviewPath.setAttribute('stroke','#388bfd');connectPreviewPath.setAttribute('stroke-width','2');connectPreviewPath.setAttribute('fill','none');svg.appendChild(connectPreviewPath);ev.currentTarget.setPointerCapture&&ev.currentTarget.setPointerCapture(ev.pointerId);document.addEventListener('pointermove',onConnectMove);document.addEventListener('pointerup',onConnectEnd);onConnectMove(ev);}
+function onConnectMove(ev){if(!isConnecting||!connectFromId||!connectPreviewPath)return;const from=findNode(connectFromId);const fromEl=document.querySelector(`.node-wrap[data-id="${connectFromId}"]`);if(!from||!fromEl)return;const p1x=from.x+NODE_W;const p1y=from.y+fromEl.offsetHeight/2;const c=toCanvasXY(ev.clientX,ev.clientY);const my=(p1y+c.y)/2;connectPreviewPath.setAttribute('d',`M ${p1x} ${p1y} C ${p1x} ${my}, ${c.x} ${my}, ${c.x} ${c.y}`);clearConnectHighlight();connectTargetId=null;const hit=(ev.target.closest&&ev.target.closest('.node-wrap'))||(document.elementFromPoint(ev.clientX,ev.clientY)?.closest?.('.node-wrap'));if(hit){const tid=hit.dataset.id;if(tid&&tid!==connectFromId){const sub=new Set(gatherSubtree(connectFromId));const tn=findNode(tid);if(!sub.has(tid)&&tn&&tn.nodeType!=='note'){connectTargetId=tid;hit.classList.add('connect-target');}}}}
+function onConnectEnd(ev){if(!isConnecting)return;document.removeEventListener('pointermove',onConnectMove);document.removeEventListener('pointerup',onConnectEnd);if(connectPreviewPath&&connectPreviewPath.parentNode)connectPreviewPath.remove();clearConnectHighlight();const fromId=connectFromId,toId=connectTargetId;isConnecting=false;connectFromId=null;connectTargetId=null;connectPreviewPath=null;if(fromId&&toId){const sub=new Set(gatherSubtree(fromId));if(sub.has(toId)||fromId===toId){toast('不可形成環');return;}const to=findNode(toId);if(!to)return;to.parentId=fromId;saveData();renderNodes();selectNode(toId);toast('已建立上下階關係');return;}const c=toCanvasXY(ev.clientX,ev.clientY);const n=newNode();n.parentId=fromId;n.x=c.x-NODE_W/2;n.y=c.y-30;nodes.push(n);saveData();renderNodes();openPanel(n.id);toast('已新增子節點');}
+
 /* ═══════════════════════════════════════
    SELECTION
 ═══════════════════════════════════════ */
@@ -610,6 +672,7 @@ function createNoteNodeAt(cx,cy){
 }
 
 function headerAddNote(){
+  if(!CMD.allowed('note.add')){ toast('此指令已被停用'); return; }
   const c=container();
   const cx=(c.offsetWidth/2-panX)/zoom;
   const cy=(c.offsetHeight/2-panY)/zoom;
@@ -641,6 +704,7 @@ function addChild(parentId){
 }
 
 function headerAddNode(){
+  if(!CMD.allowed('node.add')){ toast('此指令已被停用'); return; }
   if(selId){
     addChild(selId);
   } else {
@@ -1378,6 +1442,7 @@ function renderCalendar(){
 
 const EV_TYPES=['分享會','專場','訓練','二對一'];
 function openEventModal(id,defaultDate){
+  if(!CMD.allowed('event.open')){ toast('此指令已被停用'); return; }
   editingEventId=id||null;
   const ev=id?events.find(e=>e.id===id):null;
   document.getElementById('event-modal-title').textContent=ev?'編輯活動':'新增活動';
@@ -1411,6 +1476,7 @@ function closeEventModal(){
 }
 
 function saveEvent(){
+  if(!CMD.allowed('event.save')){ toast('此指令已被停用'); return; }
   const type=document.getElementById('ev-type').value;
   const participants=[...document.querySelectorAll('#event-modal .ev-pax.selected')].map(el=>el.dataset.nid);
   const ev={
@@ -1436,6 +1502,7 @@ function saveEvent(){
 }
 
 function deleteEvent(id){
+  if(!CMD.allowed('event.delete')){ toast('此指令已被停用'); return; }
   if(!confirm('確定刪除此活動？'))return;
   events=events.filter(e=>e.id!==id);
   localStorage.setItem('crm-events',JSON.stringify(events));
@@ -1621,7 +1688,7 @@ function buildSystemPrompt(personaKey){
   const salesPct=salesTarget>0?Math.round(summary.income/salesTarget*100):0;
   const todayRpt=dailyReports[today]||{};
   const upcoming=events.filter(ev=>ev.date>=today).slice(0,5).map(ev=>`${ev.date} ${ev.title}`);
-  const rankLabels={director:'主任',asst_mgr:'襄理',manager:'經理',shareholder:'店股東',chief:'店長'};
+  const rankLabels={director:'主任',asst_mgr:'襄理',manager:'經理',shop_partner:'店股東',shop_head:'店長'};
 
   return `${persona.rolePrompt}
 
@@ -1827,13 +1894,17 @@ async function sendChat(){
 
       let continueLoop=true;
       while(continueLoop){
-        const res=await fetch('https://api.anthropic.com/v1/messages',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':s.apiKey,
-            'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-          body:JSON.stringify({model:s.model||'claude-3-5-haiku-20241022',
-            max_tokens:1536,system:systemMsg,tools:CRM_TOOLS,messages})
-        });
+        const res = s.apiKey
+          ? await fetch('https://api.anthropic.com/v1/messages',{
+              method:'POST',
+              headers:{'Content-Type':'application/json','x-api-key':s.apiKey,
+                'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+              body:JSON.stringify({model:s.model||'claude-3-5-haiku-20241022',
+                max_tokens:1536,system:systemMsg,tools:CRM_TOOLS,messages})
+            })
+          : await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({provider:'anthropic',body:{model:s.model||'claude-3-5-haiku-20241022',
+                max_tokens:1536,system:systemMsg,tools:CRM_TOOLS,messages}})});
         const d=await res.json();
         if(d.error){chatHistory.push({role:'assistant',content:d.error.message});break;}
 
@@ -1865,10 +1936,14 @@ async function sendChat(){
       const msgs=chatHistory
         .filter(m=>m.role==='user'||m.role==='assistant')
         .map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.content}]}));
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${s.model||'gemini-2.0-flash'}:generateContent?key=${s.apiKey}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:systemMsg}]},contents:msgs})
-      });
+      const res = s.apiKey
+        ? await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${s.model||'gemini-2.0-flash'}:generateContent?key=${s.apiKey}`,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({systemInstruction:{parts:[{text:systemMsg}]},contents:msgs})
+          })
+        : await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({provider:'gemini',body:{model:s.model||'gemini-2.0-flash',
+              systemInstruction:{parts:[{text:systemMsg}]},contents:msgs}})});
       const d=await res.json();
       chatHistory.push({role:'assistant',content:d.candidates?.[0]?.content?.parts?.[0]?.text||d.error?.message||'無回應'});
 
@@ -1879,10 +1954,13 @@ async function sendChat(){
       const msgs=[{role:'system',content:systemMsg},
         ...chatHistory.filter(m=>m.role==='user'||m.role==='assistant')
           .map(m=>({role:m.role,content:m.content}))];
-      const res=await fetch(endpoint,{method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.apiKey}`},
-        body:JSON.stringify({model:s.model,max_tokens:1536,messages:msgs})
-      });
+      const res = (!s.apiKey && endpoint.endsWith('/v1/chat/completions') && s.provider!=='grok' && s.provider!=='custom')
+        ? await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({provider:'openai',body:{model:s.model,max_tokens:1536,messages:msgs}})})
+        : await fetch(endpoint,{method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.apiKey}`},
+            body:JSON.stringify({model:s.model,max_tokens:1536,messages:msgs})
+          });
       const d=await res.json();
       chatHistory.push({role:'assistant',content:d.choices?.[0]?.message?.content||d.error?.message||'無回應'});
     }
@@ -1923,18 +2001,17 @@ function switchPage(page){
    SALES / 業績 PAGE
 ══════════════════════════════════════ */
 const SALES_TAX = 0.1211;
-const TRANSFER_AMOUNT = 75440; // 舊單轉讓固定金額
+const TRANSFER_AMOUNT = 75440;
 const RANK_RATES = {
   director:    0.15, // 主任
   asst_mgr:    0.20, // 襄理
   manager:     0.25, // 經理
-  shareholder: 0.25, // 店股東（同經理）
-  owner35:     0.35, // 店長 35%
-  owner45:     0.45, // 店長 45%
+  shop_partner:0.25, // 店股東
+  shop_head:   0.25, // 店長
 };
 const RANK_LABELS = {
   director:'主任(15%)', asst_mgr:'襄理(20%)', manager:'經理(25%)',
-  shareholder:'店股東(25%)', owner35:'店長(35%)', owner45:'店長(45%)',
+  shop_partner:'店股東(25%)', shop_head:'店長(25%)',
 };
 function getMyRank(){ return STORE.getMyRank(); }
 function getMyRate(){ return STORE.getMyRate(); }
@@ -1956,7 +2033,7 @@ const SALES_PRODUCTS = {
   vip:      { name:'VIP買房服務',price:300000,          color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
   asst_mgr_pkg: { name:'襄理批貨', price:79800*6,       color:'#10b981', bg:'rgba(16,185,129,.12)' },
   manager_pkg:  { name:'經理批貨', price:79800*15,      color:'#ef4444', bg:'rgba(239,68,68,.12)'  },
-  consult:  { name:'協談+',      price:Math.round(79800*0.03), color:'#06b6d4', bg:'rgba(6,182,212,.12)', perPerson:true },
+  consult:  { name:'協談獎金',   price:Math.round(79800*0.03), color:'#06b6d4', bg:'rgba(6,182,212,.12)', perPerson:true, noSamerank:true },
 };
 
 let salesData = JSON.parse(localStorage.getItem(STORE.K.sales)||'[]');
@@ -1969,6 +2046,13 @@ function salesNextMonth(){ salesMonth++; if(salesMonth>11){salesMonth=0;salesYea
 function salesGoToday(){ salesYear=new Date().getFullYear(); salesMonth=new Date().getMonth(); renderSales(); }
 
 function fmtMoney(n){ return 'NT$ '+Math.round(n).toLocaleString('zh-TW'); }
+function parseMoneyText(s){
+  if(s==null) return NaN;
+  const cleaned = String(s).replace(/[^\d.-]/g,'');
+  if(!cleaned) return NaN;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : NaN;
+}
 
 function renderSales(){
   const label = document.getElementById('sales-month-label');
@@ -1979,7 +2063,7 @@ function renderSales(){
   const myRate  = STORE.getMyRate();
   const prefix  = `${salesYear}-${String(salesMonth+1).padStart(2,'0')}`;
   // ── CALC handles all arithmetic ──
-  const { gross, transferTotal, income, tax, net, newCount, totalCount, sorted } =
+  const { gross, transferTotal, bonusTotal, income, tax, net, newCount, bonusCount, totalCount, sorted } =
     CALC.monthSummary(salesData, myRate, prefix);
 
   const body = document.getElementById('sales-body');
@@ -2003,6 +2087,20 @@ function renderSales(){
       <div class="kpi-label">稅後實得</div>
       <div class="kpi-value">${fmtMoney(net)}</div>
       <div class="kpi-sub">${totalCount} 筆成交</div>
+    </div>
+    <div class="kpi-card kpi-bonus">
+      <div class="kpi-label">協談獎金合計</div>
+      <div class="kpi-value">${fmtMoney(bonusTotal)}</div>
+      <div class="kpi-sub">${bonusCount} 筆協談</div>
+      ${(()=>{ // 近7天協談趨勢（金額）
+        const today = new Date();
+        const days = [];
+        for(let i=6;i>=0;i--){ const d=new Date(today); d.setDate(today.getDate()-i); days.push(d.toISOString().slice(0,10)); }
+        const sums = days.map(ds => salesData.filter(s=>s.saleType==='bonus'&&s.date===ds).reduce((a,s)=>a+s.amount,0));
+        const max = Math.max(1,...sums);
+        const bars = sums.map(v=>`<div title="${v?fmtMoney(v):'—'}" style="flex:1;height:${Math.max(2,Math.round(v/max*28))}px;background:${v>0?'var(--accent)':'var(--surface2)'};border:1px solid var(--border);border-bottom:0;border-radius:3px 3px 0 0"></div>`).join('');
+        return `<div style="display:flex;align-items:flex-end;gap:3px;height:30px;margin-top:8px">${bars}</div>`;
+      })()}
     </div>
   </div>`;
 
@@ -2043,14 +2141,14 @@ function renderSales(){
         const rowIncome = CALC.saleIncome(s, myRate);
         const rowNet    = rowIncome * (1 - SALES_TAX);
         const clientNames = (s.clients||[]).map(id=>{ const n=findNode(id); return n?n.name:'—'; }).join('、')||'—';
-        return `<div style="display:grid;grid-template-columns:88px 1fr 110px 100px 100px 90px 32px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        return `<div onclick="openSaleEditModal('${s.id}')" style="display:grid;grid-template-columns:88px 1fr 110px 100px 100px 90px 32px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .1s;cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
           <span>${s.date}</span>
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${clientNames}">${clientNames}</span>
           <span><span class="sale-badge" style="--prod-color:${p.color};--prod-bg:${p.bg}">${p.name}</span></span>
-          <span class="sale-amount">${isTransfer?'—':fmtMoney(s.amount)}</span>
+          <span class="sale-amount">${fmtMoney(s.amount)}</span>
           <span style="font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">${fmtMoney(rowIncome)}</span>
           <span class="sale-net">${fmtMoney(rowNet)}</span>
-          <button class="sale-del" onclick="deleteSale('${s.id}')">✕</button>
+          <button class="sale-del" onclick="event.stopPropagation();deleteSale('${s.id}')">✕</button>
         </div>`;
       }).join('') : '<div class="sale-empty">本月尚無成交記錄</div>'}
     </div>
@@ -2060,8 +2158,37 @@ function renderSales(){
 }
 
 let _editingSaleId = null;
+let _saleManualAmount = false;
+
+function onSaleAmountFocus(){
+  const el=document.getElementById('sale-amount-display'); if(!el) return;
+  const n=parseMoneyText(el.value);
+  if(Number.isFinite(n)) el.value=String(Math.round(n));
+}
+function onSaleAmountBlur(){
+  const el=document.getElementById('sale-amount-display'); if(!el) return;
+  const n=parseMoneyText(el.value);
+  if(Number.isFinite(n)) el.value=fmtMoney(n);
+}
+function onSaleAmountInput(){
+  _saleManualAmount = true;
+  updateSalePreviewFromInputs();
+}
+function getSaleAmountFromInput(){
+  const el=document.getElementById('sale-amount-display'); if(!el) return 0;
+  const n=parseMoneyText(el.value);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+}
+function setSaleAmountToInput(amount){
+  const el=document.getElementById('sale-amount-display'); if(!el) return;
+  el.value = fmtMoney(amount);
+}
+
 function openSaleModal(productId){
+  if(!CMD.allowed('sales.open')){ toast('此指令已被停用'); return; }
   _editingSaleId = null;
+  _saleManualAmount = false;
+  document.getElementById('sale-modal-title-text').textContent='新增成交';
   const isTransfer = productId === 'transfer';
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('sale-date').value = today;
@@ -2088,17 +2215,58 @@ function openSaleModal(productId){
 }
 function closeSaleModal(){ document.getElementById('sale-modal').classList.remove('open'); }
 
+function openSaleEditModal(id){
+  if(!CMD.allowed('sales.open')){ toast('此指令已被停用'); return; }
+  const s = salesData.find(x=>x.id===id);
+  if(!s){ toast('找不到此筆成交'); return; }
+  _editingSaleId = id;
+  _saleManualAmount = true;
+  document.getElementById('sale-modal-title-text').textContent='編輯成交';
+
+  document.getElementById('sale-date').value = s.date || new Date().toISOString().slice(0,10);
+  document.getElementById('sale-notes').value = s.notes || '';
+  document.getElementById('sale-qty').value = String(s.qty || 1);
+
+  const isTransfer = s.saleType === 'transfer';
+  const typeRadios = document.querySelectorAll('input[name="sale-type"]');
+  typeRadios.forEach(r=>{ r.checked = isTransfer ? r.value==='transfer' : r.value==='new'; });
+
+  // 根據職級隱藏批貨選項
+  const productSel = document.getElementById('sale-product');
+  productSel.querySelectorAll('option[value="asst_mgr_pkg"], option[value="manager_pkg"]')
+    .forEach(opt => { opt.style.display = canSeeBatchProduct(opt.value) ? '' : 'none'; });
+
+  if(!isTransfer){
+    document.getElementById('sale-product').value = s.product || 'student';
+    document.querySelectorAll('input[name="sale-batchby"]').forEach(r=>{ r.checked = (r.value === (s.batchby||'self')); });
+    document.querySelectorAll('input[name="sale-samerank"]').forEach(r=>{ r.checked = (r.value === (s.samerank||'self')); });
+  }
+
+  onSaleTypeChange();
+
+  // Render pax tags (with selection)
+  const contactNodes = nodes.filter(n=>n.status!==null&&n.name);
+  const selected = new Set((s.clients||[]).map(String));
+  document.getElementById('sale-pax').innerHTML = contactNodes.length
+    ? contactNodes.map(n=>`<div class="ev-pax${selected.has(String(n.id))?' selected':''}" data-nid="${n.id}" onclick="this.classList.toggle('selected')">
+        <span class="sdot ${n.status||'gray'}"></span>${escHtml(n.name)}</div>`).join('')
+    : '<span style="color:var(--text-muted);font-size:12px">尚無人脈節點</span>';
+
+  setSaleAmountToInput(s.amount || 0);
+  updateSalePreviewFromInputs();
+  document.getElementById('sale-modal').classList.add('open');
+}
+
 function onSaleTypeChange(){
   const isTransfer = document.querySelector('input[name="sale-type"]:checked')?.value === 'transfer';
   document.getElementById('sale-product-group').style.display = isTransfer ? 'none' : '';
   document.getElementById('sale-qty-group').style.display = 'none';
   if(isTransfer){
-    document.getElementById('sale-amount-display').value = fmtMoney(TRANSFER_AMOUNT);
-    const myRate = getMyRate();
-    document.getElementById('sale-tax-preview').textContent = fmtMoney(TRANSFER_AMOUNT * SALES_TAX);
-    document.getElementById('sale-net-preview').textContent = fmtMoney(TRANSFER_AMOUNT * (1-SALES_TAX));
-    document.getElementById('sale-modal-product-badge').textContent='舊單轉讓';
-    document.getElementById('sale-modal-product-badge').style.cssText='background:rgba(249,115,22,.15);color:#f97316';
+    if(!_saleManualAmount) setSaleAmountToInput(TRANSFER_AMOUNT);
+    const badge=document.getElementById('sale-modal-product-badge');
+    badge.textContent='舊單轉讓';
+    badge.style.cssText='background:rgba(249,115,22,.15);color:#f97316';
+    updateSalePreviewFromInputs();
   } else {
     onSaleProductChange();
   }
@@ -2117,72 +2285,99 @@ function onSaleProductChange(){
   // 批貨對象 toggle
   document.getElementById('sale-batchby-group').style.display = isBatch ? '' : 'none';
   // 傘下同階業績 toggle（非批貨才顯示）
-  document.getElementById('sale-samerank-group').style.display = (!isBatch && !p.perPerson) ? '' : 'none';
+  document.getElementById('sale-samerank-group').style.display = (!isBatch && !p.perPerson && !p.noSamerank) ? '' : 'none';
 
-  const amount = p.price * qty;
-  const myRate = getMyRate();
-  let myIncome, incomeLabel;
-
-  if(isBatch){
-    const batchby = document.querySelector('input[name="sale-batchby"]:checked')?.value || 'self';
-    if(batchby === 'student'){
-      const anchor = BATCH_ANCHORS[pid] || 0;
-      const diff = Math.max(0, myRate - anchor);
-      myIncome = amount * diff;
-      const batchLabel = pid==='asst_mgr_pkg'
-        ? `升至襄理 anchor 20%`
-        : `升至經理 anchor 15%`;
-      incomeLabel = `${fmtMoney(myIncome)} (${(myRate*100).toFixed(0)}%−${(anchor*100).toFixed(0)}%=${(diff*100).toFixed(0)}% · ${batchLabel})`;
-    } else {
-      myIncome = amount * myRate;
-      incomeLabel = fmtMoney(myIncome);
-    }
-  } else {
-    const samerank = document.querySelector('input[name="sale-samerank"]:checked')?.value || 'self';
-    if(samerank === 'samerank'){
-      myIncome = amount * 0.01;
-      incomeLabel = `${fmtMoney(myIncome)} (傘下同階 1%)`;
-    } else {
-      myIncome = amount * myRate;
-      incomeLabel = fmtMoney(myIncome);
-    }
-  }
-
-  document.getElementById('sale-amount-display').value = fmtMoney(amount);
-  document.getElementById('sale-income-preview').textContent = incomeLabel;
-  document.getElementById('sale-tax-preview').textContent = fmtMoney(myIncome * SALES_TAX);
-  document.getElementById('sale-net-preview').textContent = fmtMoney(myIncome * (1-SALES_TAX));
+  const autoAmount = p.price * qty;
+  if(!_saleManualAmount) setSaleAmountToInput(autoAmount);
+  updateSalePreviewFromInputs();
   const badge = document.getElementById('sale-modal-product-badge');
   badge.textContent = p.name;
   badge.style.cssText = `background:${p.bg};color:${p.color}`;
 }
 
+function updateSalePreviewFromInputs(){
+  const isTransfer = document.querySelector('input[name="sale-type"]:checked')?.value === 'transfer';
+  const amount = getSaleAmountFromInput();
+  const myRate = getMyRate();
+  let myIncome = 0;
+  let incomeLabel = fmtMoney(0);
+
+  if(isTransfer){
+    myIncome = amount;
+    incomeLabel = fmtMoney(myIncome);
+  } else {
+    const pid = document.getElementById('sale-product').value;
+    const p = SALES_PRODUCTS[pid];
+    if(!p) return;
+    if(pid === 'consult'){ myIncome = amount; incomeLabel = `${fmtMoney(myIncome)} (協談獎金)`; document.getElementById('sale-income-preview').textContent = incomeLabel; document.getElementById('sale-tax-preview').textContent = fmtMoney(myIncome * SALES_TAX); document.getElementById('sale-net-preview').textContent = fmtMoney(myIncome * (1-SALES_TAX)); return; }
+    const isBatch = (pid === 'asst_mgr_pkg' || pid === 'manager_pkg');
+    if(isBatch){
+      const batchby = document.querySelector('input[name="sale-batchby"]:checked')?.value || 'self';
+      if(batchby === 'student'){
+        const anchor = BATCH_ANCHORS[pid] || 0;
+        const diff = Math.max(0, myRate - anchor);
+        myIncome = amount * diff;
+        const batchLabel = pid==='asst_mgr_pkg'
+          ? `升至襄理 anchor 20%`
+          : `升至經理 anchor 15%`;
+        incomeLabel = `${fmtMoney(myIncome)} (${(myRate*100).toFixed(0)}%−${(anchor*100).toFixed(0)}%=${(diff*100).toFixed(0)}% · ${batchLabel})`;
+      } else {
+        myIncome = amount * myRate;
+        incomeLabel = fmtMoney(myIncome);
+      }
+    } else {
+      const samerank = document.querySelector('input[name="sale-samerank"]:checked')?.value || 'self';
+      if(samerank === 'samerank'){
+        myIncome = amount * 0.01;
+        incomeLabel = `${fmtMoney(myIncome)} (傘下同階 1%)`;
+      } else {
+        myIncome = amount * myRate;
+        incomeLabel = fmtMoney(myIncome);
+      }
+    }
+  }
+
+  document.getElementById('sale-income-preview').textContent = incomeLabel;
+  document.getElementById('sale-tax-preview').textContent = fmtMoney(myIncome * SALES_TAX);
+  document.getElementById('sale-net-preview').textContent = fmtMoney(myIncome * (1-SALES_TAX));
+}
+
 function saveSale(){
+  if(!CMD.allowed('sales.save')){ toast('此指令已被停用'); return; }
   const isTransfer = document.querySelector('input[name="sale-type"]:checked')?.value === 'transfer';
   const pid = isTransfer ? 'transfer' : document.getElementById('sale-product').value;
   const p = SALES_PRODUCTS[pid];
   const qty = (!isTransfer && p?.perPerson) ? (parseInt(document.getElementById('sale-qty').value)||1) : 1;
-  const amount = isTransfer ? TRANSFER_AMOUNT : (p?.price||0) * qty;
+  const amount = getSaleAmountFromInput();
   const clients = [...document.querySelectorAll('#sale-pax .ev-pax.selected')].map(el=>el.dataset.nid);
   const date = document.getElementById('sale-date').value;
   if(!date){ toast('請選擇日期'); return; }
+  if(!amount){ toast('請填寫業績金額'); return; }
   const isBatch = (pid === 'asst_mgr_pkg' || pid === 'manager_pkg');
   const batchby = isBatch ? (document.querySelector('input[name="sale-batchby"]:checked')?.value||'self') : 'self';
-  const samerank = (!isBatch && !isTransfer) ? (document.querySelector('input[name="sale-samerank"]:checked')?.value||'self') : 'self';
+  const samerank = (!isBatch && !isTransfer && !p?.noSamerank) ? (document.querySelector('input[name="sale-samerank"]:checked')?.value||'self') : 'self';
+  const saleType = isTransfer ? 'transfer' : (pid==='consult' ? 'bonus' : 'new');
   const sale = {
-    id: uid(), saleType: isTransfer?'transfer':'new',
+    id: _editingSaleId || uid(), saleType,
     product: pid, amount, qty, clients,
     batchby, samerank,
     date, notes: document.getElementById('sale-notes').value,
   };
-  salesData.push(sale);
+  if(_editingSaleId){
+    const idx = salesData.findIndex(x=>x.id===_editingSaleId);
+    if(idx>=0) salesData[idx]=sale;
+    else salesData.push(sale);
+  } else {
+    salesData.push(sale);
+  }
   saveSalesData();
   closeSaleModal();
   renderSales();
-  toast(isTransfer ? '舊單轉讓已記錄' : '新業績成交 🎉');
+  toast(_editingSaleId ? '成交已更新' : (isTransfer ? '舊單轉讓已記錄' : '新業績成交 🎉'));
 }
 
 function deleteSale(id){
+  if(!CMD.allowed('sales.delete')){ toast('此指令已被停用'); return; }
   if(!confirm('確定刪除此筆成交？')) return;
   salesData = salesData.filter(s=>s.id!==id);
   saveSalesData();
@@ -2308,7 +2503,7 @@ function getMonthKey(dateStr){
 function saveMonthlyGoalInputs(){
   const mkey=getMonthKey();
   const goals=monthlyGoals[mkey]||(monthlyGoals[mkey]={});
-  ['mg-invite','mg-calls','mg-forms','mg-followup','mg-close'].forEach(k=>{
+  ['mg-invite','mg-calls','mg-forms','mg-followup','mg-close','mg-consult'].forEach(k=>{
     const el=document.querySelector(`[data-mg="${k}"]`);
     if(el)goals[k]=parseInt(el.value)||0;
   });
@@ -2341,7 +2536,7 @@ function renderMonthlyProgress(){
         <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">實績 ${fmtMoney(sp.income)} · ${sp.pct}%</span>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px">
       ${items.map(it=>`
         <div class="daily-kpi-card${it.full?' exceeded':''}">
           <div class="daily-kpi-label">${it.label}目標</div>
@@ -2386,12 +2581,12 @@ function saveDailyReport(){
   if(!body)return;
   const report=dailyReports[dateStr]||{};
   // Goals
-  ['goal-invite','goal-calls','goal-forms','goal-followup','goal-close'].forEach(k=>{
+  ['goal-invite','goal-calls','goal-forms','goal-followup','goal-close','goal-consult'].forEach(k=>{
     const el=body.querySelector(`[data-daily="${k}"]`);
     if(el)report[k]=parseInt(el.value)||0;
   });
   // Activity
-  ['act-invite','act-calls','act-forms','act-followup','act-close'].forEach(k=>{
+  ['act-invite','act-calls','act-forms','act-followup','act-close','act-consult'].forEach(k=>{
     const el=body.querySelector(`[data-daily="${k}"]`);
     if(el)report[k]=parseInt(el.value)||0;
   });
@@ -2417,6 +2612,7 @@ function renderDailyProgress(){
     {label:'問卷數',actKey:'act-forms',   goalKey:'goal-forms'},
     {label:'跟進數',actKey:'act-followup',goalKey:'goal-followup'},
     {label:'成交數',actKey:'act-close',   goalKey:'goal-close'},
+    {label:'協談數',actKey:'act-consult', goalKey:'goal-consult'},
   ];
   const kpiGrid=document.querySelector('.daily-kpi-grid');
   if(!kpiGrid)return;
@@ -2452,6 +2648,7 @@ function renderDailyPage(){
     {label:'問卷數',  actKey:'act-forms',   goalKey:'goal-forms'},
     {label:'跟進數',  actKey:'act-followup',goalKey:'goal-followup'},
     {label:'成交數',  actKey:'act-close',   goalKey:'goal-close'},
+    {label:'協談數',  actKey:'act-consult', goalKey:'goal-consult'},
   ];
 
   const mkey=getMonthKey(dateStr);
@@ -2494,7 +2691,7 @@ function renderDailyPage(){
       <div class="daily-section-header"><span>🎯 今日目標設定</span></div>
       <div class="daily-section-body">
         <div class="daily-activity-grid">
-          ${[{k:'goal-invite',label:'邀約目標'},{k:'goal-calls',label:'電話目標'},{k:'goal-forms',label:'問卷目標'},{k:'goal-followup',label:'跟進目標'},{k:'goal-close',label:'成交目標'}].map(item=>`
+          ${[{k:'goal-invite',label:'邀約目標'},{k:'goal-calls',label:'電話目標'},{k:'goal-forms',label:'問卷目標'},{k:'goal-followup',label:'跟進目標'},{k:'goal-close',label:'成交目標'},{k:'goal-consult',label:'協談目標'}].map(item=>`
             <div class="daily-act-item">
               <div class="daily-act-label">${item.label}</div>
               <input class="daily-act-input" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}" oninput="renderDailyProgress(this)">
@@ -2508,7 +2705,7 @@ function renderDailyPage(){
       <div class="daily-section-header"><span>📞 今日實績記錄</span></div>
       <div class="daily-section-body">
         <div class="daily-activity-grid">
-          ${[{k:'act-invite',label:'邀約數'},{k:'act-calls',label:'電話數'},{k:'act-forms',label:'問卷數'},{k:'act-followup',label:'跟進數'},{k:'act-close',label:'成交數'}].map(item=>`
+          ${[{k:'act-invite',label:'邀約數'},{k:'act-calls',label:'電話數'},{k:'act-forms',label:'問卷數'},{k:'act-followup',label:'跟進數'},{k:'act-close',label:'成交數'},{k:'act-consult',label:'協談數'}].map(item=>`
             <div class="daily-act-item">
               <div class="daily-act-label">${item.label}</div>
               <input class="daily-act-input" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}">
@@ -2624,6 +2821,7 @@ let _docFileData=null; // base64 of current file in modal
 
 /* ── Modal open/close ── */
 function openDocModal(prefill){
+  if(!CMD.allowed('doc.open')){ toast('此指令已被停用'); return; }
   _docFileData=null;
   document.getElementById('doc-name').value=prefill?.name||'';
   document.getElementById('doc-url').value=prefill?.url||'';
@@ -2734,6 +2932,7 @@ function docsOnDrop(e){
 }
 
 function saveDoc(){
+  if(!CMD.allowed('doc.save')){ toast('此指令已被停用'); return; }
   const name=document.getElementById('doc-name').value.trim();
   if(!name){toast('請輸入文件名稱');return;}
   const type=document.getElementById('doc-type').value;
@@ -2749,6 +2948,7 @@ function saveDoc(){
 }
 
 function deleteDoc(id){
+  if(!CMD.allowed('doc.delete')){ toast('此指令已被停用'); return; }
   if(!confirm('確定刪除此文件？'))return;
   docsData=docsData.filter(d=>d.id!==id);
   saveDocs();renderDocs();toast('已刪除');
@@ -2792,10 +2992,32 @@ function renderSettingsPage(){
       </div>
     </div>`).join('')}
   </div>`;
+  const cm=document.getElementById('cmd-mode-select');
+  if(cm) cm.value=CMD.mode;
+  const cf=document.getElementById('cmd-filter');
+  const q=(cf?.value||'').trim().toLowerCase();
+  const list=document.getElementById('cmd-list');
+  if(list){
+    const rows=COMMANDS.filter(c=>!q||c.label.toLowerCase().includes(q)||c.id.includes(q)).map(c=>{
+      const allowed=CMD.allowed(c.id);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+        <div style="display:flex;flex-direction:column">
+          <div style="font-weight:600;font-size:13px">${c.label}</div>
+          <div style="font-size:11px;color:var(--text-subtle)">${c.id}</div>
+        </div>
+        <label class="cb-item" style="cursor:pointer">
+          <input type="checkbox" ${allowed?'checked':''} onchange="toggleCmd('${c.id}')" style="margin-right:6px">
+          <span>${allowed?'允許':'停用'}</span>
+        </label>
+      </div>`;
+    }).join('');
+    list.innerHTML = rows || `<div style="color:var(--text-muted);font-size:12px">無符合的指令</div>`;
+  }
 }
 
 /* ── Backup (完整備份：全部模組) ── */
 function exportAll(){
+  if(!CMD.allowed('backup.export')){ toast('此指令已被停用'); return; }
   const data={
     version:'crm-v4',
     exportedAt:new Date().toISOString(),
@@ -2819,6 +3041,7 @@ function exportAll(){
 }
 
 function importAll(ev){
+  if(!CMD.allowed('backup.import')){ toast('此指令已被停用'); return; }
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=e=>{
@@ -2840,6 +3063,7 @@ function importAll(ev){
   r.readAsText(f);ev.target.value='';
 }
 function clearAllData(){
+  if(!CMD.allowed('data.clear')){ toast('此指令已被停用'); return; }
   if(!confirm('確定清除所有資料？此操作無法復原。'))return;
   [STORE.K.nodes, STORE.K.events, STORE.K.tasks, STORE.K.chat].forEach(k => localStorage.removeItem(k));
   nodes=[];events=[];tasks=[];chatHistory=[];
@@ -2868,11 +3092,13 @@ const THEMES = [
   { id:'dark-blue',  label:'深藍',      icon:'🌌' },
   { id:'light',      label:'淺色',      icon:'☀️' },
   { id:'light-warm', label:'暖色',      icon:'🌤' },
+  { id:'sage-gold',  label:'清新金綠',   icon:'🛫'  },
+  { id:'impact',     label:'Impact',    icon:'⚡'  },
 ];
 function applyTheme(id){
   document.documentElement.setAttribute('data-theme', id);
   localStorage.setItem(STORE.K.theme, id);
-  const isLight = id==='light'||id==='light-warm';
+  const isLight = id==='light'||id==='light-warm'||id==='sage-gold';
   document.documentElement.style.setProperty('--node-shadow', isLight ? '0 2px 8px rgba(0,0,0,.12)' : '0 2px 8px rgba(0,0,0,.4)');
 }
 function loadTheme(){

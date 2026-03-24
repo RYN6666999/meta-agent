@@ -5,144 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>房多多 — 管理員後台</title>
   <link rel="icon" href="icon.svg">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: #0d1117;
-      color: #c9d1d9;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 1.5rem;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid #21262d;
-    }
-    header img { width: 36px; height: 36px; border-radius: 8px; }
-    header h1 { font-size: 1.1rem; font-weight: 700; color: #e6edf3; }
-    header p  { font-size: .8rem; color: #8b949e; }
-
-    .controls {
-      display: flex;
-      gap: .75rem;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .controls input {
-      padding: .5rem .75rem;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e6edf3;
-      font-size: .9rem;
-      width: 220px;
-    }
-    .controls input:focus { outline: none; border-color: #388bfd; }
-    .btn {
-      padding: .5rem 1.2rem;
-      border: none;
-      border-radius: 8px;
-      font-size: .9rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .btn-primary { background: #238636; color: #fff; }
-    .btn-primary:hover { background: #2ea043; }
-    .btn-danger  { background: transparent; color: #f85149; border: 1px solid #f85149; }
-    .btn-danger:hover  { background: #f851491a; }
-
-    .stat-bar {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .stat {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: .75rem 1.25rem;
-      flex: 1;
-      min-width: 120px;
-    }
-    .stat-val { font-size: 1.6rem; font-weight: 700; color: #388bfd; }
-    .stat-lbl { font-size: .75rem; color: #8b949e; margin-top: 2px; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #161b22;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid #21262d;
-    }
-    thead { background: #21262d; }
-    th {
-      padding: .7rem 1rem;
-      text-align: left;
-      font-size: .78rem;
-      font-weight: 600;
-      color: #8b949e;
-      letter-spacing: .05em;
-      text-transform: uppercase;
-    }
-    td {
-      padding: .7rem 1rem;
-      font-size: .88rem;
-      border-top: 1px solid #21262d;
-    }
-    tr:hover td { background: #1c2128; }
-
-    .rank-badge {
-      display: inline-block;
-      padding: .15rem .55rem;
-      border-radius: 20px;
-      font-size: .75rem;
-      font-weight: 600;
-    }
-    .rank-director     { background: #1f6feb33; color: #58a6ff; }
-    .rank-asst_mgr     { background: #238636 33; color: #3fb950; }
-    .rank-manager      { background: #d2992233; color: #e3b341; }
-    .rank-shop_partner { background: #8957e533; color: #bc8cff; }
-    .rank-shop_head    { background: #f8514933; color: #ff7b72; }
-
-    .ts { color: #8b949e; font-size: .8rem; }
-
-    .empty {
-      text-align: center;
-      padding: 3rem;
-      color: #8b949e;
-      font-size: .9rem;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 3rem;
-      color: #8b949e;
-    }
-
-    .error-msg {
-      background: #f851491a;
-      border: 1px solid #f8514940;
-      border-radius: 8px;
-      padding: .75rem 1rem;
-      color: #ff7b72;
-      margin-bottom: 1rem;
-      font-size: .9rem;
-    }
-
-    /* Refresh indicator */
-    .refresh-info { font-size: .78rem; color: #8b949e; margin-left: auto; }
-  </style>
+  <link rel="stylesheet" href="crm.css">
 </head>
-<body>
-<header>
+<body class="admin-page">
+<header class="admin-header">
   <img src="icon.svg" alt="房多多">
   <div>
     <h1>房多多 管理員後台</h1>
@@ -150,18 +16,18 @@
   </div>
 </header>
 
-<div class="controls">
+<div class="admin-controls">
   <input type="password" id="tokenInput" placeholder="Admin Token" autocomplete="off">
-  <button class="btn btn-primary" onclick="loadData()">載入 / 刷新</button>
+  <button class="btn btn-accent" onclick="loadData()">載入 / 刷新</button>
   <span class="refresh-info" id="lastRefresh"></span>
 </div>
 
 <div id="errorBox"></div>
 
-<div class="stat-bar" id="statBar" style="display:none">
-  <div class="stat"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">登入人數</div></div>
-  <div class="stat"><div class="stat-val" id="statToday">0</div><div class="stat-lbl">今日登入</div></div>
-  <div class="stat"><div class="stat-val" id="statSenior">0</div><div class="stat-lbl">店長及以上</div></div>
+<div class="admin-stat-bar" id="statBar" style="display:none">
+  <div class="admin-stat"><div class="admin-stat-val" id="statTotal">0</div><div class="admin-stat-lbl">登入人數</div></div>
+  <div class="admin-stat"><div class="admin-stat-val" id="statToday">0</div><div class="admin-stat-lbl">今日登入</div></div>
+  <div class="admin-stat"><div class="admin-stat-val" id="statSenior">0</div><div class="admin-stat-lbl">店長及以上</div></div>
 </div>
 
 <div id="tableWrap">
@@ -243,7 +109,7 @@
     }).join('');
 
     document.getElementById('tableWrap').innerHTML = `
-      <table>
+      <table class="admin-table">
         <thead>
           <tr>
             <th>姓名</th>

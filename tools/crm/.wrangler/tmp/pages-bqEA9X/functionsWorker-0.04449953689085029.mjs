@@ -105,7 +105,7 @@ async function onRequestOptions() {
 }
 __name(onRequestOptions, "onRequestOptions");
 
-// ../.wrangler/tmp/pages-rJ9C7Q/functionsRoutes-0.02164222538735161.mjs
+// ../.wrangler/tmp/pages-bqEA9X/functionsRoutes-0.41491694367792054.mjs
 var routes = [
   {
     routePath: "/api/ai",
@@ -624,7 +624,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-ztgcqy/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-qDrq1x/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -656,7 +656,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-ztgcqy/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-qDrq1x/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
@@ -756,4 +756,4 @@ export {
   __INTERNAL_WRANGLER_MIDDLEWARE__,
   middleware_loader_entry_default as default
 };
-//# sourceMappingURL=functionsWorker-0.16946459475081954.mjs.map
+//# sourceMappingURL=functionsWorker-0.04449953689085029.mjs.map
