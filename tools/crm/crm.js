@@ -199,6 +199,16 @@ const CALC = {
   },
 };
 
+/* ── Note color palette ── */
+const NOTE_COLORS=[
+  {id:'yellow',bg:'#1a1600',border:'#4a4200',text:'#e8d87e'},
+  {id:'blue',  bg:'#001526',border:'#003a6e',text:'#7eb8e8'},
+  {id:'green', bg:'#001a06',border:'#00452a',text:'#7ee8a0'},
+  {id:'pink',  bg:'#1a000f',border:'#6e0030',text:'#e87eb8'},
+  {id:'purple',bg:'#0a001a',border:'#42006e',text:'#c07ee8'},
+  {id:'gray',  bg:'#111418',border:'#2c3038',text:'#b0bec5'},
+];
+
 /* ═══════════════════════════════════════
    STORE — Data Layer
    Single source of truth for localStorage keys
@@ -416,7 +426,7 @@ let panStartMX,panStartMY,panStartPX,panStartPY;
 let didMove=false;
 const DRAG_THRESHOLD=4;
 let snapTargetId=null;          // id of node currently highlighted as drop target
-const SNAP_RADIUS=120;          // screen-pixels snap threshold
+const SNAP_RADIUS=60;           // screen-pixels snap threshold
 let isResizingPanel=false,resizeStartX=0,resizeStartW=380;
 let _suppressNextCanvasClick=false;
 let _nodeWasMousedDown=false; // true when mousedown landed on a node wrap
@@ -530,18 +540,21 @@ function renderNodes(){
 
     // ── 純文字便條 ──────────────────────────
     if(n.nodeType==='note'){
+      const nc=NOTE_COLORS.find(c=>c.id===(n.noteColor||'yellow'))||NOTE_COLORS[0];
       wrap.className='node-wrap note-node'+(selId===n.id?' selected':'');
       wrap.innerHTML=`
-        <div class="node-card note-card">
+        <div class="node-card note-card" style="background:${nc.bg};border-color:${nc.border}${selId===n.id?';box-shadow:0 0 0 2px '+nc.text+'55':''}" >
           <div class="node-drag-handle" title="拖曳移動">⠿</div>
-          <div class="note-content"
+          <div class="note-content" style="color:${nc.text}"
                contenteditable="true"
                data-id="${n.id}"
                onblur="saveNoteContent(this)"
                onkeydown="if(event.key==='Escape')this.blur()"
                spellcheck="false">${escHtml(n.content||'').replace(/\n/g,'<br>')}</div>
           <div class="node-footer">
-            <div class="node-meta" style="color:var(--text-muted);font-size:10px">📝 便條</div>
+            <div class="note-color-picker">
+              ${NOTE_COLORS.map(c=>`<div class="note-color-dot${(n.noteColor||'yellow')===c.id?' active':''}" style="background:${c.text}" onclick="setNoteColor('${n.id}','${c.id}');event.stopPropagation()" title="${c.id}"></div>`).join('')}
+            </div>
             <div class="node-actions">
               <button class="act-btn" data-a="add" data-id="${n.id}" title="新增子節點">+</button>
               <button class="act-btn del" data-a="del" data-id="${n.id}" title="刪除">🗑</button>
@@ -709,6 +722,11 @@ function createNoteNodeAt(cx,cy){
     if(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);}
   },50);
   toast('已新增文字便條');
+}
+
+function setNoteColor(id,colorId){
+  const n=findNode(id);if(!n)return;
+  n.noteColor=colorId;saveData();renderNodes();
 }
 
 function headerAddNote(){
@@ -3064,6 +3082,7 @@ function renderSettingsPage(){
       </div>
     </div>`).join('')}
   </div>`;
+  OB_BACKUP.renderStatus();
   const cm=document.getElementById('cmd-mode-select');
   if(cm) cm.value=CMD.mode;
   const cf=document.getElementById('cmd-filter');
@@ -3277,6 +3296,99 @@ function loadTheme(){
 }
 
 
+/* ── Obsidian Auto Backup (File System Access API) ── */
+const OB_BACKUP={
+  INTERVAL_MS:5*60*1000,
+  _timer:null,
+  _dirHandle:null,
+  _idb(mode){
+    return new Promise(res=>{
+      const req=indexedDB.open('crm-backup',1);
+      req.onupgradeneeded=e=>e.target.result.createObjectStore('handles');
+      req.onsuccess=e=>res(e.target.result.transaction('handles',mode).objectStore('handles'));
+      req.onerror=()=>res(null);
+    });
+  },
+  async getHandle(){
+    const store=await this._idb('readonly');
+    if(!store)return null;
+    return new Promise(res=>{const r=store.get('dirHandle');r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);});
+  },
+  async saveHandle(h){
+    const store=await this._idb('readwrite');
+    if(store)store.put(h,'dirHandle');
+  },
+  async checkPermission(h){
+    const opts={mode:'readwrite'};
+    if(await h.queryPermission(opts)==='granted')return true;
+    if(await h.requestPermission(opts)==='granted')return true;
+    return false;
+  },
+  async requestDir(){
+    if(!('showDirectoryPicker' in window)){toast('請改用 Chrome 或 Edge');return;}
+    try{
+      const h=await window.showDirectoryPicker({mode:'readwrite',id:'crm-ob-backup'});
+      this._dirHandle=h;
+      await this.saveHandle(h);
+      await this.backup();
+      this.startTimer();
+      this.renderStatus();
+      toast('✅ 已設定 Obsidian 自動備份，每 5 分鐘寫入一次');
+    }catch(e){if(e.name!=='AbortError')toast('授權失敗：'+e.message);}
+  },
+  async init(){
+    const h=await this.getHandle();
+    if(!h){this.renderStatus();return;}
+    const ok=await this.checkPermission(h);
+    if(ok){this._dirHandle=h;await this.backup();this.startTimer();}
+    this.renderStatus();
+  },
+  startTimer(){
+    if(this._timer)clearInterval(this._timer);
+    this._timer=setInterval(()=>this.backup(),this.INTERVAL_MS);
+  },
+  async backup(){
+    if(!this._dirHandle)return;
+    const today=new Date().toISOString().slice(0,10);
+    const data={version:'crm-v4',backupAt:new Date().toISOString(),nodes,events,tasks,salesData,dailyReports,monthlyGoals,monthlySalesTargets};
+    try{
+      const fh=await this._dirHandle.getFileHandle(`CRM-${today}.json`,{create:true});
+      const w=await fh.createWritable();
+      await w.write(JSON.stringify(data,null,2));
+      await w.close();
+      localStorage.setItem('crm-ob-last-backup',new Date().toISOString());
+      this.renderStatus();
+    }catch(e){console.error('OB backup failed',e);}
+  },
+  async clear(){
+    this._dirHandle=null;
+    if(this._timer){clearInterval(this._timer);this._timer=null;}
+    const store=await this._idb('readwrite');
+    if(store)store.delete('dirHandle');
+    localStorage.removeItem('crm-ob-last-backup');
+    this.renderStatus();
+    toast('已清除自動備份設定');
+  },
+  renderStatus(){
+    const el=document.getElementById('ob-backup-status');
+    const btn=document.getElementById('ob-backup-btn');
+    const clr=document.getElementById('ob-backup-clear');
+    if(!el)return;
+    const last=localStorage.getItem('crm-ob-last-backup');
+    if(this._dirHandle){
+      el.textContent=last?`✅ 上次備份：${new Date(last).toLocaleString('zh-TW')}`:'✅ 已授權，備份中…';
+      el.style.color='var(--green)';
+      if(btn)btn.textContent='🔄 重新選擇資料夾';
+      if(clr)clr.style.display='inline-flex';
+    }else{
+      el.textContent=last?`⚠ 需重新授權（上次：${new Date(last).toLocaleString('zh-TW')}）`:'未設定自動備份';
+      el.style.color='';
+      if(btn)btn.textContent='📁 授權 Obsidian 資料夾';
+      if(clr)clr.style.display='none';
+    }
+  }
+};
+
 function init(){
   loadTheme();
   loadData();
@@ -3335,6 +3447,7 @@ function init(){
 
   updateStats();
   updateAiModelBadge();
+  OB_BACKUP.init();
 }
 
 document.addEventListener('DOMContentLoaded',init);

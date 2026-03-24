@@ -431,6 +431,18 @@
       <div id="obsidian-status" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
     </div>
 
+    <!-- Obsidian Auto Backup -->
+    <div class="settings-card">
+      <div class="settings-card-title">⏱ Obsidian 定時備份</div>
+      <div class="settings-card-desc">每 5 分鐘自動寫入今日備份到指定資料夾。每天一個檔案（CRM-YYYY-MM-DD.json），可逆向還原任意日期資料。</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-accent" id="ob-backup-btn" onclick="OB_BACKUP.requestDir()">📁 授權 Obsidian 資料夾</button>
+        <button class="btn" id="ob-backup-clear" style="display:none;color:var(--red)" onclick="OB_BACKUP.clear()">清除設定</button>
+      </div>
+      <div id="ob-backup-status" style="font-size:11px;color:var(--text-muted);margin-top:6px">未設定自動備份</div>
+      <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">僅支援 Chrome / Edge。授權後每次開啟頁面會自動申請續期。</div>
+    </div>
+
     <!-- Backup -->
     <div class="settings-card">
       <div class="settings-card-title">💾 備份與還原</div>
