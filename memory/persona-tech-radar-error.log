@@ -22,3 +22,7 @@ Traceback (most recent call last):
   File "/Users/ryan/meta-agent/scripts/persona_tech_radar.py", line 14, in <module>
     from common.status_store import load_status, save_status
 ModuleNotFoundError: No module named 'common'
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/persona_tech_radar.py", line 14, in <module>
+    from common.status_store import load_status, save_status
+ModuleNotFoundError: No module named 'common'
