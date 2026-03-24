@@ -940,3 +940,16 @@
   其他變更 "truth-source/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
 
 ---
+
+## 2026-03-25 00:16 | auto-git-score | 分數 130 | 📥 達到閾值（130/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=80），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-03-25-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-25-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/status/swap-monitor.log +10
+
+---
