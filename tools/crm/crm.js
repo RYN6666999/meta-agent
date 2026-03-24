@@ -51,10 +51,10 @@ function migrateOldTree(treeNode,parentId=null,result=[]){
 
 function loadData(){
   try{
-    const raw=localStorage.getItem('crm-v3');
+    const raw=localStorage.getItem(STORE.K.nodes);
     if(raw){nodes=JSON.parse(raw);}
     else{
-      const old=localStorage.getItem('crm-v2');
+      const old=localStorage.getItem('crm-v2'); // legacy migration
       if(old){
         const tree=JSON.parse(old);
         nodes=migrateOldTree(tree);
@@ -64,21 +64,18 @@ function loadData(){
       }
     }
   }catch(e){nodes=buildDemoData();}
-  // Always ensure at least one editable node exists
   if(!nodes||nodes.length===0){
     const starter=newNode('點擊編輯此節點');
     starter.x=200; starter.y=100; starter.parentId=null;
     nodes=[starter];
-    saveData();
+    STORE.saveNodes();
   }
-  try{events=JSON.parse(localStorage.getItem('crm-events')||'[]');}catch(e){events=[];}
-  try{tasks=JSON.parse(localStorage.getItem('crm-tasks')||'[]');}catch(e){tasks=[];}
-  try{chatHistory=JSON.parse(localStorage.getItem('crm-chat')||'[]');}catch(e){chatHistory=[];}
+  try{events=JSON.parse(localStorage.getItem(STORE.K.events)||'[]');}catch(e){events=[];}
+  try{tasks=JSON.parse(localStorage.getItem(STORE.K.tasks)||'[]');}catch(e){tasks=[];}
+  try{chatHistory=JSON.parse(localStorage.getItem(STORE.K.chat)||'[]');}catch(e){chatHistory=[];}
 }
 
-function saveData(){
-  localStorage.setItem('crm-v3',JSON.stringify(nodes));
-}
+function saveData(){ STORE.saveNodes(); }
 
 function findNode(id){return nodes.find(n=>n.id===id)||null;}
 function getChildren(id){return nodes.filter(n=>n.parentId===id);}
@@ -100,6 +97,114 @@ function gatherSubtree(id){
   kids.forEach(c=>gatherSubtree(c.id).forEach(x=>ids.push(x)));
   return ids;
 }
+
+/* ═══════════════════════════════════════
+   CALC — Pure Calculation Layer
+   IN: data objects  OUT: numbers/objects
+   FORBIDDEN: no DOM, no localStorage
+═══════════════════════════════════════ */
+const CALC = {
+  // IN: sale{saleType,product,amount,batchby,samerank}, myRate:number  OUT: number
+  saleIncome(sale, myRate) {
+    if (sale.saleType === 'transfer') return sale.amount;
+    const isBatch = sale.product === 'asst_mgr_pkg' || sale.product === 'manager_pkg';
+    if (isBatch && sale.batchby === 'student')
+      return sale.amount * Math.max(0, myRate - (BATCH_ANCHORS[sale.product] || 0));
+    if (sale.samerank === 'samerank') return sale.amount * 0.01;
+    return sale.amount * myRate;
+  },
+  // IN: salesData[], myRate, monthPrefix "2026-03"
+  // OUT: {gross, transferTotal, income, tax, net, newCount, totalCount, sorted}
+  monthSummary(salesData, myRate, monthPrefix) {
+    const ms       = salesData.filter(s => s.date && s.date.startsWith(monthPrefix));
+    const newSales = ms.filter(s => s.saleType !== 'transfer');
+    const transfers= ms.filter(s => s.saleType === 'transfer');
+    const gross        = newSales.reduce((a,s) => a + s.amount, 0);
+    const transferTotal= transfers.reduce((a,s) => a + s.amount, 0);
+    const income = ms.reduce((a,s) => a + CALC.saleIncome(s, myRate), 0);
+    const tax    = income * SALES_TAX;
+    const net    = income - tax;
+    const sorted = [...ms].sort((a,b) => b.date.localeCompare(a.date));
+    return { gross, transferTotal, income, tax, net, newCount: newSales.length, totalCount: ms.length, sorted };
+  },
+  // IN: dailyReports{}, monthKey "2026-03"  OUT: {invite,calls,forms,followup,close}
+  monthActuals(dailyReports, monthKey) {
+    const t = { invite:0, calls:0, forms:0, followup:0, close:0 };
+    Object.entries(dailyReports).forEach(([date,r]) => {
+      if (date.startsWith(monthKey)) {
+        t.invite   += (r['act-invite']   || 0);
+        t.calls    += (r['act-calls']    || 0);
+        t.forms    += (r['act-forms']    || 0);
+        t.followup += (r['act-followup'] || 0);
+        t.close    += (r['act-close']    || 0);
+      }
+    });
+    return t;
+  },
+  // IN: actuals{}, goals{'mg-invite':n,...}
+  // OUT: [{k, label, goalK, actual, goal, pct, full}]
+  progressItems(actuals, goals) {
+    return [
+      { k:'invite',   label:'邀約', goalK:'mg-invite'   },
+      { k:'calls',    label:'電話', goalK:'mg-calls'    },
+      { k:'forms',    label:'問卷', goalK:'mg-forms'    },
+      { k:'followup', label:'跟進', goalK:'mg-followup' },
+      { k:'close',    label:'成交', goalK:'mg-close'    },
+    ].map(d => {
+      const goal   = goals[d.goalK] || 0;
+      const actual = actuals[d.k]   || 0;
+      const pct    = goal ? Math.min(100, Math.round(actual / goal * 100)) : 0;
+      const full   = goal > 0 && actual >= goal;
+      return { ...d, actual, goal, pct, full };
+    });
+  },
+  // IN: salesData[], myRate, monthPrefix, salesTarget  OUT: {income, pct, full}
+  salesProgress(salesData, myRate, monthPrefix, salesTarget) {
+    const income = salesData
+      .filter(s => s.date && s.date.startsWith(monthPrefix))
+      .reduce((a,s) => a + CALC.saleIncome(s, myRate), 0);
+    const pct  = salesTarget ? Math.min(100, Math.round(income / salesTarget * 100)) : 0;
+    const full = salesTarget > 0 && income >= salesTarget;
+    return { income, pct, full };
+  },
+};
+
+/* ═══════════════════════════════════════
+   STORE — Data Layer
+   Single source of truth for localStorage keys
+   FORBIDDEN: no DOM, no calculations
+═══════════════════════════════════════ */
+const STORE = {
+  K: {
+    nodes:               'crm-v3',
+    events:              'crm-events',
+    tasks:               'crm-tasks',
+    chat:                'crm-chat',
+    sales:               'crm-sales',
+    dailyReports:        'crm-daily-reports',
+    monthlyGoals:        'crm-monthly-goals',
+    monthlySalesTargets: 'crm-monthly-sales-targets',
+    theme:               'crm-theme',
+    shortcuts:           'crm-shortcuts',
+    docs:                'crm-docs',
+    profileRank:         'crm-profile-rank',
+    obsidianPath:        'crm-obsidian-path',
+    aiProvider:          'crm-ai-provider',
+    aiModel:             'crm-ai-model',
+    apiKey:              'crm-apikey',
+    aiEndpoint:          'crm-ai-endpoint',
+  },
+  saveNodes()               { localStorage.setItem(STORE.K.nodes,               JSON.stringify(nodes)); },
+  saveEvents()              { localStorage.setItem(STORE.K.events,              JSON.stringify(events)); },
+  saveSales()               { localStorage.setItem(STORE.K.sales,               JSON.stringify(salesData)); },
+  saveDailyReports()        { localStorage.setItem(STORE.K.dailyReports,        JSON.stringify(dailyReports)); },
+  saveMonthlyGoals()        { localStorage.setItem(STORE.K.monthlyGoals,        JSON.stringify(monthlyGoals)); },
+  saveMonthlySalesTargets() { localStorage.setItem(STORE.K.monthlySalesTargets, JSON.stringify(monthlySalesTargets)); },
+  saveShortcuts()           { localStorage.setItem(STORE.K.shortcuts,           JSON.stringify(sk)); },
+  saveDocs()                { localStorage.setItem(STORE.K.docs,                JSON.stringify(docsData)); },
+  getMyRank()               { return localStorage.getItem(STORE.K.profileRank) || 'director'; },
+  getMyRate()               { return RANK_RATES[STORE.getMyRank()] || 0.15; },
+};
 
 /* ═══════════════════════════════════════
    DEMO DATA
@@ -643,8 +748,8 @@ const DEFAULT_SHORTCUTS = {
   zoomOut:     { key:'-',       ctrl:true,  label:'縮小 (⌘-)',            desc:'縮小' },
   escape:      { key:'Escape',  ctrl:false, label:'取消選取 (Esc)',        desc:'Esc' },
 };
-let sk = JSON.parse(localStorage.getItem('crm-shortcuts')||'null') || JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
-function saveShortcuts(){ localStorage.setItem('crm-shortcuts',JSON.stringify(sk)); }
+let sk = JSON.parse(localStorage.getItem(STORE.K.shortcuts)||'null') || JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
+function saveShortcuts(){ STORE.saveShortcuts(); }
 function resetShortcuts(){ sk=JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)); saveShortcuts(); renderSkModal(); renderShortcutsHint(); toast('已恢復預設快捷鍵'); }
 
 function matchShortcut(action, e){
@@ -1207,10 +1312,10 @@ const AI_PROVIDERS={
 
 function getAiSettings(){
   return{
-    provider:localStorage.getItem('crm-ai-provider')||'claude',
-    model:localStorage.getItem('crm-ai-model')||'claude-3-5-haiku-20241022',
-    apiKey:localStorage.getItem('crm-apikey')||'',
-    endpoint:localStorage.getItem('crm-ai-endpoint')||''
+    provider:localStorage.getItem(STORE.K.aiProvider)||'claude',
+    model:localStorage.getItem(STORE.K.aiModel)||'claude-3-5-haiku-20241022',
+    apiKey:localStorage.getItem(STORE.K.apiKey)||'',
+    endpoint:localStorage.getItem(STORE.K.aiEndpoint)||''
   };
 }
 
@@ -1219,10 +1324,10 @@ function saveAiSettings(){
   const model=document.getElementById('ai-model-select')?.value||'';
   const apiKey=document.getElementById('ai-apikey-input')?.value||'';
   const endpoint=document.getElementById('ai-custom-endpoint')?.value||'';
-  localStorage.setItem('crm-ai-provider',provider);
-  localStorage.setItem('crm-ai-model',model);
-  localStorage.setItem('crm-apikey',apiKey);
-  localStorage.setItem('crm-ai-endpoint',endpoint);
+  localStorage.setItem(STORE.K.aiProvider, provider);
+  localStorage.setItem(STORE.K.aiModel,    model);
+  localStorage.setItem(STORE.K.apiKey,     apiKey);
+  localStorage.setItem(STORE.K.aiEndpoint, endpoint);
   updateAiModelBadge();
 }
 
@@ -1428,8 +1533,8 @@ const RANK_LABELS = {
   director:'主任(15%)', asst_mgr:'襄理(20%)', manager:'經理(25%)',
   shareholder:'店股東(25%)', owner35:'店長(35%)', owner45:'店長(45%)',
 };
-function getMyRank(){ return localStorage.getItem('crm-profile-rank')||'director'; }
-function getMyRate(){ return RANK_RATES[getMyRank()]||0.15; }
+function getMyRank(){ return STORE.getMyRank(); }
+function getMyRate(){ return STORE.getMyRate(); }
 
 // 批貨 anchor：利潤 = (我的職級% - anchor) × 批貨金額
 // 升至襄理批貨(6×79800)：anchor=20%；升至經理批貨(15×79800)：anchor=15%
@@ -1444,11 +1549,11 @@ const SALES_PRODUCTS = {
   consult:  { name:'協談+',      price:Math.round(79800*0.03), color:'#06b6d4', bg:'rgba(6,182,212,.12)', perPerson:true },
 };
 
-let salesData = JSON.parse(localStorage.getItem('crm-sales')||'[]');
+let salesData = JSON.parse(localStorage.getItem(STORE.K.sales)||'[]');
 let salesYear  = new Date().getFullYear();
 let salesMonth = new Date().getMonth(); // 0-based
 
-function saveSalesData(){ localStorage.setItem('crm-sales', JSON.stringify(salesData)); }
+function saveSalesData(){ STORE.saveSales(); }
 function salesPrevMonth(){ salesMonth--; if(salesMonth<0){salesMonth=11;salesYear--;} renderSales(); }
 function salesNextMonth(){ salesMonth++; if(salesMonth>11){salesMonth=0;salesYear++;} renderSales(); }
 function salesGoToday(){ salesYear=new Date().getFullYear(); salesMonth=new Date().getMonth(); renderSales(); }
@@ -1461,52 +1566,36 @@ function renderSales(){
   const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   label.textContent = `${salesYear} 年 ${MONTHS[salesMonth]}`;
 
-  const prefix = `${salesYear}-${String(salesMonth+1).padStart(2,'0')}`;
-  const monthSales = salesData.filter(s => s.date && s.date.startsWith(prefix));
-
-  // 分類計算
-  const myRate = getMyRate();
-  const newSales     = monthSales.filter(s=>s.saleType!=='transfer');
-  const transfers    = monthSales.filter(s=>s.saleType==='transfer');
-  const newGross     = newSales.reduce((a,s)=>a+s.amount,0);
-  const transferTotal= transfers.reduce((a,s)=>a+s.amount,0);
-  const myIncome     = newSales.reduce((a,s)=>{
-    const isBatch = (s.product==='asst_mgr_pkg'||s.product==='manager_pkg');
-    if(isBatch && s.batchby==='student'){
-      const anchor = BATCH_ANCHORS[s.product]||0;
-      return a + s.amount * Math.max(0, myRate - anchor);
-    }
-    if(s.samerank==='samerank') return a + s.amount * 0.01;
-    return a + s.amount * myRate;
-  },0) + transferTotal;
-  const incomeTax    = myIncome * SALES_TAX;
-  const netIncome    = myIncome - incomeTax;
+  const myRate  = STORE.getMyRate();
+  const prefix  = `${salesYear}-${String(salesMonth+1).padStart(2,'0')}`;
+  // ── CALC handles all arithmetic ──
+  const { gross, transferTotal, income, tax, net, newCount, totalCount, sorted } =
+    CALC.monthSummary(salesData, myRate, prefix);
 
   const body = document.getElementById('sales-body');
   if(!body) return;
 
-  // KPI cards
-  const rankLabel = RANK_LABELS[getMyRank()]||'主任(15%)';
+  const rankLabel = RANK_LABELS[STORE.getMyRank()] || '主任(15%)';
+
   const kpiHtml = `
   <div class="kpi-bar">
     <div class="kpi-card kpi-total">
       <div class="kpi-label">業績量（新業績）</div>
-      <div class="kpi-value">${fmtMoney(newGross)}</div>
-      <div class="kpi-sub">${newSales.length} 筆 · 舊單轉讓 ${fmtMoney(transferTotal)}</div>
+      <div class="kpi-value">${fmtMoney(gross)}</div>
+      <div class="kpi-sub">${newCount} 筆 · 舊單轉讓 ${fmtMoney(transferTotal)}</div>
     </div>
     <div class="kpi-card kpi-net">
       <div class="kpi-label">我的所得 <span style="font-size:10px;font-weight:400">${rankLabel}</span></div>
-      <div class="kpi-value">${fmtMoney(myIncome)}</div>
-      <div class="kpi-sub">稅金 ${fmtMoney(incomeTax)}</div>
+      <div class="kpi-value">${fmtMoney(income)}</div>
+      <div class="kpi-sub">稅金 ${fmtMoney(tax)}</div>
     </div>
     <div class="kpi-card kpi-count">
       <div class="kpi-label">稅後實得</div>
-      <div class="kpi-value">${fmtMoney(netIncome)}</div>
-      <div class="kpi-sub">${monthSales.length} 筆成交</div>
+      <div class="kpi-value">${fmtMoney(net)}</div>
+      <div class="kpi-sub">${totalCount} 筆成交</div>
     </div>
   </div>`;
 
-  // 舊單轉讓快速按鈕 + 產品卡片
   const prodHtml = `
   <div>
     <div class="prod-section-title">快速新增成交</div>
@@ -1529,8 +1618,6 @@ function renderSales(){
     </div>
   </div>`;
 
-  // Sales log — 7 columns now (add 所得 column)
-  const sorted = [...monthSales].sort((a,b)=>b.date.localeCompare(a.date));
   const logHtml = `
   <div>
     <div class="prod-section-title">成交記錄</div>
@@ -1543,20 +1630,16 @@ function renderSales(){
         const p = isTransfer
           ? {name:'舊單轉讓',color:'#f97316',bg:'rgba(249,115,22,.12)'}
           : (SALES_PRODUCTS[s.product]||{name:s.product,color:'var(--accent)',bg:'var(--surface2)'});
-        const isBatch = !isTransfer && (s.product==='asst_mgr_pkg'||s.product==='manager_pkg');
-        const income = isTransfer ? s.amount
-          : (isBatch && s.batchby==='student') ? s.amount * Math.max(0, myRate-(BATCH_ANCHORS[s.product]||0))
-          : s.samerank==='samerank' ? s.amount * 0.01
-          : s.amount * myRate;
-        const net    = income * (1-SALES_TAX);
+        const rowIncome = CALC.saleIncome(s, myRate);
+        const rowNet    = rowIncome * (1 - SALES_TAX);
         const clientNames = (s.clients||[]).map(id=>{ const n=findNode(id); return n?n.name:'—'; }).join('、')||'—';
         return `<div style="display:grid;grid-template-columns:88px 1fr 110px 100px 100px 90px 32px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
           <span>${s.date}</span>
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${clientNames}">${clientNames}</span>
           <span><span class="sale-badge" style="--prod-color:${p.color};--prod-bg:${p.bg}">${p.name}</span></span>
           <span class="sale-amount">${isTransfer?'—':fmtMoney(s.amount)}</span>
-          <span style="font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">${fmtMoney(income)}</span>
-          <span class="sale-net">${fmtMoney(net)}</span>
+          <span style="font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">${fmtMoney(rowIncome)}</span>
+          <span class="sale-net">${fmtMoney(rowNet)}</span>
           <button class="sale-del" onclick="deleteSale('${s.id}')">✕</button>
         </div>`;
       }).join('') : '<div class="sale-empty">本月尚無成交記錄</div>'}
@@ -1782,13 +1865,13 @@ function renderCrmListView(){
 /* ══════════════════════════════════════
    DAILY REPORT PAGE
 ══════════════════════════════════════ */
-let dailyReports=JSON.parse(localStorage.getItem('crm-daily-reports')||'{}');
-let monthlyGoals=JSON.parse(localStorage.getItem('crm-monthly-goals')||'{}');
-let monthlySalesTargets=JSON.parse(localStorage.getItem('crm-monthly-sales-targets')||'{}'); // 獨立 key
+let dailyReports=JSON.parse(localStorage.getItem(STORE.K.dailyReports)||'{}');
+let monthlyGoals=JSON.parse(localStorage.getItem(STORE.K.monthlyGoals)||'{}');
+let monthlySalesTargets=JSON.parse(localStorage.getItem(STORE.K.monthlySalesTargets)||'{}');
 
-function saveDailyReports(){localStorage.setItem('crm-daily-reports',JSON.stringify(dailyReports));}
-function saveMonthlyGoals(){localStorage.setItem('crm-monthly-goals',JSON.stringify(monthlyGoals));}
-function saveMonthlySalesTargets(){localStorage.setItem('crm-monthly-sales-targets',JSON.stringify(monthlySalesTargets));}
+function saveDailyReports(){ STORE.saveDailyReports(); }
+function saveMonthlyGoals(){ STORE.saveMonthlyGoals(); }
+function saveMonthlySalesTargets(){ STORE.saveMonthlySalesTargets(); }
 
 function saveMonthSalesTarget(){
   const mkey=getMonthKey();
@@ -1805,20 +1888,7 @@ function getMonthKey(dateStr){
   return d.slice(0,7); // "2026-03"
 }
 
-function calcMonthActuals(monthKey){
-  // Sum all daily actuals for this month
-  const totals={invite:0,calls:0,forms:0,followup:0,close:0};
-  Object.entries(dailyReports).forEach(([date,r])=>{
-    if(date.startsWith(monthKey)){
-      totals.invite+=(r['act-invite']||0);
-      totals.calls+=(r['act-calls']||0);
-      totals.forms+=(r['act-forms']||0);
-      totals.followup+=(r['act-followup']||0);
-      totals.close+=(r['act-close']||0);
-    }
-  });
-  return totals;
-}
+// calcMonthActuals removed — use CALC.monthActuals(dailyReports, monthKey)
 
 function saveMonthlyGoalInputs(){
   const mkey=getMonthKey();
@@ -1833,68 +1903,44 @@ function saveMonthlyGoalInputs(){
 }
 
 function renderMonthlyProgress(){
-  const mkey=getMonthKey();
-  const goals=monthlyGoals[mkey]||{};
-  const actuals=calcMonthActuals(mkey);
-  const items=[
-    {k:'invite',label:'邀約',goalK:'mg-invite',actual:actuals.invite},
-    {k:'calls', label:'電話',goalK:'mg-calls', actual:actuals.calls},
-    {k:'forms', label:'問卷',goalK:'mg-forms', actual:actuals.forms},
-    {k:'followup',label:'跟進',goalK:'mg-followup',actual:actuals.followup},
-    {k:'close', label:'成交',goalK:'mg-close', actual:actuals.close},
-  ];
-  // 業績目標 (獨立 key: crm-monthly-sales-targets)
-  const salesTarget=monthlySalesTargets[mkey]||0;
-  const prefix=mkey; // "2026-03"
-  const monthActualIncome=salesData.filter(s=>s.date&&s.date.startsWith(prefix)).reduce((a,s)=>{
-    if(s.saleType==='transfer') return a+s.amount;
-    const myRate=getMyRate();
-    const isBatch=(s.product==='asst_mgr_pkg'||s.product==='manager_pkg');
-    if(isBatch&&s.batchby==='student') return a+s.amount*Math.max(0,myRate-(BATCH_ANCHORS[s.product]||0));
-    if(s.samerank==='samerank') return a+s.amount*0.01;
-    return a+s.amount*myRate;
-  },0);
-  const salesPct=salesTarget?Math.min(100,Math.round(monthActualIncome/salesTarget*100)):0;
-  const salesFull=salesTarget&&monthActualIncome>=salesTarget;
+  const mkey  = getMonthKey();
+  const goals = monthlyGoals[mkey] || {};
+  // ── CALC handles all arithmetic ──
+  const actuals = CALC.monthActuals(dailyReports, mkey);
+  const items   = CALC.progressItems(actuals, goals);
+  const sp      = CALC.salesProgress(salesData, STORE.getMyRate(), mkey, monthlySalesTargets[mkey]||0);
 
-  const container=document.getElementById('monthly-goal-body');
-  if(!container)return;
-  container.innerHTML=`
-    <!-- 業績目標 (獨立 key) -->
-    <div class="daily-kpi-card${salesFull?' exceeded':''}" style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px 14px">
+  const container = document.getElementById('monthly-goal-body');
+  if(!container) return;
+  container.innerHTML = `
+    <div class="daily-kpi-card${sp.full?' exceeded':''}" style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px 14px">
       <div style="font-size:13px;font-weight:600;white-space:nowrap">💰 本月業績目標</div>
       <div style="display:flex;align-items:center;gap:6px;flex:1">
         <span style="font-size:12px;color:var(--text-muted)">NT$</span>
-        <input data-mst="mg-sales" type="number" min="0" value="${salesTarget}"
+        <input data-mst="mg-sales" type="number" min="0" value="${monthlySalesTargets[mkey]||0}"
           style="width:110px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 8px;font-size:14px;font-weight:700"
           oninput="saveMonthSalesTarget()">
         <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)">
-          <div style="height:100%;width:${salesPct}%;background:${salesFull?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
+          <div style="height:100%;width:${sp.pct}%;background:${sp.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
         </div>
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">實績 ${fmtMoney(monthActualIncome)} · ${salesPct}%</span>
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">實績 ${fmtMoney(sp.income)} · ${sp.pct}%</span>
       </div>
     </div>
-    <!-- KPI grid -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
-      ${items.map(it=>{
-        const goal=goals[it.goalK]||0;
-        const pct=goal?Math.min(100,Math.round(it.actual/goal*100)):0;
-        const full=goal&&it.actual>=goal;
-        return`<div class="daily-kpi-card${full?' exceeded':''}">
+      ${items.map(it=>`
+        <div class="daily-kpi-card${it.full?' exceeded':''}">
           <div class="daily-kpi-label">${it.label}目標</div>
           <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
-            <input data-mg="${it.goalK}" type="number" min="0" value="${goal}"
+            <input data-mg="${it.goalK}" type="number" min="0" value="${it.goal}"
               style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 6px;font-size:14px;font-weight:700;text-align:center"
               oninput="saveMonthlyGoalInputs()">
           </div>
           <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border);margin-bottom:3px">
-            <div style="height:100%;width:${pct}%;background:${full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
+            <div style="height:100%;width:${it.pct}%;background:${it.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
           </div>
-          <div class="daily-kpi-target">實績 ${it.actual} · ${pct}%</div>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
+          <div class="daily-kpi-target">實績 ${it.actual} · ${it.pct}%</div>
+        </div>`).join('')}
+    </div>`;
 }
 
 function getDailyDateStr(){
@@ -2133,10 +2179,10 @@ function filterDailyFu(q){
 /* ══════════════════════════════════════
    DOCS PAGE
 ══════════════════════════════════════ */
-let docsData=JSON.parse(localStorage.getItem('crm-docs')||'[]');
+let docsData=JSON.parse(localStorage.getItem(STORE.K.docs)||'[]');
 const DOC_ICONS={poster:'🖼',form:'📋',link:'🔗',file:'📄'};
 
-function saveDocs(){localStorage.setItem('crm-docs',JSON.stringify(docsData));}
+function saveDocs(){ STORE.saveDocs(); }
 
 function renderDocs(){
   const grid=document.getElementById('docs-grid');
@@ -2214,12 +2260,12 @@ function deleteDoc(id){
 /* ── Obsidian ── */
 function saveObsidianPath(){
   const p=document.getElementById('obsidian-path').value.trim();
-  localStorage.setItem('crm-obsidian-path',p);
+  localStorage.setItem(STORE.K.obsidianPath, p);
   const s=document.getElementById('obsidian-status');
   if(s)s.textContent=p?`已儲存路徑：${p}`:'';
 }
 function openObsidianVault(){
-  const p=localStorage.getItem('crm-obsidian-path')||'';
+  const p=localStorage.getItem(STORE.K.obsidianPath)||'';
   if(!p){toast('請先設定 Obsidian Vault 路徑');return;}
   window.open('obsidian://open?path='+encodeURIComponent(p),'_blank');
 }
@@ -2228,7 +2274,7 @@ function openObsidianVault(){
 function renderSettingsPage(){
   // Load obsidian path
   const obsEl=document.getElementById('obsidian-path');
-  if(obsEl) obsEl.value=localStorage.getItem('crm-obsidian-path')||'';
+  if(obsEl) obsEl.value=localStorage.getItem(STORE.K.obsidianPath)||'';
   renderAiSettingsCard();
   // Theme grid
   const curTheme=document.documentElement.getAttribute('data-theme')||'dark';
@@ -2277,8 +2323,7 @@ function importAll(ev){
 }
 function clearAllData(){
   if(!confirm('確定清除所有資料？此操作無法復原。'))return;
-  localStorage.removeItem('crm-v3');localStorage.removeItem('crm-events');
-  localStorage.removeItem('crm-tasks');localStorage.removeItem('crm-chat');
+  [STORE.K.nodes, STORE.K.events, STORE.K.tasks, STORE.K.chat].forEach(k => localStorage.removeItem(k));
   nodes=[];events=[];tasks=[];chatHistory=[];
   loadData();renderNodes();renderSettingsPage();
   toast('已清除所有資料');
@@ -2308,14 +2353,12 @@ const THEMES = [
 ];
 function applyTheme(id){
   document.documentElement.setAttribute('data-theme', id);
-  localStorage.setItem('crm-theme', id);
-  // update node card borders for light themes
+  localStorage.setItem(STORE.K.theme, id);
   const isLight = id==='light'||id==='light-warm';
   document.documentElement.style.setProperty('--node-shadow', isLight ? '0 2px 8px rgba(0,0,0,.12)' : '0 2px 8px rgba(0,0,0,.4)');
 }
 function loadTheme(){
-  const t=localStorage.getItem('crm-theme')||'dark';
-  applyTheme(t);
+  applyTheme(localStorage.getItem(STORE.K.theme)||'dark');
 }
 
 
