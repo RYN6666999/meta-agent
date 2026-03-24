@@ -18,6 +18,7 @@ const STATUS_ORDER=['green','yellow','red','gray'];
 function newNode(){
   return{
     id:uid(),parentId:null,x:0,y:0,
+    nodeType:'contact',  // 'contact' | 'note'
     name:'新聯繫人',status:'yellow',collapsed:false,
     info:{
       age:'',zodiac:'',hometown:'',personality:'',interests:'',
@@ -40,6 +41,30 @@ let nodes=[];
 let events=[];
 let tasks=[];
 let chatHistory=[];
+
+/* ═══════════════════════════════════════
+   UNDO STACK（僅 nodes，最多 50 步）
+═══════════════════════════════════════ */
+const UNDO_MAX=50;
+let undoStack=[];
+let _undoRestoring=false;
+
+function pushUndo(){
+  if(_undoRestoring)return;
+  undoStack.push(JSON.stringify(nodes));
+  if(undoStack.length>UNDO_MAX) undoStack.shift();
+}
+
+function undoLast(){
+  if(!undoStack.length){toast('沒有可恢復的動作');return;}
+  _undoRestoring=true;
+  nodes=JSON.parse(undoStack.pop());
+  saveData(); // persist restored state
+  _undoRestoring=false;
+  renderNodes();
+  deselect();
+  toast('↩ 已恢復上一動作');
+}
 
 /* ── Migration from crm-v2 (recursive tree) ── */
 function migrateOldTree(treeNode,parentId=null,result=[]){
@@ -75,7 +100,7 @@ function loadData(){
   try{chatHistory=JSON.parse(localStorage.getItem(STORE.K.chat)||'[]');}catch(e){chatHistory=[];}
 }
 
-function saveData(){ STORE.saveNodes(); }
+function saveData(){ pushUndo(); STORE.saveNodes(); }
 
 function findNode(id){return nodes.find(n=>n.id===id)||null;}
 function getChildren(id){return nodes.filter(n=>n.parentId===id);}
@@ -196,6 +221,7 @@ const STORE = {
   },
   saveNodes()               { localStorage.setItem(STORE.K.nodes,               JSON.stringify(nodes)); },
   saveEvents()              { localStorage.setItem(STORE.K.events,              JSON.stringify(events)); },
+  saveTasks()               { localStorage.setItem(STORE.K.tasks,               JSON.stringify(tasks)); },
   saveSales()               { localStorage.setItem(STORE.K.sales,               JSON.stringify(salesData)); },
   saveDailyReports()        { localStorage.setItem(STORE.K.dailyReports,        JSON.stringify(dailyReports)); },
   saveMonthlyGoals()        { localStorage.setItem(STORE.K.monthlyGoals,        JSON.stringify(monthlyGoals)); },
@@ -299,6 +325,8 @@ let dragStartPositions=new Map();
 let panStartMX,panStartMY,panStartPX,panStartPY;
 let didMove=false;
 const DRAG_THRESHOLD=4;
+let snapTargetId=null;          // id of node currently highlighted as drop target
+const SNAP_RADIUS=120;          // screen-pixels snap threshold
 let isResizingPanel=false,resizeStartX=0,resizeStartW=380;
 let _suppressNextCanvasClick=false;
 let _nodeWasMousedDown=false; // true when mousedown landed on a node wrap
@@ -347,6 +375,47 @@ function fitView(){
 /* ═══════════════════════════════════════
    RENDER NODES
 ═══════════════════════════════════════ */
+// 共用：為節點 wrap 附加拖曳 + click 事件
+function _attachNodeDrag(wrap, n){
+  // Use Pointer Events so drag works on both mouse and touch/stylus
+  wrap.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    if(e.target.classList.contains('note-content'))return;
+    e.stopPropagation();
+    wrap.setPointerCapture(e.pointerId); // keeps events on this element during drag
+    _nodeWasMousedDown=true;
+    selectNode(n.id);
+    dragId=n.id;
+    dragStartMX=e.clientX;
+    dragStartMY=e.clientY;
+    dragStartPositions=new Map();
+    const subtree=gatherSubtree(n.id);
+    subtree.forEach(sid=>{
+      const sn=findNode(sid);
+      if(sn)dragStartPositions.set(sid,{x:sn.x,y:sn.y});
+    });
+    isDragging=false;
+    didMove=false;
+  });
+  wrap.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(isDragging)return;
+    const a=e.target.closest('[data-a]');
+    if(!a)return;
+    const act=a.dataset.a,id=a.dataset.id;
+    if(act==='open'){openPanel(id);}
+    else if(act==='status'){cycleStatus(id);}
+    else if(act==='add'){addChild(id);}
+    else if(act==='del'){promptDel(id);}
+    else if(act==='collapse'){toggleCollapse(id);}
+  });
+  wrap.addEventListener('dblclick',e=>{
+    e.stopPropagation();
+    if(n.nodeType==='note')return; // note: click on contenteditable directly
+    openPanel(n.id);
+  });
+}
+
 function renderNodes(){
   const layer=document.getElementById('nodes-layer');
   layer.innerHTML='';
@@ -355,27 +424,56 @@ function renderNodes(){
     const isRoot=!n.parentId&&n.status===null;
     const kids=getChildren(n.id);
     const hasKids=kids.length>0;
+
+    const wrap=document.createElement('div');
+    wrap.dataset.id=n.id;
+    wrap.style.cssText=`left:${n.x}px;top:${n.y}px`;
+
+    let collapseHtml='';
+    if(hasKids){
+      collapseHtml=`<button class="collapse-btn" data-a="collapse" data-id="${n.id}">${n.collapsed?'▼ 展開('+kids.length+')':'▲ 收合'}</button>`;
+    }
+
+    // ── 純文字便條 ──────────────────────────
+    if(n.nodeType==='note'){
+      wrap.className='node-wrap note-node'+(selId===n.id?' selected':'');
+      wrap.innerHTML=`
+        <div class="node-card note-card">
+          <div class="node-drag-handle" title="拖曳移動">⠿</div>
+          <div class="note-content"
+               contenteditable="true"
+               data-id="${n.id}"
+               onblur="saveNoteContent(this)"
+               onkeydown="if(event.key==='Escape')this.blur()"
+               spellcheck="false">${escHtml(n.content||'').replace(/\n/g,'<br>')}</div>
+          <div class="node-footer">
+            <div class="node-meta" style="color:var(--text-muted);font-size:10px">📝 便條</div>
+            <div class="node-actions">
+              <button class="act-btn" data-a="add" data-id="${n.id}" title="新增子節點">+</button>
+              <button class="act-btn del" data-a="del" data-id="${n.id}" title="刪除">🗑</button>
+            </div>
+          </div>
+          ${collapseHtml}
+        </div>`;
+      layer.appendChild(wrap);
+      // drag events added below
+      _attachNodeDrag(wrap, n);
+      return; // skip normal card
+    }
+
+    // ── 一般聯繫人節點 ───────────────────────
     const meta=n.info.company||(n.info.tags&&n.info.tags[0])||'';
     const ROLE_MAP={潛在客戶:'role-prospect',轉介紹中心:'role-referral',學員:'role-student',從業人員:'role-agent'};
     const roleHtml=n.info.role?`<div class="node-role-pill ${ROLE_MAP[n.info.role]||''}">${n.info.role}</div>`:'';
     const regionsHtml=(n.info.regions&&n.info.regions.length)?`<div class="node-region-tags">${n.info.regions.map(r=>`<span class="node-region-tag">${r}</span>`).join('')}</div>`:'';
 
-    const wrap=document.createElement('div');
     wrap.className='node-wrap'+(n.status&&!isRoot?' status-'+n.status:'')+(selId===n.id?' selected':'');
-    wrap.dataset.id=n.id;
-    wrap.style.cssText=`left:${n.x}px;top:${n.y}px`;
 
     let statusHtml='';
     if(isRoot){
       statusHtml=`<div class="node-root-pill">根節點</div>`;
     } else {
       statusHtml=`<div class="status-pill" data-a="status" data-id="${n.id}"><span class="status-dot"></span>${STATUS_LABELS[n.status]||''}</div>`;
-    }
-
-    let collapseHtml='';
-    if(hasKids){
-      const visKids=kids.filter(c=>!isHidden(c.id)).length;
-      collapseHtml=`<button class="collapse-btn" data-a="collapse" data-id="${n.id}">${n.collapsed?'▼ 展開('+kids.length+')':'▲ 收合'}</button>`;
     }
 
     wrap.innerHTML=`
@@ -398,46 +496,7 @@ function renderNodes(){
         ${collapseHtml}
       </div>`;
 
-    // Node drag — mousedown on wrap
-    wrap.addEventListener('mousedown',e=>{
-      if(e.button!==0)return;
-      e.stopPropagation();
-      _nodeWasMousedDown=true; // flag: background click should be suppressed
-      // select
-      selectNode(n.id);
-      // start drag
-      dragId=n.id;
-      dragStartMX=e.clientX;
-      dragStartMY=e.clientY;
-      dragStartPositions=new Map();
-      const subtree=gatherSubtree(n.id);
-      subtree.forEach(sid=>{
-        const sn=findNode(sid);
-        if(sn)dragStartPositions.set(sid,{x:sn.x,y:sn.y});
-      });
-      isDragging=false;
-      didMove=false;
-    });
-
-    // Click handlers — always stop propagation so canvas doesn't see it
-    wrap.addEventListener('click',e=>{
-      e.stopPropagation();
-      if(isDragging)return; // ignore click after drag
-      const a=e.target.closest('[data-a]');
-      if(!a)return; // click card body → just keep selection (no panel)
-      const act=a.dataset.a,id=a.dataset.id;
-      if(act==='open'){openPanel(id);}
-      else if(act==='status'){cycleStatus(id);}
-      else if(act==='add'){addChild(id);}
-      else if(act==='del'){promptDel(id);}
-      else if(act==='collapse'){toggleCollapse(id);}
-    });
-    // Double-click card body → open panel
-    wrap.addEventListener('dblclick',e=>{
-      e.stopPropagation();
-      openPanel(n.id);
-    });
-
+    _attachNodeDrag(wrap, n);
     layer.appendChild(wrap);
   });
 
@@ -451,9 +510,12 @@ function renderNodes(){
 function drawEdges(){
   const svg=document.getElementById('edges-svg');
   svg.innerHTML='';
+
+  // Normal edges
   nodes.forEach(n=>{
     if(!n.parentId)return;
     if(isHidden(n.id))return;
+    if(isDragging&&n.id===dragId)return; // skip current drag node's old edge
     const parent=findNode(n.parentId);
     if(!parent||isHidden(parent.id))return;
     if(parent.collapsed)return;
@@ -472,6 +534,29 @@ function drawEdges(){
     path.setAttribute('fill','none');
     svg.appendChild(path);
   });
+
+  // Snap preview edge (dashed, animated)
+  if(isDragging&&dragId&&snapTargetId){
+    const dn=findNode(dragId);
+    const sn=findNode(snapTargetId);
+    const snEl=document.querySelector(`.node-wrap[data-id="${snapTargetId}"]`);
+    if(dn&&sn&&snEl){
+      const px=sn.x+NODE_W/2;
+      const py=sn.y+snEl.offsetHeight;
+      const cx=dn.x+NODE_W/2;
+      const cy=dn.y;
+      const my=(py+cy)/2;
+      const preview=document.createElementNS('http://www.w3.org/2000/svg','path');
+      preview.setAttribute('d',`M ${px} ${py} C ${px} ${my}, ${cx} ${my}, ${cx} ${cy}`);
+      preview.setAttribute('stroke','#388bfd');
+      preview.setAttribute('stroke-width','2.5');
+      preview.setAttribute('stroke-dasharray','8 4');
+      preview.setAttribute('fill','none');
+      preview.setAttribute('opacity','0.85');
+      preview.classList.add('snap-preview-edge');
+      svg.appendChild(preview);
+    }
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -504,6 +589,39 @@ function createNodeAt(cx,cy){
   selectNode(n.id);
   openPanel(n.id);
   toast('已新增節點 — 點擊姓名編輯');
+}
+
+function createNoteNodeAt(cx,cy){
+  const n={
+    id:uid(),parentId:null,x:cx-NODE_W/2,y:cy-30,
+    nodeType:'note',name:'便條',status:null,collapsed:false,
+    content:'',info:{}
+  };
+  nodes.push(n);
+  saveData();
+  renderNodes();
+  selectNode(n.id);
+  // Focus the note content for immediate editing
+  setTimeout(()=>{
+    const el=document.querySelector(`.node-wrap[data-id="${n.id}"] .note-content`);
+    if(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);}
+  },50);
+  toast('已新增文字便條');
+}
+
+function headerAddNote(){
+  const c=container();
+  const cx=(c.offsetWidth/2-panX)/zoom;
+  const cy=(c.offsetHeight/2-panY)/zoom;
+  createNoteNodeAt(cx,cy);
+}
+
+function saveNoteContent(el){
+  const id=el.dataset.id;
+  const n=findNode(id);
+  if(!n)return;
+  n.content=el.innerText.trim();
+  saveData();
 }
 
 function addChild(parentId){
@@ -618,17 +736,16 @@ function initCanvas(){
   // Canvas background click/pan detection
   // Use separate flags so pan-drag doesn't block future clicks
   let canvasPanMoved=false;
-  cont.addEventListener('mousedown',e=>{
-    if(e.button!==0)return;
-    // Only start pan when clicking the background (not on a node)
-    // Node wraps stopPropagation on mousedown, so if we get here it's background
+  cont.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    // Only start pan when clicking the background (node wraps stopPropagation)
     isPanning=true;
     canvasPanMoved=false;
     panStartMX=e.clientX;panStartMY=e.clientY;
     panStartPX=panX;panStartPY=panY;
     cont.style.cursor='grabbing';
   });
-  // Canvas click = deselect only (node creation via toolbar/shortcut only)
+  // Canvas click = deselect only
   cont.addEventListener('click',e=>{
     if(_suppressNextCanvasClick){_suppressNextCanvasClick=false;return;}
     if(canvasPanMoved)return;
@@ -636,12 +753,16 @@ function initCanvas(){
     closePanel();
   });
 
-  // Global mousemove
-  document.addEventListener('mousemove',e=>{
+  // Global pointermove (covers mouse + touch + stylus)
+  document.addEventListener('pointermove',e=>{
     if(dragId!==null){
       const dx=e.clientX-dragStartMX;
       const dy=e.clientY-dragStartMY;
-      if(!isDragging&&Math.hypot(dx,dy)>DRAG_THRESHOLD){isDragging=true;didMove=true;}
+      if(!isDragging&&Math.hypot(dx,dy)>DRAG_THRESHOLD){
+        isDragging=true;didMove=true;
+        // Apply floating class to the dragged wrap
+        document.querySelector(`.node-wrap[data-id="${dragId}"]`)?.classList.add('dragging');
+      }
       if(isDragging){
         dragStartPositions.forEach((pos,id)=>{
           const dn=findNode(id);
@@ -652,6 +773,29 @@ function initCanvas(){
             if(el){el.style.left=dn.x+'px';el.style.top=dn.y+'px';}
           }
         });
+
+        // ── Snap-target detection ──────────────────
+        const dn=findNode(dragId);
+        if(dn){
+          const subtree=gatherSubtree(dragId);
+          const snapR=SNAP_RADIUS/zoom; // threshold in canvas units
+          const dragCX=dn.x+NODE_W/2;
+          const dragCY=dn.y+60;
+          let bestId=null,bestDist=snapR;
+          nodes.forEach(cand=>{
+            if(subtree.includes(cand.id))return;
+            const candCX=cand.x+NODE_W/2;
+            const candCY=cand.y+60;
+            const dist=Math.hypot(dragCX-candCX,dragCY-candCY);
+            if(dist<bestDist){bestDist=dist;bestId=cand.id;}
+          });
+          if(snapTargetId!==bestId){
+            if(snapTargetId)document.querySelector(`.node-wrap[data-id="${snapTargetId}"]`)?.classList.remove('snap-target');
+            snapTargetId=bestId;
+            if(snapTargetId)document.querySelector(`.node-wrap[data-id="${snapTargetId}"]`)?.classList.add('snap-target');
+          }
+        }
+
         drawEdges();
       }
       return;
@@ -665,8 +809,8 @@ function initCanvas(){
     }
   });
 
-  // Global mouseup
-  document.addEventListener('mouseup',e=>{
+  // Global pointerup (covers mouse + touch + stylus)
+  document.addEventListener('pointerup',e=>{
     if(isResizingPanel){
       isResizingPanel=false;
       document.body.style.cursor='';
@@ -674,11 +818,26 @@ function initCanvas(){
       return;
     }
     if(dragId!==null){
-      if(isDragging){saveData();}
       const wasDragging=isDragging;
+      // Remove visual drag state
+      document.querySelector(`.node-wrap[data-id="${dragId}"]`)?.classList.remove('dragging');
+      if(isDragging){
+        if(snapTargetId){
+          // ── Reparent to snap target ──────────────
+          const dn=findNode(dragId);
+          if(dn){dn.parentId=snapTargetId;}
+          document.querySelector(`.node-wrap[data-id="${snapTargetId}"]`)?.classList.remove('snap-target');
+          snapTargetId=null;
+          saveData();
+          renderNodes();
+          toast('節點已連接');
+        } else {
+          // Clear any leftover snap highlight
+          if(snapTargetId){document.querySelector(`.node-wrap[data-id="${snapTargetId}"]`)?.classList.remove('snap-target');snapTargetId=null;}
+          saveData();
+        }
+      }
       dragId=null;isDragging=false;
-      // If was dragging a node, the upcoming click event should be suppressed
-      // We flag this via a short-lived guard
       if(wasDragging) _suppressNextCanvasClick=true;
       return;
     }
@@ -818,9 +977,14 @@ document.addEventListener('keydown',e=>{
   // Normal shortcuts
   const tag=e.target.tagName;
   const inInput=tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+  const inContentEditable=e.target.isContentEditable;
+  // Cmd+Z — undo (skip if in contenteditable so text-undo still works)
+  const ctrl=e.ctrlKey||e.metaKey;
+  if(ctrl&&e.key==='z'&&!inContentEditable&&!inInput){
+    e.preventDefault();undoLast();return;
+  }
   if(inInput)return;
   if(currentPage!=='crm')return;
-  const ctrl=e.ctrlKey||e.metaKey;
   if(matchShortcut('copy',e)){e.preventDefault();copySelected();}
   else if(matchShortcut('cut',e)){e.preventDefault();cutSelected();}
   else if(matchShortcut('paste',e)){e.preventDefault();pasteClipboard();}
@@ -1400,12 +1564,205 @@ function updateAiModelBadge(){
 }
 
 /* ═══════════════════════════════════════
-   AI PAGE
+   AI — PERSONA & CONTEXT  (Phase 1)
 ═══════════════════════════════════════ */
+let currentPersona='assistant';
 
+const PERSONA_CONFIG={
+  assistant:{
+    label:'通用助理',
+    rolePrompt:'你是房多多業務智能助理，全方位支援業務員的日常工作。',
+    quickPrompts:['今天要跟進誰？','本月業績狀況如何？','知識庫裡有什麼文件？','最近冷掉的客戶有哪些？']
+  },
+  coach:{
+    label:'跟進教練',
+    rolePrompt:'你是專業業務跟進教練，專注分析客戶心理與關係進展，提供具體話術、破冰策略與最佳跟進時機。',
+    quickPrompts:['幫我想一個高意願客戶的跟進話術','如何重新聯繫冷掉的客戶？','下次拜訪要聊什麼？','如何推進猶豫不決的客戶？']
+  },
+  analyst:{
+    label:'業績分析師',
+    rolePrompt:'你是業績數字分析師，精通佣金計算、業績趨勢、目標達成率分析。用數字說話，找出業績瓶頸並提供改善方向。',
+    quickPrompts:['本月業績卡在哪裡？','我的稅後收入怎麼算？','離目標還差多少？','哪種成交類型最划算？']
+  },
+  strategist:{
+    label:'人脈策略師',
+    rolePrompt:'你是人脈開發策略師，擅長分析人脈樹結構、尋找轉介紹機會、評估網絡廣度與深度，給出最優拓展路徑。',
+    quickPrompts:['我的人脈樹有哪些弱點？','誰最有轉介紹潛力？','如何快速拓展新人脈？','分析我的人脈分布']
+  },
+  secretary:{
+    label:'日報小秘書',
+    rolePrompt:'你是日報填寫助理。用戶口述今天的工作狀況，你負責提取結構化數字（邀約、電訪、表單、追蹤、成交）並整理成日報格式，再詢問確認。你也可以查詢知識庫中的表單與問卷連結。',
+    quickPrompts:['幫我填今天的日報','今天打了10通電話、約到3組','找問卷或表單連結','根據我的目標今天達標了嗎？']
+  }
+};
+
+function buildSystemPrompt(personaKey){
+  const persona=PERSONA_CONFIG[personaKey||'assistant'];
+  const login=JSON.parse(localStorage.getItem('crm-login')||'{}');
+  const myRank=STORE.getMyRank();
+  const myRate=STORE.getMyRate();
+  const now=new Date();
+  const today=now.toISOString().slice(0,10);
+  const monthPrefix=today.slice(0,7);
+  const daysLeft=new Date(now.getFullYear(),now.getMonth()+1,0).getDate()-now.getDate();
+
+  const contactNodes=nodes.filter(n=>n.parentId!==null);
+  const green=contactNodes.filter(n=>n.status==='green');
+  const yellow=contactNodes.filter(n=>n.status==='yellow');
+  const red=contactNodes.filter(n=>n.status==='red');
+  const stale=contactNodes.filter(n=>{
+    if(!n.info||!n.info.lastContact)return false;
+    return Math.floor((new Date(today)-new Date(n.info.lastContact))/86400000)>7
+      &&(n.status==='green'||n.status==='yellow');
+  }).map(n=>`${n.name}（${Math.floor((new Date(today)-new Date(n.info.lastContact))/86400000)}天）`);
+
+  const summary=CALC.monthSummary(salesData,myRate,monthPrefix);
+  const salesTarget=monthlySalesTargets[monthPrefix]||300000;
+  const salesPct=salesTarget>0?Math.round(summary.income/salesTarget*100):0;
+  const todayRpt=dailyReports[today]||{};
+  const upcoming=events.filter(ev=>ev.date>=today).slice(0,5).map(ev=>`${ev.date} ${ev.title}`);
+  const rankLabels={director:'主任',asst_mgr:'襄理',manager:'經理',shareholder:'店股東',chief:'店長'};
+
+  return `${persona.rolePrompt}
+
+【使用者】${login.name||'業務員'}｜${rankLabels[myRank]||myRank}｜佣金率 ${(myRate*100).toFixed(0)}%
+【今日】${today}，月底還有 ${daysLeft} 天
+【本月業績】$${summary.income.toLocaleString()} / 目標 $${salesTarget.toLocaleString()}（${salesPct}%）稅後 $${summary.net.toLocaleString()}，成交 ${summary.newCount} 件
+【人脈概況】共 ${contactNodes.length} 人｜🟢高意願 ${green.length}（${green.map(n=>n.name).join('、')||'無'}）｜🟡觀察中 ${yellow.length}｜🔴冷淡 ${red.length}
+⚠ 超過7天未聯繫：${stale.join('、')||'無'}
+【今日活動量】邀約${todayRpt.invite||0} 電訪${todayRpt.calls||0} 表單${todayRpt.forms||0} 追蹤${todayRpt.followup||0} 成交${todayRpt.close||0}
+【近期活動】${upcoming.length?upcoming.join('；'):'無'}
+
+【知識庫文件】${docsData.length?docsData.map(d=>{
+  const icon={poster:'🖼',form:'📋',link:'🔗',file:'📄'}[d.type]||'📄';
+  return `${icon}《${d.name}》${d.url?'→ '+d.url:''}`;
+}).join('　'):'尚無文件'}
+
+【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs
+
+請用繁體中文回答，語氣專業親切，重點條列清晰。`;
+}
+
+/* ── Tool definitions  (Phase 2) ─────────────────── */
+const CRM_TOOLS=[
+  {name:'update_contact_status',
+   description:'更新聯繫人的跟進狀態',
+   input_schema:{type:'object',
+     properties:{
+       name:{type:'string',description:'聯繫人姓名（支援部分匹配）'},
+       status:{type:'string',enum:['green','yellow','red','gray'],
+               description:'green=高意願 yellow=觀察中 red=冷淡 gray=無效'}
+     },required:['name','status']}},
+  {name:'add_note',
+   description:'為聯繫人新增備注（自動加日期前綴）',
+   input_schema:{type:'object',
+     properties:{
+       name:{type:'string',description:'聯繫人姓名'},
+       note:{type:'string',description:'備注內容'}
+     },required:['name','note']}},
+  {name:'log_contact',
+   description:'記錄今日已與聯繫人接觸，lastContact 更新為今天',
+   input_schema:{type:'object',
+     properties:{name:{type:'string',description:'聯繫人姓名（部分匹配）'}},
+     required:['name']}},
+  {name:'get_followup_list',
+   description:'取得超過指定天數未聯繫的高/中意願客戶清單',
+   input_schema:{type:'object',
+     properties:{days:{type:'number',description:'超過幾天，預設7'}}}},
+  {name:'search_docs',
+   description:'搜尋知識庫文件。可依名稱關鍵字篩選，或列出全部文件清單及連結',
+   input_schema:{type:'object',
+     properties:{query:{type:'string',description:'搜尋關鍵字，留空則列出全部'}}}}
+];
+
+function executeToolCall(name,input){
+  const today=new Date().toISOString().slice(0,10);
+  switch(name){
+    case 'update_contact_status':{
+      const n=nodes.find(nd=>nd.name&&nd.name.includes(input.name));
+      if(!n)return{error:`找不到：${input.name}`};
+      n.status=input.status;saveData();renderNodes();
+      const lbl={green:'🟢高意願',yellow:'🟡觀察中',red:'🔴冷淡',gray:'⚪無效'};
+      return{ok:true,msg:`已將「${n.name}」更新為 ${lbl[input.status]||input.status}`};
+    }
+    case 'add_note':{
+      const n=nodes.find(nd=>nd.name&&nd.name.includes(input.name));
+      if(!n)return{error:`找不到：${input.name}`};
+      if(!n.info)n.info={};
+      n.info.notes=(n.info.notes?n.info.notes+'\n':'')+`[${today}] ${input.note}`;
+      saveData();
+      return{ok:true,msg:`已為「${n.name}」新增備注`};
+    }
+    case 'log_contact':{
+      const n=nodes.find(nd=>nd.name&&nd.name.includes(input.name));
+      if(!n)return{error:`找不到：${input.name}`};
+      if(!n.info)n.info={};
+      n.info.lastContact=today;saveData();
+      return{ok:true,msg:`已記錄今日聯繫「${n.name}」`};
+    }
+    case 'get_followup_list':{
+      const days=input.days||7;
+      const list=nodes.filter(nd=>{
+        if(!nd.info||!nd.info.lastContact)return false;
+        const d=Math.floor((new Date(today)-new Date(nd.info.lastContact))/86400000);
+        return d>=days&&(nd.status==='green'||nd.status==='yellow');
+      }).map(nd=>({name:nd.name,status:nd.status,lastContact:nd.info.lastContact,
+        days:Math.floor((new Date(today)-new Date(nd.info.lastContact))/86400000)}));
+      return{ok:true,list,count:list.length,
+        msg:`找到 ${list.length} 位需跟進：${list.map(x=>x.name+'('+x.days+'天)').join('、')}`};
+    }
+    case 'search_docs':{
+      const q=(input.query||'').toLowerCase().trim();
+      const results=docsData.filter(d=>!q||d.name.toLowerCase().includes(q));
+      if(!results.length)return{ok:true,msg:`知識庫中沒有符合「${q||'所有'}」的文件`,list:[]};
+      const icon={poster:'🖼',form:'📋',link:'🔗',file:'📄'};
+      const msg=results.map(d=>`${icon[d.type]||'📄'}《${d.name}》${d.url?d.url:''}`).join('\n');
+      return{ok:true,count:results.length,msg,list:results.map(d=>({name:d.name,type:d.type,url:d.url||''}))};
+    }
+    default:return{error:`未知工具：${name}`};
+  }
+}
+
+function setPersona(key,el){
+  currentPersona=key;
+  document.querySelectorAll('.persona-pill').forEach(p=>p.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderQuickPrompts(key);
+}
+
+let _quickPrompts=[];
+
+function renderQuickPrompts(key){
+  const bar=document.getElementById('ai-quick-prompts');
+  if(!bar)return;
+  _quickPrompts=(PERSONA_CONFIG[key]||PERSONA_CONFIG.assistant).quickPrompts;
+  bar.innerHTML=_quickPrompts.map((p,i)=>
+    `<button class="quick-prompt-chip" onclick="injectPrompt(${i})">${escHtml(p)}</button>`
+  ).join('');
+}
+
+function injectPrompt(idx){
+  const text=typeof idx==='number'?(_quickPrompts[idx]||''):idx;
+  const inp=document.getElementById('chat-input');
+  if(!inp)return;
+  inp.value=text;inp.focus();autoResizeChat(inp);
+}
+
+/* Phase 3 — 今日簡報（本地生成 + 可掛 n8n） */
+async function generateDailyBriefing(){
+  const s=getAiSettings();
+  if(!s.apiKey){toast('請先在設定中填入 API Key');switchPage('settings');return;}
+  const input=document.getElementById('chat-input');
+  input.value='幫我生成今日業務簡報：1)今天優先要做的3件事 2)需跟進的客戶清單 3)距月目標的差距與建議 4)一句給自己的激勵話語。格式清晰條列。';
+  await sendChat();
+}
+
+/* ═══════════════════════════════════════
+   AI PAGE — CHAT
+═══════════════════════════════════════ */
 function clearChat(){
   chatHistory=[];
-  localStorage.setItem('crm-chat',JSON.stringify(chatHistory));
+  localStorage.setItem(STORE.K.chat,JSON.stringify(chatHistory));
   renderChat();
 }
 
@@ -1413,10 +1770,19 @@ function renderChat(){
   const area=document.getElementById('chat-area');
   if(!area)return;
   if(!chatHistory.length){
-    area.innerHTML='<div class="chat-msg system">您好！我是 AI 助理，可以協助分析人脈資料、建議跟進策略。</div>';
+    const login=JSON.parse(localStorage.getItem('crm-login')||'{}');
+    area.innerHTML=`<div class="chat-msg system">嗨 ${login.name||'業務員'}！選一個角色，或直接輸入問題開始。</div>`;
     return;
   }
-  area.innerHTML=chatHistory.map(m=>`<div class="chat-msg ${m.role==='user'?'user':'ai'}">${escHtml(m.content).replace(/\n/g,'<br>')}</div>`).join('');
+  area.innerHTML=chatHistory.map(m=>{
+    if(m.role==='tool'){
+      return`<div class="chat-msg tool-result"><span class="tool-icon">⚙</span>${escHtml(m.content)}</div>`;
+    }
+    let html=escHtml(m.content)
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\n/g,'<br>');
+    return`<div class="chat-msg ${m.role==='user'?'user':'ai'}">${html}</div>`;
+  }).join('');
   area.scrollTop=area.scrollHeight;
 }
 
@@ -1429,6 +1795,11 @@ function autoResizeChat(el){
   el.style.height=Math.min(el.scrollHeight,120)+'px';
 }
 
+function setSendLoading(on){
+  const btn=document.getElementById('send-btn');
+  if(btn){btn.disabled=on;btn.textContent=on?'…':'發送';}
+}
+
 async function sendChat(){
   const input=document.getElementById('chat-input');
   const msg=input.value.trim();
@@ -1436,58 +1807,90 @@ async function sendChat(){
   const s=getAiSettings();
   input.value='';input.style.height='auto';
   chatHistory.push({role:'user',content:msg});
-  renderChat();
+  renderChat();setSendLoading(true);
 
   if(!s.apiKey){
     chatHistory.push({role:'assistant',content:'請先在「設定 > AI 模型設定」填入 API Key。'});
-    renderChat();
-    localStorage.setItem('crm-chat',JSON.stringify(chatHistory));
+    renderChat();setSendLoading(false);
+    localStorage.setItem(STORE.K.chat,JSON.stringify(chatHistory));
     return;
   }
 
-  const crmContext=nodes.slice(0,20).map(n=>`${n.name}(${n.status||'根'}):${n.info.company||''}${n.info.currentJob||''}`).join('; ');
-  const systemMsg=`你是 CRM 人脈管理 AI 助理。目前人脈資料摘要：${crmContext}。請用繁體中文回答，簡潔專業。`;
+  const systemMsg=buildSystemPrompt(currentPersona);
 
   try{
-    let replyText='';
     if(s.provider==='claude'){
-      const res=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:s.model||'claude-3-5-haiku-20241022',max_tokens:1024,system:systemMsg,messages:chatHistory.map(m=>({role:m.role,content:m.content}))})
-      });
-      const d=await res.json();
-      replyText=d.content?.[0]?.text||d.error?.message||'無回應';
+      /* ── Phase 2: Tool-calling loop ── */
+      const messages=chatHistory
+        .filter(m=>m.role==='user'||m.role==='assistant')
+        .map(m=>({role:m.role,content:m.content}));
+
+      let continueLoop=true;
+      while(continueLoop){
+        const res=await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':s.apiKey,
+            'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          body:JSON.stringify({model:s.model||'claude-3-5-haiku-20241022',
+            max_tokens:1536,system:systemMsg,tools:CRM_TOOLS,messages})
+        });
+        const d=await res.json();
+        if(d.error){chatHistory.push({role:'assistant',content:d.error.message});break;}
+
+        if(d.stop_reason==='tool_use'){
+          const textBlocks=d.content.filter(b=>b.type==='text');
+          const toolBlocks=d.content.filter(b=>b.type==='tool_use');
+          if(textBlocks.length){
+            chatHistory.push({role:'assistant',content:textBlocks.map(b=>b.text).join('')});
+            renderChat();
+          }
+          messages.push({role:'assistant',content:d.content});
+          const toolResults=[];
+          for(const tb of toolBlocks){
+            const result=executeToolCall(tb.name,tb.input);
+            const txt=result.error?`❌ ${result.error}`:`✅ ${result.msg||JSON.stringify(result)}`;
+            chatHistory.push({role:'tool',content:`[${tb.name}] ${txt}`});
+            renderChat();
+            toolResults.push({type:'tool_result',tool_use_id:tb.id,content:JSON.stringify(result)});
+          }
+          messages.push({role:'user',content:toolResults});
+        } else {
+          const txt=d.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'無回應';
+          chatHistory.push({role:'assistant',content:txt});
+          continueLoop=false;
+        }
+      }
+
     } else if(s.provider==='gemini'){
-      const model=s.model||'gemini-1.5-flash';
-      const msgs=chatHistory.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.content}]}));
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${s.apiKey}`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+      const msgs=chatHistory
+        .filter(m=>m.role==='user'||m.role==='assistant')
+        .map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.content}]}));
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${s.model||'gemini-2.0-flash'}:generateContent?key=${s.apiKey}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({systemInstruction:{parts:[{text:systemMsg}]},contents:msgs})
       });
       const d=await res.json();
-      replyText=d.candidates?.[0]?.content?.parts?.[0]?.text||d.error?.message||'無回應';
+      chatHistory.push({role:'assistant',content:d.candidates?.[0]?.content?.parts?.[0]?.text||d.error?.message||'無回應'});
+
     } else {
-      // OpenAI-compatible: openai, grok, custom
       const endpoint=s.provider==='custom'&&s.endpoint?s.endpoint
         :s.provider==='grok'?'https://api.x.ai/v1/chat/completions'
         :'https://api.openai.com/v1/chat/completions';
-      const msgs=[{role:'system',content:systemMsg},...chatHistory.map(m=>({role:m.role,content:m.content}))];
-      const res=await fetch(endpoint,{
-        method:'POST',
+      const msgs=[{role:'system',content:systemMsg},
+        ...chatHistory.filter(m=>m.role==='user'||m.role==='assistant')
+          .map(m=>({role:m.role,content:m.content}))];
+      const res=await fetch(endpoint,{method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.apiKey}`},
-        body:JSON.stringify({model:s.model,max_tokens:1024,messages:msgs})
+        body:JSON.stringify({model:s.model,max_tokens:1536,messages:msgs})
       });
       const d=await res.json();
-      replyText=d.choices?.[0]?.message?.content||d.error?.message||'無回應';
+      chatHistory.push({role:'assistant',content:d.choices?.[0]?.message?.content||d.error?.message||'無回應'});
     }
-    chatHistory.push({role:'assistant',content:replyText});
   }catch(e){
-    chatHistory.push({role:'assistant',content:'網路錯誤，請檢查連線與 API Key。'});
+    chatHistory.push({role:'assistant',content:`網路錯誤：${e.message}`});
   }
-  renderChat();
-  localStorage.setItem('crm-chat',JSON.stringify(chatHistory));
+  renderChat();setSendLoading(false);
+  localStorage.setItem(STORE.K.chat,JSON.stringify(chatHistory));
 }
 
 /* ═══════════════════════════════════════
@@ -1512,7 +1915,7 @@ function switchPage(page){
   if(page==='events'){renderCalendar();}
   if(page==='docs'){renderDocs();}
   if(page==='sales'){renderSales();}
-  if(page==='ai'){renderChat();updateAiModelBadge();}
+  if(page==='ai'){renderChat();updateAiModelBadge();renderQuickPrompts(currentPersona);}
   if(page==='settings'){renderSettingsPage();}
 }
 
@@ -1535,6 +1938,13 @@ const RANK_LABELS = {
 };
 function getMyRank(){ return STORE.getMyRank(); }
 function getMyRate(){ return STORE.getMyRate(); }
+
+// 批貨產品可見性：襄理含以下者不顯示
+const BATCH_RESTRICTED_RANKS = new Set(['director', 'asst_mgr']);
+function canSeeBatchProduct(productId){
+  if(productId !== 'asst_mgr_pkg' && productId !== 'manager_pkg') return true;
+  return !BATCH_RESTRICTED_RANKS.has(STORE.getMyRank());
+}
 
 // 批貨 anchor：利潤 = (我的職級% - anchor) × 批貨金額
 // 升至襄理批貨(6×79800)：anchor=20%；升至經理批貨(15×79800)：anchor=15%
@@ -1606,7 +2016,7 @@ function renderSales(){
         <div class="prod-price" style="color:#f97316">${fmtMoney(TRANSFER_AMOUNT)}</div>
         <div class="prod-desc">固定金額</div>
       </div>
-      ${Object.entries(SALES_PRODUCTS).map(([id,p])=>`
+      ${Object.entries(SALES_PRODUCTS).filter(([id])=>canSeeBatchProduct(id)).map(([id,p])=>`
         <div class="prod-card" style="--prod-color:${p.color}" onclick="openSaleModal('${id}')">
           <span class="prod-add-icon">＋</span>
           <div class="prod-name">${p.name}</div>
@@ -1657,11 +2067,16 @@ function openSaleModal(productId){
   document.getElementById('sale-date').value = today;
   document.getElementById('sale-notes').value = '';
   document.getElementById('sale-qty').value = '1';
+  // 根據職級隱藏批貨選項
+  const productSel = document.getElementById('sale-product');
+  productSel.querySelectorAll('option[value="asst_mgr_pkg"], option[value="manager_pkg"]')
+    .forEach(opt => { opt.style.display = canSeeBatchProduct(opt.value) ? '' : 'none'; });
   // Set sale type
   const typeRadios = document.querySelectorAll('input[name="sale-type"]');
   typeRadios.forEach(r=>{ r.checked = isTransfer ? r.value==='transfer' : r.value==='new'; });
   onSaleTypeChange();
-  if(!isTransfer && productId) document.getElementById('sale-product').value = productId;
+  if(!isTransfer && productId && canSeeBatchProduct(productId))
+    document.getElementById('sale-product').value = productId;
   // Render pax tags
   const contactNodes = nodes.filter(n=>n.status!==null&&n.name);
   document.getElementById('sale-pax').innerHTML = contactNodes.length
@@ -2205,13 +2620,18 @@ function renderDocs(){
     </div>`).join('');
 }
 
-let _docImgData=null;
-function openDocModal(){
-  _docImgData=null;
-  document.getElementById('doc-name').value='';
-  document.getElementById('doc-url').value='';
-  document.getElementById('doc-img-file').value='';
+let _docFileData=null; // base64 of current file in modal
+
+/* ── Modal open/close ── */
+function openDocModal(prefill){
+  _docFileData=null;
+  document.getElementById('doc-name').value=prefill?.name||'';
+  document.getElementById('doc-url').value=prefill?.url||'';
+  document.getElementById('doc-file-input').value='';
   document.getElementById('doc-img-preview').style.display='none';
+  document.getElementById('doc-file-label').textContent='點擊選擇 或 拖曳檔案至此';
+  document.getElementById('doc-file-icon').textContent='⬆';
+  if(prefill?.type)document.getElementById('doc-type').value=prefill.type;
   onDocTypeChange();
   document.getElementById('doc-add-modal').classList.add('open');
 }
@@ -2219,21 +2639,98 @@ function closeDocModal(){document.getElementById('doc-add-modal').classList.remo
 
 function onDocTypeChange(){
   const t=document.getElementById('doc-type').value;
-  document.getElementById('doc-url-group').style.display=t==='poster'?'none':'';
-  document.getElementById('doc-img-group').style.display=t==='poster'?'':'none';
+  const isLink=t==='form'||t==='link';
+  const isFile=t==='poster'||t==='file';
+  document.getElementById('doc-url-group').style.display=isLink?'':'none';
+  document.getElementById('doc-file-group').style.display=isFile?'':'none';
+  // accept filter
+  const inp=document.getElementById('doc-file-input');
+  inp.accept=t==='poster'?'image/*':'*/*';
 }
-// wire type change
-document.getElementById('doc-type')?.addEventListener('change',onDocTypeChange);
 
-function previewDocImg(input){
-  const f=input.files[0];if(!f)return;
+/* ── Modal file dropzone ── */
+function modalFileOver(e){
+  e.preventDefault();e.stopPropagation();
+  document.getElementById('doc-file-dropzone').classList.add('drag-over');
+}
+function modalFileLeave(e){
+  document.getElementById('doc-file-dropzone').classList.remove('drag-over');
+}
+function modalFileDrop(e){
+  e.preventDefault();e.stopPropagation();
+  document.getElementById('doc-file-dropzone').classList.remove('drag-over');
+  const f=e.dataTransfer.files[0];
+  if(f)_loadDocFile(f);
+}
+function modalFileChange(input){
+  const f=input.files[0];if(f)_loadDocFile(f);
+}
+function _loadDocFile(f){
+  const isImg=/^image\//.test(f.type);
+  // auto-set name if empty
+  const nameEl=document.getElementById('doc-name');
+  if(!nameEl.value)nameEl.value=f.name.replace(/\.[^.]+$/,'');
+  // auto-switch type
+  const typeEl=document.getElementById('doc-type');
+  if(isImg&&typeEl.value!=='poster')typeEl.value='poster';
+  else if(!isImg&&typeEl.value==='poster')typeEl.value='file';
+  onDocTypeChange();
+
   const reader=new FileReader();
-  reader.onload=e=>{
-    _docImgData=e.target.result;
-    const prev=document.getElementById('doc-img-preview');
-    prev.src=_docImgData; prev.style.display='block';
+  reader.onload=ev=>{
+    _docFileData=ev.target.result;
+    document.getElementById('doc-file-label').textContent=f.name;
+    document.getElementById('doc-file-icon').textContent=isImg?'🖼':'📄';
+    if(isImg){
+      const prev=document.getElementById('doc-img-preview');
+      prev.src=_docFileData;prev.style.display='block';
+    }
   };
   reader.readAsDataURL(f);
+}
+
+/* ── Docs page full-page drop zone ── */
+function docsOnDragOver(e){
+  e.preventDefault();e.stopPropagation();
+  document.getElementById('docs-dropzone').classList.add('drag-over');
+  document.getElementById('docs-dropzone-hint').classList.add('active');
+}
+function docsOnDragLeave(e){
+  // only fire if leaving the dropzone itself (not a child)
+  if(e.currentTarget.contains(e.relatedTarget))return;
+  document.getElementById('docs-dropzone').classList.remove('drag-over');
+  document.getElementById('docs-dropzone-hint').classList.remove('active');
+}
+function docsOnDrop(e){
+  e.preventDefault();e.stopPropagation();
+  document.getElementById('docs-dropzone').classList.remove('drag-over');
+  document.getElementById('docs-dropzone-hint').classList.remove('active');
+  const files=[...e.dataTransfer.files];
+  if(!files.length)return;
+  if(files.length===1){
+    // single file → open modal pre-filled
+    const f=files[0];
+    const isImg=/^image\//.test(f.type);
+    openDocModal({name:f.name.replace(/\.[^.]+$/,''),type:isImg?'poster':'file'});
+    setTimeout(()=>_loadDocFile(f),50);
+  } else {
+    // multiple files → auto-create all immediately
+    let count=0;
+    files.forEach(f=>{
+      const isImg=/^image\//.test(f.type);
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        docsData.push({id:uid(),name:f.name.replace(/\.[^.]+$/,''),
+          type:isImg?'poster':'file',url:'',
+          imgData:isImg?ev.target.result:null,
+          fileData:!isImg?ev.target.result:null,
+          fileName:f.name,fileSize:f.size});
+        count++;
+        if(count===files.length){saveDocs();renderDocs();toast(`已新增 ${count} 個文件`);}
+      };
+      reader.readAsDataURL(f);
+    });
+  }
 }
 
 function saveDoc(){
@@ -2241,20 +2738,20 @@ function saveDoc(){
   if(!name){toast('請輸入文件名稱');return;}
   const type=document.getElementById('doc-type').value;
   const url=document.getElementById('doc-url').value.trim();
-  const d={id:uid(),name,type,url,imgData:type==='poster'?_docImgData:null};
+  const isImg=type==='poster';
+  const d={id:uid(),name,type,url,
+    imgData:isImg?_docFileData:null,
+    fileData:(!isImg&&type==='file')?_docFileData:null,
+    fileName:document.getElementById('doc-file-label').textContent};
   docsData.push(d);
-  saveDocs();
-  closeDocModal();
-  renderDocs();
+  saveDocs();closeDocModal();renderDocs();
   toast('文件已新增');
 }
 
 function deleteDoc(id){
   if(!confirm('確定刪除此文件？'))return;
   docsData=docsData.filter(d=>d.id!==id);
-  saveDocs();
-  renderDocs();
-  toast('已刪除');
+  saveDocs();renderDocs();toast('已刪除');
 }
 
 /* ── Obsidian ── */
@@ -2297,27 +2794,48 @@ function renderSettingsPage(){
   </div>`;
 }
 
-/* ── Backup ── */
+/* ── Backup (完整備份：全部模組) ── */
 function exportAll(){
-  const data={nodes,events,tasks,version:'crm-v3',exportedAt:new Date().toISOString()};
-  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const data={
+    version:'crm-v4',
+    exportedAt:new Date().toISOString(),
+    nodes,
+    events,
+    tasks,
+    salesData,
+    dailyReports,
+    monthlyGoals,
+    monthlySalesTargets,
+  };
+  const json=JSON.stringify(data,null,2);
+  const b=new Blob([json],{type:'application/json'});
   const u=URL.createObjectURL(b);
   const a=document.createElement('a');
-  a.href=u;a.download=`crm-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  a.href=u;
+  a.download=`fdd-crm-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
   URL.revokeObjectURL(u);
-  toast('備份匯出完成');
+  toast(`備份匯出完成（${Math.round(json.length/1024)} KB）`);
 }
+
 function importAll(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=e=>{
     try{
       const d=JSON.parse(e.target.result);
-      if(d.nodes){nodes=d.nodes;saveData();}
-      if(d.events){events=d.events;localStorage.setItem('crm-events',JSON.stringify(events));}
-      if(d.tasks){tasks=d.tasks;localStorage.setItem('crm-tasks',JSON.stringify(tasks));}
-      renderNodes();toast('備份匯入成功');
-    }catch{toast('匯入失敗：格式錯誤');}
+      if(!d.nodes&&!d.salesData){toast('匯入失敗：不是有效的備份檔案');return;}
+      if(!confirm(`確定匯入備份？\n匯出時間：${d.exportedAt||'未知'}\n將覆蓋目前所有資料。`))return;
+      if(d.nodes)             { nodes=d.nodes;                    saveData(); }
+      if(d.events)            { events=d.events;                  STORE.saveEvents(); }
+      if(d.tasks)             { tasks=d.tasks;                    STORE.saveTasks(); }
+      if(d.salesData)         { salesData=d.salesData;            STORE.saveSales(); }
+      if(d.dailyReports)      { dailyReports=d.dailyReports;      STORE.saveDailyReports(); }
+      if(d.monthlyGoals)      { monthlyGoals=d.monthlyGoals;      STORE.saveMonthlyGoals(); }
+      if(d.monthlySalesTargets){ monthlySalesTargets=d.monthlySalesTargets; STORE.saveMonthlySalesTargets(); }
+      renderNodes();
+      toast('✅ 備份匯入成功');
+    }catch(err){toast('匯入失敗：'+err.message);}
   };
   r.readAsText(f);ev.target.value='';
 }

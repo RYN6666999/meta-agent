@@ -1,0 +1,6 @@
+name = "fdd-crm"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "FDD_LOGINS"
+id = "e31247558c984a0b8848bd73ab0c1d87"

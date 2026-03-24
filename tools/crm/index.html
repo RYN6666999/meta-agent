@@ -4,8 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>房多多經營系統</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230d1117'/><circle cx='16' cy='9' r='4' fill='%23388bfd'/><circle cx='7' cy='24' r='3.5' fill='%233fb950'/><circle cx='25' cy='24' r='3.5' fill='%23d29922'/><line x1='16' y1='13' x2='16' y2='18' stroke='%23444c56' stroke-width='1.5'/><line x1='16' y1='18' x2='7' y2='21' stroke='%23444c56' stroke-width='1.5'/><line x1='16' y1='18' x2='25' y2='21' stroke='%23444c56' stroke-width='1.5'/></svg>">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161b22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="房多多">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
 <link rel="stylesheet" href="crm.css">
+<!-- 登入守衛：未登入則跳轉 login.html -->
+<script>
+  (function(){
+    var s = localStorage.getItem('crm-login');
+    if (!s) { window.location.replace('./login.html'); return; }
+    try { var o=JSON.parse(s); if(!o.name||!o.rank) window.location.replace('./login.html'); }
+    catch(e){ window.location.replace('./login.html'); }
+  })();
+</script>
 </head>
 <body>
 
@@ -28,8 +45,26 @@
   <div class="header-stats" id="header-stats"></div>
   <div class="header-actions">
     <button class="btn btn-accent" onclick="headerAddNode()">＋ 新增聯繫人</button>
+    <button class="btn" style="padding:.4rem .8rem;background:var(--surface2);border:1px solid var(--border)" onclick="headerAddNote()" title="新增純文字便條">📝 便條</button>
+    <span id="header-user-badge" style="font-size:.8rem;color:var(--text-muted);margin-left:.5rem"></span>
+    <button class="btn" style="padding:.3rem .7rem;font-size:.78rem;margin-left:.25rem;color:var(--text-muted)" onclick="doLogout()" title="登出">⏏</button>
   </div>
 </div>
+<script>
+  // 顯示登入者姓名
+  (function(){
+    try {
+      var lv = JSON.parse(localStorage.getItem('crm-login')||'{}');
+      var el = document.getElementById('header-user-badge');
+      if(el && lv.name) el.textContent = lv.rankLabel||'' + ' ' + lv.name;
+    } catch(e){}
+  })();
+  function doLogout(){
+    if(!confirm('確定要登出？')) return;
+    localStorage.removeItem('crm-login');
+    window.location.replace('./login.html');
+  }
+</script>
 
 <!-- CRM Page -->
 <div class="page" id="page-crm">
@@ -89,17 +124,40 @@
 <!-- AI Page -->
 <div class="page" id="page-ai">
   <div class="ai-container">
-    <div class="ai-settings">
-      <span id="ai-model-badge" style="font-size:12px;color:var(--text-muted)">模型：—</span>
+
+    <!-- Top bar -->
+    <div class="ai-topbar">
+      <span id="ai-model-badge" class="ai-model-badge">模型：—</span>
       <span style="flex:1"></span>
-      <button class="btn btn-sm" onclick="switchPage('settings')">⚙ 設定模型</button>
-      <button class="btn btn-sm" onclick="clearChat()">清除對話</button>
+      <button class="btn btn-sm" onclick="generateDailyBriefing()" title="生成今日 AI 簡報">🌅 今日簡報</button>
+      <button class="btn btn-sm" onclick="switchPage('settings')">⚙ 設定</button>
+      <button class="btn btn-sm" onclick="clearChat()">清除</button>
     </div>
+
+    <!-- Persona pills -->
+    <div class="ai-persona-bar" id="ai-persona-bar">
+      <span class="ai-persona-label">角色：</span>
+      <button class="persona-pill active" data-persona="assistant" onclick="setPersona('assistant',this)">🤖 通用助理</button>
+      <button class="persona-pill" data-persona="coach" onclick="setPersona('coach',this)">🎯 跟進教練</button>
+      <button class="persona-pill" data-persona="analyst" onclick="setPersona('analyst',this)">📊 業績分析師</button>
+      <button class="persona-pill" data-persona="strategist" onclick="setPersona('strategist',this)">🌳 人脈策略師</button>
+      <button class="persona-pill" data-persona="secretary" onclick="setPersona('secretary',this)">📝 日報小秘書</button>
+    </div>
+
+    <!-- Quick prompts -->
+    <div class="ai-quick-prompts" id="ai-quick-prompts"></div>
+
+    <!-- Chat area -->
     <div class="chat-area" id="chat-area"></div>
+
+    <!-- Input area -->
     <div class="chat-input-area">
-      <textarea class="chat-input" id="chat-input" rows="1" placeholder="輸入訊息…（Enter 發送，Shift+Enter 換行）" onkeydown="chatKeydown(event)" oninput="autoResizeChat(this)"></textarea>
-      <button class="btn btn-accent" onclick="sendChat()">發送</button>
+      <textarea class="chat-input" id="chat-input" rows="1"
+        placeholder="輸入訊息…（Enter 發送，Shift+Enter 換行）"
+        onkeydown="chatKeydown(event)" oninput="autoResizeChat(this)"></textarea>
+      <button class="btn btn-accent" id="send-btn" onclick="sendChat()">發送</button>
     </div>
+
   </div>
 </div>
 
@@ -221,7 +279,18 @@
       <div class="docs-title">📁 常用文件</div>
       <button class="btn btn-accent" onclick="openDocModal()">＋ 新增文件</button>
     </div>
-    <div class="docs-grid" id="docs-grid"></div>
+    <!-- 全頁拖放區（覆蓋整個文件頁） -->
+    <div class="docs-dropzone" id="docs-dropzone"
+         ondragover="docsOnDragOver(event)"
+         ondragleave="docsOnDragLeave(event)"
+         ondrop="docsOnDrop(event)">
+      <div class="docs-dropzone-hint" id="docs-dropzone-hint">
+        <span class="docs-dropzone-icon">📂</span>
+        <span>拖曳檔案到此處即可快速新增</span>
+        <span style="font-size:11px;opacity:.6">支援圖片、PDF、任意檔案，可一次拖入多個</span>
+      </div>
+      <div class="docs-grid" id="docs-grid"></div>
+    </div>
   </div>
 </div>
 
@@ -231,7 +300,7 @@
     <div style="font-size:15px;font-weight:600">新增文件</div>
     <div class="field-group">
       <div class="field-label">類型</div>
-      <select class="field-input" id="doc-type">
+      <select class="field-input" id="doc-type" onchange="onDocTypeChange()">
         <option value="poster">🖼 海報圖片</option>
         <option value="form">📋 問卷連結</option>
         <option value="link">🔗 其他連結</option>
@@ -246,9 +315,19 @@
       <div class="field-label">連結 / URL</div>
       <input class="field-input" id="doc-url" placeholder="https://…">
     </div>
-    <div class="field-group" id="doc-img-group" style="display:none">
-      <div class="field-label">圖片檔案</div>
-      <input class="field-input" type="file" accept="image/*" id="doc-img-file" onchange="previewDocImg(this)">
+    <!-- 統一拖放 / 點擊上傳區 -->
+    <div class="field-group" id="doc-file-group" style="display:none">
+      <div class="field-label">檔案</div>
+      <div class="doc-file-dropzone" id="doc-file-dropzone"
+           onclick="document.getElementById('doc-file-input').click()"
+           ondragover="modalFileOver(event)"
+           ondragleave="modalFileLeave(event)"
+           ondrop="modalFileDrop(event)">
+        <span class="doc-file-dropzone-icon" id="doc-file-icon">⬆</span>
+        <span id="doc-file-label">點擊選擇 或 拖曳檔案至此</span>
+        <span id="doc-file-hint" style="font-size:11px;opacity:.55">圖片 / PDF / 任意格式</span>
+      </div>
+      <input type="file" id="doc-file-input" style="display:none" onchange="modalFileChange(this)">
       <img id="doc-img-preview" style="display:none;max-height:120px;border-radius:8px;margin-top:8px;object-fit:cover;width:100%">
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -338,7 +417,7 @@
         </label>
         <button class="btn" style="color:var(--red)" onclick="clearAllData()">🗑 清除所有資料</button>
       </div>
-      <div style="font-size:11px;color:var(--text-subtle);margin-top:8px">匯出包含人脈節點、分享會活動、排程任務。</div>
+      <div style="font-size:11px;color:var(--text-subtle);margin-top:8px">完整備份：人脈節點、業績記錄、日報表、月份目標、活動、任務。匯入前系統會再次確認。</div>
     </div>
   </div>
 </div>
@@ -384,5 +463,12 @@
 <div class="toast" id="toast"></div>
 
 <script src="crm.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('[SW] 已註冊', r.scope))
+      .catch(e => console.warn('[SW] 註冊失敗', e));
+  }
+</script>
 </body>
 </html>
