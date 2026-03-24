@@ -37,5 +37,6 @@
 | 2026-03-24 | auto-git-score | git-score 自動 commit（score=85），含重要變更 [commit:HEAD~1..HEAD] | 80 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-03-24 | auto-git-score | git-score 自動 commit（score=150），含重要變更 [commit:HEAD~1..HEAD] | 220 | 其他變更 .wrangler/cache/pages.json +10; 其他變更 .wrangler/cache/wrangler-account.json +10 | pending |
 | 2026-03-24 | auto-git-score | git-score 自動 commit（score=105），含重要變更 [commit:HEAD~1..HEAD] | 170 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
+| 2026-03-24 | auto-git-score | git-score 自動 commit（score=155），含重要變更 [commit:HEAD~1..HEAD] | 280 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 

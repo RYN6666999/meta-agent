@@ -284,6 +284,44 @@ function setCmdMode(m){ CMD.setMode(m); renderSettingsPage(); toast('指令模�
 function toggleCmd(id){ CMD.toggle(id); renderSettingsPage(); }
 function resetCmdPolicy(){ CMD.reset(); renderSettingsPage(); toast('已恢復預設指令策略'); }
 
+const DRAFT={
+  K:'crm-drafts',
+  data:{},
+  load(){try{this.data=JSON.parse(localStorage.getItem(this.K)||'{}')}catch(e){this.data={}}},
+  save(){localStorage.setItem(this.K,JSON.stringify(this.data))},
+  set(id,val){this.data[id]=val;this.save()},
+  get(id){return this.data[id]},
+  clear(){this.data={};this.save()}
+};
+function initDrafts(){
+  DRAFT.load();
+  const isSensitive=(el)=>el.type==='password'||el.dataset.nodraft==='true';
+  const restore=(root)=>{
+    const els=root.querySelectorAll?.('input[id], textarea[id]')||[];
+    els.forEach(el=>{
+      if(isSensitive(el))return;
+      const id=el.id;if(!id)return;
+      const v=DRAFT.get(id);
+      if(v!==undefined && (el.value===''||el.dataset.restore==='force')){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}))}
+    });
+  };
+  restore(document);
+  const onInput=(e)=>{
+    const t=e.target;
+    if(!(t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement))return;
+    if(!t.id||isSensitive(t))return;
+    DRAFT.set(t.id,t.value);
+  };
+  document.addEventListener('input',onInput,true);
+  document.addEventListener('change',onInput,true);
+  // Only watch for added nodes at top level to reduce overhead
+  const mo=new MutationObserver(muts=>{
+    muts.forEach(m=>{m.addedNodes.forEach(n=>{if(n.nodeType===1)restore(n);})});
+  });
+  mo.observe(document.body,{subtree:false,childList:true});
+  window.addEventListener('beforeunload',()=>DRAFT.save());
+}
+
 /* ═══════════════════════════════════════
    DEMO DATA
 ═══════════════════════════════════════ */
@@ -2489,8 +2527,10 @@ function saveMonthSalesTarget(){
   if(!el)return;
   monthlySalesTargets[mkey]=parseInt(el.value.replace(/[^\d]/g,''))||0;
   saveMonthlySalesTargets();
-  renderMonthlyProgress();
-  toast('業績目標已儲存');
+  // 不在輸入時重建 DOM，只更新業績進度條
+  const sp=CALC.salesProgress(salesData,STORE.getMyRate(),mkey,monthlySalesTargets[mkey]||0);
+  const bar=document.querySelector('[data-mst="mg-sales"]')?.closest('.daily-kpi-card')?.querySelector('[data-progress-bar]');
+  if(bar){bar.style.width=sp.pct+'%';}
 }
 
 function getMonthKey(dateStr){
@@ -2508,8 +2548,23 @@ function saveMonthlyGoalInputs(){
     if(el)goals[k]=parseInt(el.value)||0;
   });
   saveMonthlyGoals();
-  renderMonthlyProgress();
-  toast('本月目標已儲存');
+  // 只更新進度條數值，不重建 DOM（避免焦點跳掉）
+  updateMonthlyProgressBars();
+}
+function updateMonthlyProgressBars(){
+  const mkey=getMonthKey();
+  const goals=monthlyGoals[mkey]||{};
+  const actuals=CALC.monthActuals(dailyReports,mkey);
+  const items=CALC.progressItems(actuals,goals);
+  items.forEach(it=>{
+    const card=document.querySelector(`[data-mg="${it.goalK}"]`)?.closest('.daily-kpi-card');
+    if(!card)return;
+    const bar=card.querySelector('[data-progress-bar]');
+    const label=card.querySelector('[data-progress-label]');
+    if(bar)bar.style.width=it.pct+'%';
+    if(label)label.textContent=`實績 ${it.actual} · ${it.pct}%`;
+    card.classList.toggle('exceeded',it.full);
+  });
 }
 
 function renderMonthlyProgress(){
@@ -2527,11 +2582,12 @@ function renderMonthlyProgress(){
       <div style="font-size:13px;font-weight:600;white-space:nowrap">💰 本月業績目標</div>
       <div style="display:flex;align-items:center;gap:6px;flex:1">
         <span style="font-size:12px;color:var(--text-muted)">NT$</span>
-        <input data-mst="mg-sales" type="number" min="0" value="${monthlySalesTargets[mkey]||0}"
+        <input data-mst="mg-sales" data-nodraft="true" type="number" min="0" value="${monthlySalesTargets[mkey]||0}"
           style="width:110px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 8px;font-size:14px;font-weight:700"
-          oninput="saveMonthSalesTarget()">
+          oninput="saveMonthSalesTarget()"
+          onblur="renderMonthlyProgress()">
         <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)">
-          <div style="height:100%;width:${sp.pct}%;background:${sp.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
+          <div data-progress-bar style="height:100%;width:${sp.pct}%;background:${sp.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
         </div>
         <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">實績 ${fmtMoney(sp.income)} · ${sp.pct}%</span>
       </div>
@@ -2541,14 +2597,15 @@ function renderMonthlyProgress(){
         <div class="daily-kpi-card${it.full?' exceeded':''}">
           <div class="daily-kpi-label">${it.label}目標</div>
           <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
-            <input data-mg="${it.goalK}" type="number" min="0" value="${it.goal}"
+            <input data-mg="${it.goalK}" data-nodraft="true" type="number" min="0" value="${it.goal}"
               style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 6px;font-size:14px;font-weight:700;text-align:center"
-              oninput="saveMonthlyGoalInputs()">
+              oninput="saveMonthlyGoalInputs()"
+              onblur="renderMonthlyProgress()">
           </div>
           <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border);margin-bottom:3px">
-            <div style="height:100%;width:${it.pct}%;background:${it.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
+            <div data-progress-bar style="height:100%;width:${it.pct}%;background:${it.full?'var(--green)':'var(--accent)'};border-radius:3px;transition:width .3s"></div>
           </div>
-          <div class="daily-kpi-target">實績 ${it.actual} · ${it.pct}%</div>
+          <div class="daily-kpi-target" data-progress-label>實績 ${it.actual} · ${it.pct}%</div>
         </div>`).join('')}
     </div>`;
 }
@@ -2694,7 +2751,7 @@ function renderDailyPage(){
           ${[{k:'goal-invite',label:'邀約目標'},{k:'goal-calls',label:'電話目標'},{k:'goal-forms',label:'問卷目標'},{k:'goal-followup',label:'跟進目標'},{k:'goal-close',label:'成交目標'},{k:'goal-consult',label:'協談目標'}].map(item=>`
             <div class="daily-act-item">
               <div class="daily-act-label">${item.label}</div>
-              <input class="daily-act-input" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}" oninput="renderDailyProgress(this)">
+              <input class="daily-act-input" data-nodraft="true" type="number" min="0" data-daily="${item.k}" value="${report[item.k]||0}" oninput="renderDailyProgress(this)">
             </div>`).join('')}
         </div>
       </div>
@@ -3071,14 +3128,118 @@ function clearAllData(){
   toast('已清除所有資料');
 }
 
-/* ── Google Calendar (placeholder) ── */
-function connectGoogleCal(){
-  const cid=document.getElementById('gcal-client-id')?.value.trim();
-  if(!cid){toast('請先填入 Google Client ID');return;}
-  localStorage.setItem('gcal-client-id',cid);
-  // Real OAuth flow would open a popup; this is a placeholder
-  document.getElementById('gcal-status').textContent='⚠ 需要後端 OAuth 支援';
-  toast('Google Calendar 整合需要伺服器端 OAuth 流程');
+/* ── Google Calendar — GIS Token Flow (純瀏覽器，不需後端) ── */
+const GCAL={
+  SCOPE:'https://www.googleapis.com/auth/calendar.readonly',
+  tokenClient:null,
+  getClientId(){ return localStorage.getItem('gcal-client-id')||''; },
+  getToken(){
+    try{ return JSON.parse(localStorage.getItem('gcal-token')||'null'); }
+    catch(e){ return null; }
+  },
+  isTokenValid(){
+    const t=this.getToken();
+    return t && t.access_token && Date.now() < (t.expires_at||0);
+  },
+  saveToken(resp){
+    const t={access_token:resp.access_token, expires_at:Date.now()+(resp.expires_in||3600)*1000};
+    localStorage.setItem('gcal-token',JSON.stringify(t));
+  },
+  clearToken(){
+    localStorage.removeItem('gcal-token');
+    localStorage.removeItem('gcal-client-id');
+  },
+  updateStatus(){
+    const el=document.getElementById('gcal-status');
+    if(!el)return;
+    if(this.isTokenValid()) el.textContent='✅ 已連結';
+    else if(this.getClientId()) el.textContent='未連結（點擊重新授權）';
+    else el.textContent='未連結';
+  },
+  initClient(cid){
+    if(!window.google?.accounts?.oauth2){ toast('GIS 尚未載入，請稍後再試'); return; }
+    this.tokenClient=window.google.accounts.oauth2.initTokenClient({
+      client_id:cid,
+      scope:this.SCOPE,
+      callback:(resp)=>{
+        if(resp.error){ toast('Google 授權失敗：'+resp.error); return; }
+        GCAL.saveToken(resp);
+        GCAL.updateStatus();
+        toast('✅ Google 日曆已連結');
+        fetchGcalEvents();
+      }
+    });
+  },
+  requestToken(){
+    if(!this.tokenClient){ toast('尚未初始化，請重新整理頁面'); return; }
+    this.tokenClient.requestAccessToken({prompt:''});
+  }
+};
+
+function startGoogleOAuth(){
+  let cid=GCAL.getClientId();
+  if(!cid){
+    cid=(prompt('請輸入 Google OAuth Client ID（到 Google Cloud Console > 憑證 取得）')||'').trim();
+    if(!cid){ toast('未提供 Client ID'); return; }
+    localStorage.setItem('gcal-client-id',cid);
+  }
+  GCAL.initClient(cid);
+  GCAL.requestToken();
+}
+
+function resetGoogleClientId(){
+  GCAL.clearToken();
+  GCAL.updateStatus();
+  toast('已清除 Google 日曆連結');
+}
+
+function handleOAuthReturn(){ /* 舊 code flow 已棄用，GIS token flow 不需要 */ }
+
+async function fetchGcalEvents(){
+  if(!GCAL.isTokenValid()){ GCAL.updateStatus(); return; }
+  const token=GCAL.getToken().access_token;
+  const now=new Date();
+  const timeMin=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  const timeMax=new Date(now.getFullYear(),now.getMonth()+2,1).toISOString();
+  try{
+    const res=await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&maxResults=50`,
+      {headers:{Authorization:`Bearer ${token}`}}
+    );
+    if(res.status===401){ GCAL.clearToken(); GCAL.updateStatus(); toast('Google Token 已過期，請重新連結'); return; }
+    const d=await res.json();
+    const gcalEvents=(d.items||[]).map(ev=>({
+      id:'gcal-'+ev.id,
+      title:ev.summary||'(無標題)',
+      date:(ev.start?.date||ev.start?.dateTime||'').slice(0,10),
+      allDay:!!ev.start?.date,
+      source:'gcal'
+    })).filter(ev=>ev.date);
+    // merge into events array (avoid duplicates)
+    gcalEvents.forEach(ge=>{
+      if(!events.find(e=>e.id===ge.id)) events.push(ge);
+    });
+    renderCalendar();
+    toast(`已同步 ${gcalEvents.length} 筆 Google 日曆事件`);
+  }catch(err){
+    console.error('[gcal]',err);
+    toast('Google 日曆同步失敗');
+  }
+}
+
+// Load GIS script lazily when settings page opens
+function ensureGisLoaded(cb){
+  if(window.google?.accounts?.oauth2){ cb&&cb(); return; }
+  const s=document.createElement('script');
+  s.src='https://accounts.google.com/gsi/client';
+  s.async=true;
+  s.defer=true;
+  s.onload=()=>{
+    const cid=GCAL.getClientId();
+    if(cid) GCAL.initClient(cid);
+    cb&&cb();
+  };
+  document.head.appendChild(s);
 }
 
 /* ═══════════════════════════════════════
@@ -3109,6 +3270,12 @@ function loadTheme(){
 function init(){
   loadTheme();
   loadData();
+  initDrafts();
+  // Init GIS lazily; if token already valid, refresh calendar events
+  ensureGisLoaded(()=>{
+    GCAL.updateStatus();
+    if(GCAL.isTokenValid()) fetchGcalEvents();
+  });
   // Initialize page display via JS (not CSS class) to avoid specificity conflicts
   document.querySelectorAll('.page').forEach(p=>{p.style.display='none';});
   const initPage=document.getElementById('page-crm');

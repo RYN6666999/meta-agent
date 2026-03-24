@@ -347,13 +347,22 @@
     <!-- Google Calendar -->
     <div class="settings-card">
       <div class="settings-card-title">📅 Google 日曆連結</div>
-      <div class="settings-card-desc">連結後可在分享會日程同步 Google 行事曆活動。</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <input class="field-input" id="gcal-client-id" placeholder="Google Client ID" style="flex:1;min-width:200px" value="">
-        <button class="btn btn-accent" onclick="connectGoogleCal()">🔗 連結 Google 日曆</button>
+      <div class="settings-card-desc">填入 Client ID 後點「授權連結」，彈窗完成授權即可同步日曆事件（純瀏覽器，不需後端）。</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <input class="field-input" id="gcal-client-id" data-nodraft="true"
+          placeholder="Google OAuth Client ID（貼入後點授權）"
+          style="flex:1;min-width:220px"
+          oninput="localStorage.setItem('gcal-client-id',this.value.trim())">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-accent" onclick="startGoogleOAuth()">🔗 授權連結</button>
+        <button class="btn" onclick="fetchGcalEvents()">🔄 同步事件</button>
+        <button class="btn" onclick="resetGoogleClientId()" style="font-size:11px">清除</button>
         <span id="gcal-status" style="font-size:12px;color:var(--text-muted)">未連結</span>
       </div>
-      <div style="font-size:11px;color:var(--text-subtle);margin-top:8px">需先在 Google Cloud Console 設定 OAuth 2.0 並填入 Client ID。</div>
+      <div style="font-size:11px;color:var(--text-subtle);margin-top:8px">
+        需在 Google Cloud Console 建立 OAuth 2.0 用戶端，授權 JavaScript 來源填入本站網址。
+      </div>
     </div>
 
     <!-- AI Model -->

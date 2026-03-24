@@ -816,3 +816,39 @@
   其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsWorker-0.16946459475081954.mjs.map +10
 
 ---
+
+## 2026-03-24 17:00 | auto-git-score | 分數 280 | 📥 達到閾值（280/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=155），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/e31247558c984a0b8848bd73ab0c1d87/blobs/1367bef28db71ae6ae25f0d0d80eab780fe1db6a99a88447df83dca0f57201350000019d1eff2a7c +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/36bda5fd0ff4910b2a06334f3b1896da71986208f5f4e23a05a0782cffd69c78.sqlite +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-Mf9Fut/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-Mf9Fut/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-qDrq1x/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-qDrq1x/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-ztgcqy/middleware-insertion-facade.js +10
+  其他變更 tools/crm/.wrangler/tmp/bundle-ztgcqy/middleware-loader.entry.ts +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ZAlLlI/functionsWorker-0.04449953689085029.js +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ZAlLlI/functionsWorker-0.04449953689085029.js.map +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ya0w5f/functionsWorker-0.16946459475081954.js +10
+  其他變更 tools/crm/.wrangler/tmp/dev-ya0w5f/functionsWorker-0.16946459475081954.js.map +10
+  其他變更 tools/crm/.wrangler/tmp/pages-bqEA9X/functionsRoutes-0.41491694367792054.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-bqEA9X/functionsWorker-0.04449953689085029.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-bqEA9X/functionsWorker-0.04449953689085029.mjs.map +10
+  其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsRoutes-0.02164222538735161.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsWorker-0.16946459475081954.mjs +10
+  其他變更 tools/crm/.wrangler/tmp/pages-rJ9C7Q/functionsWorker-0.16946459475081954.mjs.map +10
+  其他變更 tools/crm/admin.html +10
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/functions/api/ai.js +10
+  其他變更 tools/crm/index.html +10
+
+---
