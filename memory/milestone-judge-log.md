@@ -888,3 +888,38 @@
   其他變更 tools/crm/index.html +10
 
 ---
+
+## 2026-03-24 19:00 | auto-git-score | 分數 110 | 📥 達到閾值（110/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=90），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/icon-192.png +10
+  其他變更 tools/crm/icon-512.png +10
+  其他變更 tools/crm/index.html +10
+  其他變更 tools/crm/manifest.json +10
+
+---
+
+## 2026-03-24 19:46 | CRM-status-pill-click-無法切換 | 分數 80 | 📥 達到閾值（80/60）→ 已送決策匣，待人類核准
+
+**描述：** status-pill 點擊無法循環切換狀態（高意願/觀察中/冷淡/無效）
+
+**評分明細：**
+  其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/index.html +10
+  其他變更 "error-log/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
+  其他變更 "truth-source/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
+
+---

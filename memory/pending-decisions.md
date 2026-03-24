@@ -39,5 +39,7 @@
 | 2026-03-24 | auto-git-score | git-score 自動 commit（score=105），含重要變更 [commit:HEAD~1..HEAD] | 170 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-03-24 | auto-git-score | git-score 自動 commit（score=155），含重要變更 [commit:HEAD~1..HEAD] | 280 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-03-24 | auto-git-score | git-score 自動 commit（score=185），含重要變更 [commit:HEAD~1..HEAD] | 280 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
+| 2026-03-24 | auto-git-score | git-score 自動 commit（score=90），含重要變更 [commit:HEAD~1..HEAD] | 110 | 其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10 | pending |
+| 2026-03-24 | CRM-status-pill-click-無法切換 | status-pill 點擊無法循環切換狀態（高意願/觀察中/冷淡/無效） [working-tree] | 80 | 其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10; 其他變更 memory/milestone-judge-log.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 

@@ -474,7 +474,9 @@ function _attachNodeDrag(wrap, n){
     if(e.pointerType==='mouse'&&e.button!==0)return;
     if(e.target.classList.contains('note-content'))return;
     e.stopPropagation();
-    wrap.setPointerCapture(e.pointerId); // keeps events on this element during drag
+    // NOTE: do NOT setPointerCapture here — it redirects click's e.target to wrap,
+    // breaking child-element click delegation (status-pill, act-btn etc.).
+    // drag tracking via document.pointermove/pointerup works without capture.
     _nodeWasMousedDown=true;
     selectNode(n.id);
     dragId=n.id;
@@ -492,8 +494,7 @@ function _attachNodeDrag(wrap, n){
   wrap.addEventListener('click',e=>{
     e.stopPropagation();
     if(isDragging)return;
-    // setPointerCapture redirects e.target to wrap; use composedPath to find actual clicked element
-    const a=(e.composedPath&&e.composedPath().find(el=>el instanceof Element&&el.dataset&&el.dataset.a))||e.target.closest('[data-a]');
+    const a=e.target.closest('[data-a]');
     if(!a)return;
     const act=a.dataset.a,id=a.dataset.id;
     if(act==='open'){openPanel(id);}
@@ -566,7 +567,7 @@ function renderNodes(){
     if(isRoot){
       statusHtml=`<div class="node-root-pill">根節點</div>`;
     } else {
-      statusHtml=`<div class="status-pill" data-a="status" data-id="${n.id}"><span class="status-dot"></span>${STATUS_LABELS[n.status]||''}</div>`;
+      statusHtml=`<div class="status-pill" onclick="console.log('[pill-click] isDragging='+isDragging+' id=${n.id} status='+findNode('${n.id}')?.status);event.stopPropagation();if(!isDragging)cycleStatus('${n.id}');else console.warn('[pill-click] BLOCKED by isDragging')" title="點擊切換狀態"><span class="status-dot"></span>${STATUS_LABELS[n.status]||''}</div>`;
     }
 
     wrap.innerHTML=`
@@ -755,14 +756,22 @@ function headerAddNode(){
 }
 
 function cycleStatus(id){
-  const n=findNode(id);if(!n)return;
+  const n=findNode(id);
+  console.log('[cycleStatus] id='+id+' node='+JSON.stringify(n&&{name:n.name,status:n.status}));
+  if(!n)return;
   if(n.status===null)return; // root
   const idx=STATUS_ORDER.indexOf(n.status);
   n.status=STATUS_ORDER[(idx+1)%STATUS_ORDER.length];
   saveData();
-  renderNodes();
+  // Targeted DOM update — avoid full renderNodes() inside a click handler
+  // (destroys/recreates DOM mid-event causing pointer capture issues on repeat clicks)
+  const wrap=document.querySelector(`.node-wrap[data-id="${id}"]`);
+  if(wrap){
+    wrap.className='node-wrap status-'+n.status+(selId===n.id?' selected':'');
+    const pill=wrap.querySelector('.status-pill');
+    if(pill) pill.innerHTML=`<span class="status-dot"></span>${STATUS_LABELS[n.status]||''}`;
+  }
   updateStats();
-  // Keep panel open if it was showing this node
   if(panelNodeId===id) selectNode(id);
 }
 
