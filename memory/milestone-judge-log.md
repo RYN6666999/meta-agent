@@ -761,3 +761,33 @@
   其他變更 tools/crm/crm.js +10
 
 ---
+
+## 2026-03-24 14:52 | auto-git-score | 分數 220 | 📥 達到閾值（220/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=150），含重要變更
+
+**評分明細：**
+  其他變更 .wrangler/cache/pages.json +10
+  其他變更 .wrangler/cache/wrangler-account.json +10
+  其他變更 error-log/2026-03-24-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-24-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/checkpoints/checkpoint-a1e20938-20260324_143735.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/crm/.wrangler/cache/pages.json +10
+  其他變更 tools/crm/.wrangler/cache/wrangler-account.json +10
+  其他變更 tools/crm/admin.html +10
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/functions/api/login.js +10
+  其他變更 tools/crm/icon.svg +10
+  其他變更 tools/crm/index.html +10
+  其他變更 tools/crm/login.html +10
+  其他變更 tools/crm/manifest.json +10
+  其他變更 tools/crm/sw.js +10
+  其他變更 tools/crm/wrangler.toml +10
+
+---
