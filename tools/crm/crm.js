@@ -1785,6 +1785,10 @@ function buildSystemPrompt(personaKey){
 
 【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs
 
+【海報生成】當用戶要求製作活動海報（說「做海報」「幫我生成海報」「海報時間...地點...」等），請提取時間與地點，直接回覆以下格式（替換 TIME 和 LOCATION，並做 URL 編碼：空格→%20、/→%2F、（→%EF%BC%88、）→%EF%BC%89、～→%EF%BD%9E）：
+👉 [點此預覽並下載海報](https://fdd-crm.pages.dev/poster.html?time=TIME&loc=LOCATION)
+然後補充一句：「海報已帶入時間和地點，點開後直接下載 PNG 即可。」
+
 請用繁體中文回答，語氣專業親切，重點條列清晰。`;
 }
 
