@@ -562,10 +562,6 @@ function renderNodes(){
                 <button class="note-font-btn" onclick="setNoteFontSize('${n.id}',${nfs}+1);event.stopPropagation()" title="放大">A+</button>
               </div>
             </div>
-            <div class="node-actions">
-              <button class="act-btn" data-a="add" data-id="${n.id}" title="新增子節點">+</button>
-              <button class="act-btn del" data-a="del" data-id="${n.id}" title="刪除">🗑</button>
-            </div>
           </div>
           ${collapseHtml}
         </div>`;
@@ -1037,6 +1033,7 @@ const DEFAULT_SHORTCUTS = {
   addSibling:  { key:'Enter',   ctrl:false, label:'新增同層節點 (Enter)',  desc:'平行新增' },
   addChild:    { key:'Tab',     ctrl:false, label:'新增子節點 (Tab)',      desc:'向下新增' },
   delete:      { key:'Delete',  ctrl:false, label:'刪除節點 (Del)',        desc:'刪除' },
+  undo:        { key:'z',       ctrl:true,  label:'復原上一動 (⌘Z)',       desc:'復原' },
   fitView:     { key:'f',       ctrl:false, label:'全覽 (F)',              desc:'全覽' },
   copy:        { key:'c',       ctrl:true,  label:'複製 (⌘C)',            desc:'複製' },
   paste:       { key:'v',       ctrl:true,  label:'貼上 (⌘V)',            desc:'貼上' },
@@ -1116,12 +1113,13 @@ document.addEventListener('keydown',e=>{
   const tag=e.target.tagName;
   const inInput=tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
   const inContentEditable=e.target.isContentEditable;
-  // Cmd+Z — undo (skip if in contenteditable so text-undo still works)
   const ctrl=e.ctrlKey||e.metaKey;
-  if(ctrl&&e.key==='z'&&!inContentEditable&&!inInput){
+  // Cmd+Z — undo: skip if in contenteditable (let browser handle text-undo)
+  if(matchShortcut('undo',e)&&!inContentEditable&&!inInput){
     e.preventDefault();undoLast();return;
   }
-  if(inInput)return;
+  // Block ALL other shortcuts when typing in input or contenteditable
+  if(inInput||inContentEditable)return;
   if(currentPage!=='crm')return;
   if(matchShortcut('copy',e)){e.preventDefault();copySelected();}
   else if(matchShortcut('cut',e)){e.preventDefault();cutSelected();}
