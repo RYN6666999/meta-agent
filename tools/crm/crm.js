@@ -3346,12 +3346,11 @@ async function fetchGcalEvents(){
 }
 
 /* ═══════════════════════════════════════
-   GOOGLE SHEETS 整合
+   GOOGLE SHEETS 整合（每天獨立工作頁）
 ═══════════════════════════════════════ */
 const GSHEETS={
   SCOPE:'https://www.googleapis.com/auth/spreadsheets',
   CLIENT_ID:'858813478882-732hlp76l1mb1cfod932vcrgtkke3f29.apps.googleusercontent.com',
-  SHEET_NAME:'日報表',
   DEFAULT_ID:'1cRVMpiN0tYrUiXFsjf-x_5RXnWYF7uY5_Uy-kY0jdvA',
   tokenClient:null,
   getToken(){ try{ return JSON.parse(localStorage.getItem('gsheets-token')||'null'); }catch(e){ return null; } },
@@ -3360,6 +3359,8 @@ const GSHEETS={
   clearToken(){ localStorage.removeItem('gsheets-token'); },
   getSpreadsheetId(){ return localStorage.getItem('gsheets-id')||this.DEFAULT_ID; },
   setSpreadsheetId(id){ localStorage.setItem('gsheets-id',id); },
+  // "2026-03-26" → "3/26"
+  tabName(ds){ const p=ds.split('-'); return `${parseInt(p[1])}/${parseInt(p[2])}`; },
   updateStatus(){
     const el=document.getElementById('gsheets-status');
     if(el) el.textContent=this.isTokenValid()?'✅ 已連結':'未連結';
@@ -3367,25 +3368,20 @@ const GSHEETS={
   initClient(){
     if(!window.google?.accounts?.oauth2){ toast('GIS 尚未載入'); return; }
     this.tokenClient=window.google.accounts.oauth2.initTokenClient({
-      client_id:this.CLIENT_ID,
-      scope:this.SCOPE,
+      client_id:this.CLIENT_ID, scope:this.SCOPE,
       callback:(resp)=>{
         if(resp.error){ toast('Sheets 授權失敗：'+resp.error); return; }
-        GSHEETS.saveToken(resp);
-        GSHEETS.updateStatus();
-        toast('✅ Google Sheets 已連結');
+        GSHEETS.saveToken(resp); GSHEETS.updateStatus(); toast('✅ Google Sheets 已連結');
       }
     });
   },
   requestToken(cb){
-    if(!this.tokenClient){ this.initClient(); }
+    if(!this.tokenClient) this.initClient();
     if(!this.tokenClient){ toast('GIS 未就緒，請重整頁面'); return; }
     this._cb=cb;
     this.tokenClient.callback=(resp)=>{
       if(resp.error){ toast('Sheets 授權失敗：'+resp.error); return; }
-      GSHEETS.saveToken(resp);
-      GSHEETS.updateStatus();
-      toast('✅ Google Sheets 已連結');
+      GSHEETS.saveToken(resp); GSHEETS.updateStatus(); toast('✅ Google Sheets 已連結');
       if(GSHEETS._cb){ GSHEETS._cb(); GSHEETS._cb=null; }
     };
     this.tokenClient.requestAccessToken({prompt:''});
@@ -3400,74 +3396,202 @@ function saveSheetsId(){
 }
 
 /* ── Sheets API helpers ── */
-async function sheetsGet(path){
+async function sheetsReq(method,path,body){
   const token=GSHEETS.getToken().access_token;
-  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,{headers:{Authorization:`Bearer ${token}`}});
-  if(r.status===401){ GSHEETS.clearToken(); throw new Error('Token expired'); }
+  const opts={method,headers:{Authorization:`Bearer ${token}`}};
+  if(body){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,opts);
+  if(r.status===401){ GSHEETS.clearToken(); throw new Error('Token expired，請重新授權'); }
   return r.json();
 }
-async function sheetsPost(path,body){
-  const token=GSHEETS.getToken().access_token;
-  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,{
-    method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  });
-  if(r.status===401){ GSHEETS.clearToken(); throw new Error('Token expired'); }
-  return r.json();
-}
-async function sheetsPut(path,body){
-  const token=GSHEETS.getToken().access_token;
-  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,{
-    method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  });
-  return r.json();
-}
+const sheetsGet=(p)=>sheetsReq('GET',p);
+const sheetsPost=(p,b)=>sheetsReq('POST',p,b);
+const sheetsPut=(p,b)=>sheetsReq('PUT',p,b);
 
-const SHEET_HEADERS=['日期','邀約','電話','問卷','跟進','成交','大事1','目標1','大事2','目標2','大事3','目標3','連結人數','達標連結','感謝Top3','優化Top3','明天要做','同步時間'];
+/* ── color helpers ── */
+const rgb=(r,g,b)=>({red:r/255,green:g/255,blue:b/255});
+const CLRS={
+  title:   rgb(30,58,95),   titleFg: rgb(255,255,255),
+  section: rgb(219,234,254),secFg:   rgb(30,58,95),
+  header:  rgb(239,246,255),headerFg:rgb(30,58,95),
+  kpiGood: rgb(220,252,231),kpiFg:   rgb(21,128,61),
+  alt:     rgb(248,250,252),
+};
 
-async function ensureDailySheet(sid){
+/* ── 建立或取得當日分頁，回傳 sheetId ── */
+async function ensureDayTab(sid,ds){
+  const tabTitle=GSHEETS.tabName(ds);
   const meta=await sheetsGet(`${sid}?fields=sheets.properties`);
-  const exists=(meta.sheets||[]).find(s=>s.properties?.title===GSHEETS.SHEET_NAME);
-  if(exists) return exists.properties.sheetId;
-  // create sheet
-  const res=await sheetsPost(`${sid}:batchUpdate`,{requests:[{addSheet:{properties:{title:GSHEETS.SHEET_NAME}}}]});
-  const newId=res.replies?.[0]?.addSheet?.properties?.sheetId;
-  // write header
-  await sheetsPut(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A1')}?valueInputOption=USER_ENTERED`,
-    {values:[SHEET_HEADERS]});
-  return newId;
+  const existing=(meta.sheets||[]).find(s=>s.properties?.title===tabTitle);
+  if(existing) return existing.properties.sheetId;
+  const res=await sheetsPost(`${sid}:batchUpdate`,{
+    requests:[{addSheet:{properties:{title:tabTitle,gridProperties:{rowCount:80,columnCount:7}}}}]
+  });
+  return res.replies?.[0]?.addSheet?.properties?.sheetId;
 }
 
-async function findDateRow(sid,ds){
-  const res=await sheetsGet(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A:A')}`);
-  const vals=res.values||[];
-  for(let i=0;i<vals.length;i++){
-    if(vals[i][0]===ds) return i+1; // 1-based row
-  }
-  return -1;
-}
-
-function buildDailyRow(ds){
+/* ── 組裝 values 資料 (回傳 {rows, rowMap}) ── */
+function buildDayValues(ds){
   const r=dailyReports[ds]||{};
-  const bt=r.bigThree||[{},{},{}];
+  const bt=(r.bigThree||[{},{},{}]).slice(0,3).map(x=>x||{});
   const conns=r.connections||[];
   const goalConns=conns.filter(c=>c.hasGoal).length;
-  const grats=(r.gratitude||[]).filter(Boolean).slice(0,3).join(' / ');
-  const opts=(r.optimize||[]).filter(Boolean).slice(0,3).join(' / ');
-  return[
-    ds,
-    r['act-invite']||0, r['act-calls']||0, r['act-forms']||0, r['act-followup']||0, r['act-close']||0,
-    bt[0]?.task||'', bt[0]?.goal||'',
-    bt[1]?.task||'', bt[1]?.goal||'',
-    bt[2]?.task||'', bt[2]?.goal||'',
-    conns.length, goalConns,
-    grats, opts,
-    r.tomorrow||'',
-    new Date().toLocaleString('zh-TW')
-  ];
+  const grats=r.gratitude||Array(5).fill('');
+  const opts=r.optimize||Array(5).fill('');
+  const schedule=(r.schedule||[]).filter(s=>s.planned||s.achieved||s.review);
+
+  const rows=[];
+  const rowMap={};
+  const add=(rowData,key)=>{ if(key)rowMap[key]=rows.length; rows.push(rowData); };
+
+  // 0: 標題列
+  add([`📋 日報表　　${ds}`,``,``,``,``,``,`同步：${new Date().toLocaleString('zh-TW')}`],'title');
+  add([]); // 1: 空行
+
+  // 2: KPI 標頭
+  add(['📊 今日 KPI 實績'],'kpiHeader');
+  add(['邀約','電話','問卷','跟進','成交','',''],'kpiLabels');
+  add([r['act-invite']||0,r['act-calls']||0,r['act-forms']||0,r['act-followup']||0,r['act-close']||0,'',''],'kpiVals');
+  add([]); // 空行
+
+  // 6: 三件大事
+  add(['🎯 三件大事'],'btHeader');
+  add(['#','事項名稱','目標','如何驗證','','',''],'btLabels');
+  bt.forEach((item,i)=>{ add([i+1,item.task||'',item.goal||'',item.verify||'','','','']); });
+  add([]); // 空行
+
+  // 11: 今日連結
+  add([`🤝 今日連結　共 ${conns.length} 人，達標 ${goalConns} 人`],'connHeader');
+  if(conns.length){
+    add(['姓名','主題','下一步','達到目標?','','',''],'connLabels');
+    conns.forEach(c=>{ add([c.who||'',c.topic||'',c.nextStep||'',c.hasGoal?'✓':'','','','']); });
+  } else {
+    add(['（今日無連結記錄）']);
+  }
+  add([]);
+
+  // 復盤
+  add(['🌙 今日復盤'],'rfHeader');
+  add(['🙏 值得感謝','','','💡 值得優化','','',''],'rfLabels');
+  for(let i=0;i<5;i++){
+    add([`${i+1}. ${grats[i]||''}`, '','', `${i+1}. ${opts[i]||''}`, '','','']);
+  }
+  add([]);
+
+  // 明天
+  add(['📋 明天要做'],'tmrHeader');
+  add([r.tomorrow||'（未填寫）','','','','','','']);
+  add([]);
+
+  // 時間安排（只列有填寫的時段）
+  if(schedule.length){
+    add(['⏰ 時間安排（已填寫時段）'],'schedHeader');
+    add(['時間','預定','成就','復盤','','',''],'schedLabels');
+    schedule.forEach(s=>{add([s.time,s.planned||'',s.achieved||'',s.review||'','','','']);});
+  }
+
+  return{rows,rowMap};
 }
 
+/* ── 組裝格式化 requests ── */
+function buildFormatRequests(sheetId,rowMap,rows){
+  const req=[];
+  const COLS=7;
+
+  // 欄寬
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:0,endIndex:1},
+    properties:{pixelSize:80},fields:'pixelSize'}});
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:1,endIndex:4},
+    properties:{pixelSize:180},fields:'pixelSize'}});
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:4,endIndex:7},
+    properties:{pixelSize:120},fields:'pixelSize'}});
+
+  const cellFmt=(r1,c1,r2,c2,opts)=>({updateCells:{
+    range:{sheetId,startRowIndex:r1,endRowIndex:r2,startColumnIndex:c1,endColumnIndex:c2},
+    rows:Array.from({length:r2-r1},()=>({values:Array.from({length:c2-c1},()=>({userEnteredFormat:opts}))})),
+    fields:'userEnteredFormat'
+  }});
+  const merge=(r1,c1,r2,c2)=>({mergeCells:{range:{sheetId,startRowIndex:r1,endRowIndex:r2,startColumnIndex:c1,endColumnIndex:c2},mergeType:'MERGE_ALL'}});
+
+  // 標題列
+  const tR=rowMap.title;
+  if(tR!=null){
+    req.push(merge(tR,0,tR+1,6));
+    req.push(cellFmt(tR,0,tR+1,7,{backgroundColor:CLRS.title,textFormat:{bold:true,fontSize:14,foregroundColor:CLRS.titleFg},verticalAlignment:'MIDDLE',horizontalAlignment:'CENTER'}));
+    req.push({updateDimensionProperties:{range:{sheetId,dimension:'ROWS',startIndex:tR,endIndex:tR+1},properties:{pixelSize:36},fields:'pixelSize'}});
+  }
+
+  // Section header helper
+  const sectionHdr=(key,icon,cols=6)=>{
+    const row=rowMap[key];
+    if(row==null) return;
+    req.push(merge(row,0,row+1,cols));
+    req.push(cellFmt(row,0,row+1,cols,{backgroundColor:CLRS.section,textFormat:{bold:true,fontSize:11,foregroundColor:CLRS.secFg},verticalAlignment:'MIDDLE',paddingLeft:6}));
+    req.push({updateDimensionProperties:{range:{sheetId,dimension:'ROWS',startIndex:row,endIndex:row+1},properties:{pixelSize:28},fields:'pixelSize'}});
+  };
+  // Column labels helper (light bg, bold)
+  const labelRow=(key,cols=5)=>{
+    const row=rowMap[key];
+    if(row==null) return;
+    req.push(cellFmt(row,0,row+1,cols,{backgroundColor:CLRS.header,textFormat:{bold:true,fontSize:10,foregroundColor:CLRS.headerFg}}));
+  };
+
+  sectionHdr('kpiHeader');
+  labelRow('kpiLabels');
+  // KPI values — green bg, big font, centered
+  const kR=rowMap.kpiVals;
+  if(kR!=null){
+    req.push(cellFmt(kR,0,kR+1,5,{backgroundColor:CLRS.kpiGood,textFormat:{bold:true,fontSize:18,foregroundColor:CLRS.kpiFg},horizontalAlignment:'CENTER',verticalAlignment:'MIDDLE'}));
+    req.push({updateDimensionProperties:{range:{sheetId,dimension:'ROWS',startIndex:kR,endIndex:kR+1},properties:{pixelSize:44},fields:'pixelSize'}});
+  }
+
+  sectionHdr('btHeader');
+  labelRow('btLabels',4);
+  // big three rows — alternate bg
+  if(rowMap.btLabels!=null){
+    for(let i=1;i<=3;i++){
+      const row=rowMap.btLabels+i;
+      if(row<rows.length) req.push(cellFmt(row,0,row+1,4,{backgroundColor:i%2?CLRS.alt:{red:1,green:1,blue:1},textFormat:{fontSize:11}}));
+    }
+  }
+
+  sectionHdr('connHeader',6,6);
+  labelRow('connLabels',4);
+
+  sectionHdr('rfHeader');
+  // Reflection header split
+  const rfL=rowMap.rfLabels;
+  if(rfL!=null){
+    req.push(merge(rfL,0,rfL+1,3));
+    req.push(cellFmt(rfL,0,rfL+1,3,{backgroundColor:rgb(254,240,138),textFormat:{bold:true,fontSize:10,foregroundColor:rgb(113,63,18)}}));
+    req.push(merge(rfL,3,rfL+1,6));
+    req.push(cellFmt(rfL,3,rfL+1,6,{backgroundColor:rgb(220,252,231),textFormat:{bold:true,fontSize:10,foregroundColor:rgb(21,128,61)}}));
+    // 5 rows of reflection - split colouring
+    for(let i=1;i<=5;i++){
+      const rr=rfL+i;
+      if(rr<rows.length){
+        req.push(cellFmt(rr,0,rr+1,3,{backgroundColor:rgb(255,253,200),textFormat:{fontSize:11}}));
+        req.push(cellFmt(rr,3,rr+1,6,{backgroundColor:rgb(236,253,245),textFormat:{fontSize:11}}));
+      }
+    }
+  }
+
+  sectionHdr('tmrHeader');
+  const tmrRow=rowMap.tmrHeader;
+  if(tmrRow!=null){
+    const dr=tmrRow+1;
+    req.push(merge(dr,0,dr+1,6));
+    req.push(cellFmt(dr,0,dr+1,6,{textFormat:{fontSize:11},wrapStrategy:'WRAP'}));
+    req.push({updateDimensionProperties:{range:{sheetId,dimension:'ROWS',startIndex:dr,endIndex:dr+1},properties:{pixelSize:60},fields:'pixelSize'}});
+  }
+
+  sectionHdr('schedHeader');
+  labelRow('schedLabels',4);
+
+  return req;
+}
+
+/* ── 主同步函式 ── */
 async function syncDailyToSheets(ds){
   if(!GSHEETS.isTokenValid()){
     ensureGisLoaded(()=>{ GSHEETS.initClient(); GSHEETS.requestToken(()=>syncDailyToSheets(ds)); });
@@ -3478,20 +3602,29 @@ async function syncDailyToSheets(ds){
   const btn=document.getElementById('sheets-sync-btn');
   if(btn){ btn.textContent='⏳ 同步中…'; btn.disabled=true; }
   try{
-    await ensureDailySheet(sid);
-    const row=buildDailyRow(ds);
-    const existRow=await findDateRow(sid,ds);
-    if(existRow>0){
-      // update existing row
-      await sheetsPut(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A'+existRow)}?valueInputOption=USER_ENTERED`,
-        {values:[row]});
-      toast('✅ 試算表已更新（'+ds+'）');
-    } else {
-      // append new row
-      await sheetsPost(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-        {values:[row]});
-      toast('✅ 已新增到試算表（'+ds+'）');
+    // 1. 建立/取得當日分頁
+    const sheetId=await ensureDayTab(sid,ds);
+
+    // 2. 清除現有內容
+    const tabTitle=GSHEETS.tabName(ds);
+    await sheetsReq('DELETE',`${sid}/values/${encodeURIComponent(tabTitle+'!A1:Z100')}:clear`,{});
+
+    // 3. 寫入資料
+    const {rows,rowMap}=buildDayValues(ds);
+    await sheetsPut(
+      `${sid}/values/${encodeURIComponent(tabTitle+'!A1')}?valueInputOption=USER_ENTERED`,
+      {values:rows}
+    );
+
+    // 4. 套用格式
+    const fmtReqs=buildFormatRequests(sheetId,rowMap,rows);
+    if(fmtReqs.length){
+      await sheetsPost(`${sid}:batchUpdate`,{requests:fmtReqs});
     }
+
+    const url=`https://docs.google.com/spreadsheets/d/${sid}`;
+    toast(`✅ 已同步「${tabTitle}」工作頁`);
+    console.log('[gsheets] synced:',url);
   }catch(e){
     console.error('[gsheets]',e);
     toast('❌ 同步失敗：'+e.message);
