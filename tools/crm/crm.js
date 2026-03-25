@@ -3679,15 +3679,20 @@ async function pullDailyFromSheets(ds){
   try{
     // 確認試算表分頁存在
     const meta=await sheetsGet(`${sid}?fields=sheets.properties`);
+    if(meta.error) throw new Error(`API: ${meta.error.message} (code ${meta.error.code})`);
+    console.log('[gsheets-pull] tabs:',(meta.sheets||[]).map(s=>s.properties?.title));
     const exists=(meta.sheets||[]).find(s=>s.properties?.title===tabTitle);
     if(!exists){
-      toast(`試算表中找不到「${tabTitle}」分頁，請先同步一次`);
+      const tabs=(meta.sheets||[]).map(s=>s.properties?.title).join('、');
+      toast(`找不到「${tabTitle}」分頁。現有分頁：${tabs||'(無)'}`);
       return;
     }
 
     // 讀取所有資料
     const res=await sheetsGet(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:G100')}`);
+    if(res.error) throw new Error(`讀取失敗：${res.error.message}`);
     const rows=res.values||[];
+    console.log('[gsheets-pull] rows read:',rows.length,'tab:',tabTitle);
     if(!rows.length){ toast('該工作頁無資料'); return; }
 
     // 解析
@@ -3736,6 +3741,9 @@ async function pullDailyFromSheets(ds){
 function buildFormatRequests(sheetId,rowMap,rows){
   const req=[];
   const COLS=7;
+
+  // 先清除所有現有合併（防止重複同步時衝突）
+  req.push({unmergeCells:{range:{sheetId,startRowIndex:0,endRowIndex:100,startColumnIndex:0,endColumnIndex:7}}});
 
   // 欄寬
   req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:0,endIndex:1},
@@ -3843,29 +3851,34 @@ async function syncDailyToSheets(ds){
   try{
     // 1. 建立/取得當日分頁
     const sheetId=await ensureDayTab(sid,ds);
-
-    // 2. 清除現有內容
     const tabTitle=GSHEETS.tabName(ds);
-    await sheetsReq('DELETE',`${sid}/values/${encodeURIComponent(tabTitle+'!A1:Z100')}:clear`,{});
+
+    // 2. 先解除所有合併儲存格，再清值（避免舊合併衝突）
+    await sheetsPost(`${sid}:batchUpdate`,{requests:[{
+      unmergeCells:{range:{sheetId,startRowIndex:0,endRowIndex:100,startColumnIndex:0,endColumnIndex:7}}
+    }]}).catch(()=>{}); // 沒有合併時會報錯，忽略
+    // 清除值（POST，非 DELETE）
+    await sheetsPost(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:G100')}:clear`,{});
 
     // 3. 寫入資料
     const {rows,rowMap}=buildDayValues(ds);
-    await sheetsPut(
+    const writeRes=await sheetsPut(
       `${sid}/values/${encodeURIComponent(tabTitle+'!A1')}?valueInputOption=USER_ENTERED`,
       {values:rows}
     );
+    if(writeRes.error) throw new Error(`寫入失敗：${writeRes.error.message}`);
 
     // 4. 套用格式
     const fmtReqs=buildFormatRequests(sheetId,rowMap,rows);
     if(fmtReqs.length){
-      await sheetsPost(`${sid}:batchUpdate`,{requests:fmtReqs});
+      const fmtRes=await sheetsPost(`${sid}:batchUpdate`,{requests:fmtReqs});
+      if(fmtRes.error) console.warn('[gsheets] format warning:',fmtRes.error.message);
     }
 
-    const url=`https://docs.google.com/spreadsheets/d/${sid}`;
     toast(`✅ 已同步「${tabTitle}」工作頁`);
-    console.log('[gsheets] synced:',url);
+    console.log('[gsheets] synced tab:',tabTitle,'sheetId:',sheetId);
   }catch(e){
-    console.error('[gsheets]',e);
+    console.error('[gsheets] sync error:',e);
     toast('❌ 同步失敗：'+e.message);
   }finally{
     if(btn){ btn.textContent='📤 同步到試算表'; btn.disabled=false; }
