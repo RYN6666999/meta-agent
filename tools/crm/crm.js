@@ -2782,8 +2782,12 @@ function renderDailyPage(){
   }
 
   body.innerHTML=`
-<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-  <button id="sheets-sync-btn" class="btn btn-accent" style="font-size:12px;padding:5px 14px;display:flex;align-items:center;gap:5px"
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px">
+  <button id="cal-sync-btn" class="btn" style="font-size:12px;padding:5px 14px"
+    onclick="syncScheduleToCalendar('${ds}')">
+    📅 同步到日曆
+  </button>
+  <button id="sheets-sync-btn" class="btn btn-accent" style="font-size:12px;padding:5px 14px"
     onclick="syncDailyToSheets('${ds}')">
     📤 同步到試算表
   </button>
@@ -3254,7 +3258,7 @@ function clearAllData(){
 
 /* ── Google Calendar — GIS Token Flow (純瀏覽器，不需後端) ── */
 const GCAL={
-  SCOPE:'https://www.googleapis.com/auth/calendar.readonly',
+  SCOPE:'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
   CLIENT_ID:'858813478882-732hlp76l1mb1cfod932vcrgtkke3f29.apps.googleusercontent.com',
   tokenClient:null,
   getClientId(){ return this.CLIENT_ID; },
@@ -3312,6 +3316,91 @@ function resetGoogleClientId(){
 }
 
 function handleOAuthReturn(){ /* 舊 code flow 已棄用，GIS token flow 不需要 */ }
+
+/* ── 日程同步到 Google Calendar ── */
+// 儲存 {slotTime: eventId} mapping
+function getCalEventMap(ds){ try{ return JSON.parse(localStorage.getItem('gcal-emap-'+ds)||'{}'); }catch(e){ return {}; } }
+function saveCalEventMap(ds,m){ localStorage.setItem('gcal-emap-'+ds,JSON.stringify(m)); }
+
+async function calReq(method,path,body){
+  const token=GCAL.getToken()?.access_token;
+  if(!token) throw new Error('no token');
+  const opts={method,headers:{Authorization:`Bearer ${token}`}};
+  if(body){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  const r=await fetch(`https://www.googleapis.com/calendar/v3/${path}`,opts);
+  if(r.status===401){ GCAL.clearToken(); throw new Error('Token expired，請重新連結日曆'); }
+  if(r.status===204) return null;
+  return r.json();
+}
+
+function buildCalEvent(ds,slot){
+  const [h,m]=slot.time.split(':').map(Number);
+  const start=new Date(`${ds}T${slot.time}:00`);
+  const end=new Date(start.getTime()+60*60*1000); // +1 hour default
+  return{
+    summary: slot.planned,
+    description: [
+      slot.achieved?`✅ 成就：${slot.achieved}`:'',
+      slot.review?`🔍 復盤：${slot.review}`:'',
+    ].filter(Boolean).join('\n')||undefined,
+    start:{ dateTime:start.toISOString(), timeZone:'Asia/Taipei' },
+    end:{   dateTime:end.toISOString(),   timeZone:'Asia/Taipei' },
+    colorId:'9', // 藍莓色
+    source:{ title:'FDD CRM 日報', url:location.href }
+  };
+}
+
+async function syncScheduleToCalendar(ds){
+  if(!GCAL.isTokenValid()){
+    ensureGisLoaded(()=>{
+      GCAL.initClient(GCAL.CLIENT_ID);
+      // 要求含 events 權限
+      if(!GCAL.tokenClient){ toast('GIS 未就緒'); return; }
+      GCAL.tokenClient.callback=(resp)=>{
+        if(resp.error){ toast('日曆授權失敗：'+resp.error); return; }
+        GCAL.saveToken(resp); GCAL.updateStatus(); toast('✅ 已授權，開始同步…');
+        syncScheduleToCalendar(ds);
+      };
+      GCAL.tokenClient.requestAccessToken({prompt:'consent'});
+    });
+    return;
+  }
+  const rpt=dailyReports[ds]||{};
+  const slots=(rpt.schedule||[]).filter(s=>s.planned?.trim());
+  if(!slots.length){ toast('今日尚無「預定」內容可同步'); return; }
+
+  const btn=document.getElementById('cal-sync-btn');
+  if(btn){ btn.textContent='⏳ 同步日曆…'; btn.disabled=true; }
+  const eMap=getCalEventMap(ds);
+  let created=0,updated=0,failed=0;
+
+  for(const slot of slots){
+    const body=buildCalEvent(ds,slot);
+    try{
+      const existing=eMap[slot.time];
+      if(existing){
+        // 嘗試 PATCH 更新
+        try{
+          await calReq('PATCH',`calendars/primary/events/${existing}`,body);
+          updated++;
+        }catch(e){
+          // 事件已刪除，重新建立
+          const ev=await calReq('POST','calendars/primary/events',body);
+          eMap[slot.time]=ev.id; created++;
+        }
+      } else {
+        const ev=await calReq('POST','calendars/primary/events',body);
+        eMap[slot.time]=ev.id; created++;
+      }
+    }catch(e){
+      console.warn('[cal-sync] slot',slot.time,e.message);
+      failed++;
+    }
+  }
+  saveCalEventMap(ds,eMap);
+  toast(`✅ 日曆同步完成：新增 ${created}、更新 ${updated}${failed?'、失敗 '+failed:''}`);
+  if(btn){ btn.textContent='📅 同步到日曆'; btn.disabled=false; }
+}
 
 async function fetchGcalEvents(){
   if(!GCAL.isTokenValid()){ GCAL.updateStatus(); return; }
