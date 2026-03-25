@@ -794,6 +794,18 @@ select.field-input option{background:var(--surface2)}
 .dsgi:focus{outline:none;border-color:var(--accent);background:var(--surface)}
 .dsgi-r{color:var(--text-muted);font-style:italic}
 .dsgi-r:focus{color:var(--text)}
+/* 當前時段高亮 */
+.dsgt-now{color:var(--accent)!important;font-weight:800;position:relative}
+.dsgt-now-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--accent);margin-left:3px;vertical-align:middle;
+  animation:blink 1.2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.dsgi-now{
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface2))!important;
+  border-color:color-mix(in srgb,var(--accent) 35%,transparent)!important;
+}
 
 /* Big Three */
 .daily-bt-hdr{display:grid;grid-template-columns:22px 1fr 1fr 1fr;gap:5px;padding:0 2px;margin-bottom:4px}

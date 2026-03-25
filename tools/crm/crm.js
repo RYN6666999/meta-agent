@@ -2769,6 +2769,18 @@ function renderDailyPage(){
   const mkey=getMonthKey(ds);
   const mLabel=`${mkey.slice(0,4)}年${parseInt(mkey.slice(5))}月`;
 
+  // 計算當前時段 index（只對今日）
+  const todayStr=new Date().toISOString().slice(0,10);
+  const nowH=new Date().getHours(),nowM=new Date().getMinutes();
+  const nowMins=nowH*60+nowM;
+  let nowSlot=-1;
+  if(ds===todayStr){
+    rpt.schedule.forEach((s,i)=>{
+      const [sh,sm]=s.time.split(':').map(Number);
+      if(sh*60+sm<=nowMins)nowSlot=i;
+    });
+  }
+
   body.innerHTML=`
 <datalist id="drn-list">
   ${nodes.filter(n=>n.name&&!n.nodeType).map(n=>`<option value="${escHtml(n.name)}">`).join('')}
@@ -2793,12 +2805,15 @@ function renderDailyPage(){
           <div class="dsgh">📋 預定</div>
           <div class="dsgh">✅ 成就</div>
           <div class="dsgh">🔍 復盤</div>
-          ${rpt.schedule.map((s,i)=>`
-            <div class="dsgt">${s.time}</div>
-            <input class="dsgi" value="${escHtml(s.planned)}" placeholder="—" oninput="updateScheduleSlot(${i},'planned',this.value)">
-            <input class="dsgi" value="${escHtml(s.achieved)}" placeholder="—" oninput="updateScheduleSlot(${i},'achieved',this.value)">
-            <input class="dsgi dsgi-r" value="${escHtml(s.review)}" placeholder="—" oninput="updateScheduleSlot(${i},'review',this.value)">
-          `).join('')}
+          ${rpt.schedule.map((s,i)=>{
+            const isNow=(i===nowSlot);
+            const nd=isNow?'data-now="1"':'';
+            return`
+            <div class="dsgt${isNow?' dsgt-now':''}" ${nd} data-si="${i}">${s.time}${isNow?'<span class="dsgt-now-dot"></span>':''}</div>
+            <input class="dsgi${isNow?' dsgi-now':''}" value="${escHtml(s.planned)}" placeholder="—" oninput="updateScheduleSlot(${i},'planned',this.value)">
+            <input class="dsgi${isNow?' dsgi-now':''}" value="${escHtml(s.achieved)}" placeholder="—" oninput="updateScheduleSlot(${i},'achieved',this.value)">
+            <input class="dsgi dsgi-r${isNow?' dsgi-now':''}" value="${escHtml(s.review)}" placeholder="—" oninput="updateScheduleSlot(${i},'review',this.value)">`;
+          }).join('')}
         </div>
       </div>
     </div>
@@ -2901,6 +2916,13 @@ function renderDailyPage(){
 
 </div>`;
   renderMonthlyProgress();
+  // 自動捲到當前時段
+  if(nowSlot>=0){
+    requestAnimationFrame(()=>{
+      const el=document.querySelector(`.dsgt[data-si="${nowSlot}"]`);
+      if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+  }
 }
 
 function toggleDailyFu(e,nid){
