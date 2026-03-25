@@ -3515,15 +3515,24 @@ const CLRS={
 async function ensureDayTab(sid,ds){
   const tabTitle=GSHEETS.tabName(ds);
   const meta=await sheetsGet(`${sid}?fields=sheets.properties`);
+  if(meta.error) throw new Error(`API: ${meta.error.message}`);
   const existing=(meta.sheets||[]).find(s=>s.properties?.title===tabTitle);
   if(existing) return existing.properties.sheetId;
   const res=await sheetsPost(`${sid}:batchUpdate`,{
-    requests:[{addSheet:{properties:{title:tabTitle,gridProperties:{rowCount:80,columnCount:7}}}}]
+    requests:[{addSheet:{properties:{title:tabTitle,gridProperties:{rowCount:100,columnCount:5}}}}]
   });
   return res.replies?.[0]?.addSheet?.properties?.sheetId;
 }
 
-/* ── 組裝 values 資料 (回傳 {rows, rowMap}) ── */
+/* ── 組裝 values 資料 (5 欄 A-E，對齊截圖格式) ── */
+// 欄位: A=時間/序號(窄), B=主要內容(寬), C=次要, D=第三, E=備用
+const NC=5; // Number of Columns
+function r5(...vals){ // 補到5欄
+  const a=vals.slice(0,NC);
+  while(a.length<NC) a.push('');
+  return a;
+}
+
 function buildDayValues(ds){
   const r=dailyReports[ds]||{};
   const bt=(r.bigThree||[{},{},{}]).slice(0,3).map(x=>x||{});
@@ -3537,50 +3546,50 @@ function buildDayValues(ds){
   const rowMap={};
   const add=(rowData,key)=>{ if(key)rowMap[key]=rows.length; rows.push(rowData); };
 
-  // 0: 標題列
-  add([`📋 日報表　　${ds}`,``,``,``,``,``,`同步：${new Date().toLocaleString('zh-TW')}`],'title');
-  add([]); // 1: 空行
+  // 0: 標題
+  add(r5(`📋 日報表　${ds}`, '', '', '', `同步：${new Date().toLocaleString('zh-TW')}`),'title');
+  add(r5()); // blank
 
-  // 2: KPI 標頭
-  add(['📊 今日 KPI 實績'],'kpiHeader');
-  add(['邀約','電話','問卷','跟進','成交','',''],'kpiLabels');
-  add([r['act-invite']||0,r['act-calls']||0,r['act-forms']||0,r['act-followup']||0,r['act-close']||0,'',''],'kpiVals');
-  add([]); // 空行
+  // 2: KPI — A-E 各一個，上下兩列
+  add(r5('📊 今日 KPI 實績'),'kpiHeader');
+  add(r5('邀約','電話','問卷','跟進','成交'),'kpiLabels');
+  add(r5(r['act-invite']||0, r['act-calls']||0, r['act-forms']||0, r['act-followup']||0, r['act-close']||0),'kpiVals');
+  add(r5()); // blank
 
   // 6: 三件大事
-  add(['🎯 三件大事'],'btHeader');
-  add(['#','事項名稱','目標','如何驗證','','',''],'btLabels');
-  bt.forEach((item,i)=>{ add([i+1,item.task||'',item.goal||'',item.verify||'','','','']); });
-  add([]); // 空行
+  add(r5('🎯 三件大事'),'btHeader');
+  add(r5('#','事項名稱','目標','如何驗證'),'btLabels');
+  bt.forEach((item,i)=>add(r5(i+1, item.task||'', item.goal||'', item.verify||'')));
+  add(r5()); // blank
 
   // 11: 今日連結
-  add([`🤝 今日連結　共 ${conns.length} 人，達標 ${goalConns} 人`],'connHeader');
+  add(r5(`🤝 今日連結　共 ${conns.length} 人，達標 ${goalConns} 人`),'connHeader');
   if(conns.length){
-    add(['姓名','主題','下一步','達到目標?','','',''],'connLabels');
-    conns.forEach(c=>{ add([c.who||'',c.topic||'',c.nextStep||'',c.hasGoal?'✓':'','','','']); });
+    add(r5('姓名','主題','下一步','達到目標?'),'connLabels');
+    conns.forEach(c=>add(r5(c.who||'', c.topic||'', c.nextStep||'', c.hasGoal?'✓':'')));
   } else {
-    add(['（今日無連結記錄）']);
+    add(r5('（今日無連結記錄）'));
   }
-  add([]);
+  add(r5());
 
   // 復盤
-  add(['🌙 今日復盤'],'rfHeader');
-  add(['🙏 值得感謝','','','💡 值得優化','','',''],'rfLabels');
+  add(r5('🌙 今日復盤'),'rfHeader');
+  add(r5('🙏 值得感謝','','💡 值得優化'),'rfLabels');
   for(let i=0;i<5;i++){
-    add([`${i+1}. ${grats[i]||''}`, '','', `${i+1}. ${opts[i]||''}`, '','','']);
+    add(r5(`${i+1}. ${grats[i]||''}`, '', `${i+1}. ${opts[i]||''}`));
   }
-  add([]);
+  add(r5());
 
   // 明天
-  add(['📋 明天要做'],'tmrHeader');
-  add([r.tomorrow||'（未填寫）','','','','','','']);
-  add([]);
+  add(r5('📋 明天要做'),'tmrHeader');
+  add(r5(r.tomorrow||'（未填寫）'));
+  add(r5());
 
-  // 時間安排（只列有填寫的時段）
+  // 時間安排
   if(schedule.length){
-    add(['⏰ 時間安排（已填寫時段）'],'schedHeader');
-    add(['時間','預定','成就','復盤','','',''],'schedLabels');
-    schedule.forEach(s=>{add([s.time,s.planned||'',s.achieved||'',s.review||'','','','']);});
+    add(r5('⏰ 時間安排（已填寫時段）'),'schedHeader');
+    add(r5('時間','預定','成就','復盤'),'schedLabels');
+    schedule.forEach(s=>add(r5(s.time, s.planned||'', s.achieved||'', s.review||'')));
   }
 
   return{rows,rowMap};
@@ -3636,7 +3645,7 @@ function parseSheetRows(rows){
       for(let j=0;j<5;j++){
         const r=rows[i+2+j]||[];
         grats.push((r[0]||'').replace(/^\d+\.\s*/,'').trim());
-        opts.push( (r[3]||'').replace(/^\d+\.\s*/,'').trim());
+        opts.push( (r[2]||'').replace(/^\d+\.\s*/,'').trim());
       }
       out.gratitude=grats;
       out.optimize=opts;
@@ -3689,7 +3698,7 @@ async function pullDailyFromSheets(ds){
     }
 
     // 讀取所有資料
-    const res=await sheetsGet(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:G100')}`);
+    const res=await sheetsGet(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:E200')}`);
     if(res.error) throw new Error(`讀取失敗：${res.error.message}`);
     const rows=res.values||[];
     console.log('[gsheets-pull] rows read:',rows.length,'tab:',tabTitle);
@@ -3740,18 +3749,22 @@ async function pullDailyFromSheets(ds){
 /* ── 組裝格式化 requests ── */
 function buildFormatRequests(sheetId,rowMap,rows){
   const req=[];
-  const COLS=7;
+  const COLS=5;
 
   // 先清除所有現有合併（防止重複同步時衝突）
-  req.push({unmergeCells:{range:{sheetId,startRowIndex:0,endRowIndex:100,startColumnIndex:0,endColumnIndex:7}}});
+  req.push({unmergeCells:{range:{sheetId,startRowIndex:0,endRowIndex:200,startColumnIndex:0,endColumnIndex:5}}});
 
-  // 欄寬
+  // 欄寬：A=70(索引/時間), B=200(主要內容), C=150, D=130, E=100
   req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:0,endIndex:1},
-    properties:{pixelSize:80},fields:'pixelSize'}});
-  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:1,endIndex:4},
-    properties:{pixelSize:180},fields:'pixelSize'}});
-  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:4,endIndex:7},
-    properties:{pixelSize:120},fields:'pixelSize'}});
+    properties:{pixelSize:70},fields:'pixelSize'}});
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:1,endIndex:2},
+    properties:{pixelSize:200},fields:'pixelSize'}});
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:2,endIndex:3},
+    properties:{pixelSize:150},fields:'pixelSize'}});
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:3,endIndex:4},
+    properties:{pixelSize:130},fields:'pixelSize'}});
+  req.push({updateDimensionProperties:{range:{sheetId,dimension:'COLUMNS',startIndex:4,endIndex:5},
+    properties:{pixelSize:100},fields:'pixelSize'}});
 
   const cellFmt=(r1,c1,r2,c2,opts)=>({updateCells:{
     range:{sheetId,startRowIndex:r1,endRowIndex:r2,startColumnIndex:c1,endColumnIndex:c2},
@@ -3763,13 +3776,13 @@ function buildFormatRequests(sheetId,rowMap,rows){
   // 標題列
   const tR=rowMap.title;
   if(tR!=null){
-    req.push(merge(tR,0,tR+1,6));
-    req.push(cellFmt(tR,0,tR+1,7,{backgroundColor:CLRS.title,textFormat:{bold:true,fontSize:14,foregroundColor:CLRS.titleFg},verticalAlignment:'MIDDLE',horizontalAlignment:'CENTER'}));
+    req.push(merge(tR,0,tR+1,5));
+    req.push(cellFmt(tR,0,tR+1,5,{backgroundColor:CLRS.title,textFormat:{bold:true,fontSize:14,foregroundColor:CLRS.titleFg},verticalAlignment:'MIDDLE',horizontalAlignment:'CENTER'}));
     req.push({updateDimensionProperties:{range:{sheetId,dimension:'ROWS',startIndex:tR,endIndex:tR+1},properties:{pixelSize:36},fields:'pixelSize'}});
   }
 
   // Section header helper
-  const sectionHdr=(key,icon,cols=6)=>{
+  const sectionHdr=(key,icon,cols=5)=>{
     const row=rowMap[key];
     if(row==null) return;
     req.push(merge(row,0,row+1,cols));
@@ -3802,23 +3815,23 @@ function buildFormatRequests(sheetId,rowMap,rows){
     }
   }
 
-  sectionHdr('connHeader',6,6);
+  sectionHdr('connHeader',null,5);
   labelRow('connLabels',4);
 
   sectionHdr('rfHeader');
-  // Reflection header split
+  // Reflection header split: col A-B = gratitude, col C-E = optimize
   const rfL=rowMap.rfLabels;
   if(rfL!=null){
-    req.push(merge(rfL,0,rfL+1,3));
-    req.push(cellFmt(rfL,0,rfL+1,3,{backgroundColor:rgb(254,240,138),textFormat:{bold:true,fontSize:10,foregroundColor:rgb(113,63,18)}}));
-    req.push(merge(rfL,3,rfL+1,6));
-    req.push(cellFmt(rfL,3,rfL+1,6,{backgroundColor:rgb(220,252,231),textFormat:{bold:true,fontSize:10,foregroundColor:rgb(21,128,61)}}));
+    req.push(merge(rfL,0,rfL+1,2));
+    req.push(cellFmt(rfL,0,rfL+1,2,{backgroundColor:rgb(254,240,138),textFormat:{bold:true,fontSize:10,foregroundColor:rgb(113,63,18)}}));
+    req.push(merge(rfL,2,rfL+1,5));
+    req.push(cellFmt(rfL,2,rfL+1,5,{backgroundColor:rgb(220,252,231),textFormat:{bold:true,fontSize:10,foregroundColor:rgb(21,128,61)}}));
     // 5 rows of reflection - split colouring
     for(let i=1;i<=5;i++){
       const rr=rfL+i;
       if(rr<rows.length){
-        req.push(cellFmt(rr,0,rr+1,3,{backgroundColor:rgb(255,253,200),textFormat:{fontSize:11}}));
-        req.push(cellFmt(rr,3,rr+1,6,{backgroundColor:rgb(236,253,245),textFormat:{fontSize:11}}));
+        req.push(cellFmt(rr,0,rr+1,2,{backgroundColor:rgb(255,253,200),textFormat:{fontSize:11}}));
+        req.push(cellFmt(rr,2,rr+1,5,{backgroundColor:rgb(236,253,245),textFormat:{fontSize:11}}));
       }
     }
   }
@@ -3827,8 +3840,8 @@ function buildFormatRequests(sheetId,rowMap,rows){
   const tmrRow=rowMap.tmrHeader;
   if(tmrRow!=null){
     const dr=tmrRow+1;
-    req.push(merge(dr,0,dr+1,6));
-    req.push(cellFmt(dr,0,dr+1,6,{textFormat:{fontSize:11},wrapStrategy:'WRAP'}));
+    req.push(merge(dr,0,dr+1,5));
+    req.push(cellFmt(dr,0,dr+1,5,{textFormat:{fontSize:11},wrapStrategy:'WRAP'}));
     req.push({updateDimensionProperties:{range:{sheetId,dimension:'ROWS',startIndex:dr,endIndex:dr+1},properties:{pixelSize:60},fields:'pixelSize'}});
   }
 
@@ -3855,10 +3868,10 @@ async function syncDailyToSheets(ds){
 
     // 2. 先解除所有合併儲存格，再清值（避免舊合併衝突）
     await sheetsPost(`${sid}:batchUpdate`,{requests:[{
-      unmergeCells:{range:{sheetId,startRowIndex:0,endRowIndex:100,startColumnIndex:0,endColumnIndex:7}}
+      unmergeCells:{range:{sheetId,startRowIndex:0,endRowIndex:200,startColumnIndex:0,endColumnIndex:5}}
     }]}).catch(()=>{}); // 沒有合併時會報錯，忽略
     // 清除值（POST，非 DELETE）
-    await sheetsPost(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:G100')}:clear`,{});
+    await sheetsPost(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:E200')}:clear`,{});
 
     // 3. 寫入資料
     const {rows,rowMap}=buildDayValues(ds);

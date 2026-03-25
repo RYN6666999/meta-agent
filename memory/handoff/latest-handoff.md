@@ -1,20 +1,20 @@
 ---
 date: 2026-03-25
-session: meta-agent — Session 85
+session: meta-agent — Session 86
 status: 建設中
-generated: 2026-03-25 09:07
+generated: 2026-03-25 23:58
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-25 09:07 自動生成）
+## 系統狀態（2026-03-25 23:58 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(34145) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：147
 
 ---
@@ -30,12 +30,12 @@ generated: 2026-03-25 09:07
 ---
 
 ## 最近 Git 提交
-- `464dfc2 auto: [error_fix+misc] score=110 超過閾值 50 自動備份`
-- `4402ea5 auto: [error_fix+misc] score=90 超過閾值 50 自動備份`
-- `29f14df auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
-- `8ebe896 auto: [error_fix+misc] score=80 超過閾值 50 自動備份`
-- `48dbe28 feat: 海報生成器 poster.html + AI助理海報指令`
-- `ddcf36a feat: 日報表全面重構 v2`
+- `f509b90 auto: [error_fix+misc] score=55 超過閾值 50 自動備份`
+- `753ffba feat: sheets bidirectional sync - pull from spreadsheet to CRM`
+- `b63a554 feat: 日報時間安排同步到 Google Calendar`
+- `9467ca3 feat: 日報同步改為每天獨立工作頁（帶完整格式）`
+- `70c998b feat: 日報表串接 Google Sheets 試算表同步`
+- `16f8299 fix: 日報表時間軸加入當前時段高亮指示器`
 
 ## 最近 Error Log
 - 2026-03-25-mobile-bridge-tunnel-down.md

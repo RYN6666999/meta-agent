@@ -1038,3 +1038,16 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-25 17:18 | auto-git-score | 分數 50 | ⏳ 未達閾值（50/60）→ 不建分支
+
+**描述：** git-score 自動 commit（score=55），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-25-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-25-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/crm.js +10
+
+---
