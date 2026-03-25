@@ -2782,15 +2782,19 @@ function renderDailyPage(){
   }
 
   body.innerHTML=`
-<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px">
-  <button id="cal-sync-btn" class="btn" style="font-size:12px;padding:5px 14px"
-    onclick="syncScheduleToCalendar('${ds}')">
-    📅 同步到日曆
-  </button>
-  <button id="sheets-sync-btn" class="btn btn-accent" style="font-size:12px;padding:5px 14px"
-    onclick="syncDailyToSheets('${ds}')">
-    📤 同步到試算表
-  </button>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+  <div style="display:flex;gap:6px;align-items:center">
+    <span style="font-size:10px;color:var(--text-muted);font-weight:600">試算表</span>
+    <button id="sheets-pull-btn" class="btn" style="font-size:12px;padding:5px 12px"
+      onclick="pullDailyFromSheets('${ds}')">⬇ 拉取</button>
+    <button id="sheets-sync-btn" class="btn btn-accent" style="font-size:12px;padding:5px 12px"
+      onclick="syncDailyToSheets('${ds}')">⬆ 推送</button>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center">
+    <span style="font-size:10px;color:var(--text-muted);font-weight:600">日曆</span>
+    <button id="cal-sync-btn" class="btn" style="font-size:12px;padding:5px 12px"
+      onclick="syncScheduleToCalendar('${ds}')">📅 同步時程</button>
+  </div>
 </div>
 <datalist id="drn-list">
   ${nodes.filter(n=>n.name&&!n.nodeType).map(n=>`<option value="${escHtml(n.name)}">`).join('')}
@@ -3580,6 +3584,152 @@ function buildDayValues(ds){
   }
 
   return{rows,rowMap};
+}
+
+/* ── 雙向同步：從試算表拉取資料回 CRM ── */
+function parseSheetRows(rows){
+  const out={};
+  for(let i=0;i<rows.length;i++){
+    const c0=(rows[i]?.[0]||'').trim();
+
+    // ── KPI ──
+    if(c0.startsWith('📊')){
+      const v=rows[i+2]||[];
+      out['act-invite']=parseInt(v[0])||0;
+      out['act-calls']=parseInt(v[1])||0;
+      out['act-forms']=parseInt(v[2])||0;
+      out['act-followup']=parseInt(v[3])||0;
+      out['act-close']=parseInt(v[4])||0;
+    }
+
+    // ── 三件大事 ──
+    if(c0.startsWith('🎯')){
+      const bt=[];
+      for(let j=0;j<3;j++){
+        const r=rows[i+2+j]||[];
+        bt.push({task:r[1]||'',goal:r[2]||'',verify:r[3]||''});
+      }
+      out.bigThree=bt;
+    }
+
+    // ── 今日連結 ──
+    if(c0.startsWith('🤝')){
+      const next=rows[i+1]||[];
+      if((next[0]||'').trim()==='姓名'){
+        const conns=[];
+        let j=i+2;
+        while(j<rows.length){
+          const r=rows[j]||[];
+          if(!(r[0]||'').trim()) break;
+          conns.push({who:r[0]||'',topic:r[1]||'',nextStep:r[2]||'',hasGoal:r[3]==='✓'});
+          j++;
+        }
+        out.connections=conns;
+      } else {
+        out.connections=[];
+      }
+    }
+
+    // ── 復盤（感謝/優化 5×2 並排）──
+    if(c0.startsWith('🌙')){
+      const grats=[],opts=[];
+      for(let j=0;j<5;j++){
+        const r=rows[i+2+j]||[];
+        grats.push((r[0]||'').replace(/^\d+\.\s*/,'').trim());
+        opts.push( (r[3]||'').replace(/^\d+\.\s*/,'').trim());
+      }
+      out.gratitude=grats;
+      out.optimize=opts;
+    }
+
+    // ── 明天要做 ──
+    if(c0.startsWith('📋 明天')){
+      const r=rows[i+1]||[];
+      out.tomorrow=(r[0]||'').replace('（未填寫）','').trim();
+    }
+
+    // ── 時間安排 ──
+    if(c0.startsWith('⏰')){
+      const schedMap={};
+      let j=i+2;
+      while(j<rows.length){
+        const r=rows[j]||[];
+        const t=(r[0]||'').trim();
+        if(!t) break;
+        schedMap[t]={time:t,planned:r[1]||'',achieved:r[2]||'',review:r[3]||''};
+        j++;
+      }
+      out._schedMap=schedMap;
+    }
+  }
+  return out;
+}
+
+async function pullDailyFromSheets(ds){
+  if(!GSHEETS.isTokenValid()){
+    ensureGisLoaded(()=>{ GSHEETS.initClient(); GSHEETS.requestToken(()=>pullDailyFromSheets(ds)); });
+    return;
+  }
+  const sid=GSHEETS.getSpreadsheetId();
+  if(!sid){ toast('請先設定試算表 ID'); return; }
+  const tabTitle=GSHEETS.tabName(ds);
+
+  const btn=document.getElementById('sheets-pull-btn');
+  if(btn){ btn.textContent='⏳ 讀取中…'; btn.disabled=true; }
+  try{
+    // 確認試算表分頁存在
+    const meta=await sheetsGet(`${sid}?fields=sheets.properties`);
+    const exists=(meta.sheets||[]).find(s=>s.properties?.title===tabTitle);
+    if(!exists){
+      toast(`試算表中找不到「${tabTitle}」分頁，請先同步一次`);
+      return;
+    }
+
+    // 讀取所有資料
+    const res=await sheetsGet(`${sid}/values/${encodeURIComponent(tabTitle+'!A1:G100')}`);
+    const rows=res.values||[];
+    if(!rows.length){ toast('該工作頁無資料'); return; }
+
+    // 解析
+    const parsed=parseSheetRows(rows);
+
+    // 確認覆蓋
+    const hasLocal=!!dailyReports[ds];
+    if(hasLocal && !confirm(`將以試算表「${tabTitle}」的資料覆蓋本機 ${ds} 的日報？\n（此操作無法復原）`)) return;
+
+    // 合併到 CRM
+    const cur=dailyReports[ds]||(dailyReports[ds]={});
+    // KPI
+    ['act-invite','act-calls','act-forms','act-followup','act-close'].forEach(k=>{
+      if(parsed[k]!=null) cur[k]=parsed[k];
+    });
+    // Big Three
+    if(parsed.bigThree) cur.bigThree=parsed.bigThree;
+    // Connections
+    if(parsed.connections) cur.connections=parsed.connections;
+    // Reflection
+    if(parsed.gratitude) cur.gratitude=parsed.gratitude;
+    if(parsed.optimize)  cur.optimize=parsed.optimize;
+    // Tomorrow
+    if(parsed.tomorrow!=null) cur.tomorrow=parsed.tomorrow;
+    // Schedule：合併 schedMap 到完整 DAILY_TIMES 陣列
+    if(parsed._schedMap){
+      if(!cur.schedule) cur.schedule=DAILY_TIMES.map(t=>({time:t,planned:'',achieved:'',review:''}));
+      cur.schedule=cur.schedule.map(s=>{
+        const patch=parsed._schedMap[s.time];
+        return patch?{...s,...patch}:s;
+      });
+    }
+
+    STORE.saveDailyReports();
+    renderDailyPage();
+    toast(`✅ 已從試算表「${tabTitle}」更新本機資料`);
+  }catch(e){
+    console.error('[gsheets-pull]',e);
+    toast('❌ 拉取失敗：'+e.message);
+  }finally{
+    if(btn){ btn.textContent='⬇ 從試算表拉取'; btn.disabled=false; }
+  }
 }
 
 /* ── 組裝格式化 requests ── */
