@@ -362,6 +362,28 @@
       </div>
     </div>
 
+    <!-- Google Sheets -->
+    <div class="settings-card">
+      <div class="settings-card-title">📊 Google 試算表（日報同步）</div>
+      <div class="settings-card-desc">授權後可將日報表一鍵同步到指定的 Google 試算表，供主管檢視。</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-accent" onclick="startSheetsOAuth()">🔗 授權 Google Sheets</button>
+          <button class="btn" onclick="resetSheetsAuth()" style="font-size:11px">清除</button>
+          <span id="gsheets-status" style="font-size:12px;color:var(--text-muted)">未連結</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="font-size:12px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">試算表 ID</label>
+          <input class="field-input" id="gsheets-id-input" placeholder="貼入 Google 試算表 ID…"
+            value="1cRVMpiN0tYrUiXFsjf-x_5RXnWYF7uY5_Uy-kY0jdvA" style="flex:1;font-size:12px">
+          <button class="btn" onclick="saveSheetsId()" style="white-space:nowrap">儲存</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">
+          同步後會在試算表新增「日報表」分頁，欄位：日期、五大KPI、三件大事、連結人數、感謝/優化、明天要做。
+        </div>
+      </div>
+    </div>
+
     <!-- AI Model -->
     <div class="settings-card">
       <div class="settings-card-title">🤖 AI 模型設定</div>

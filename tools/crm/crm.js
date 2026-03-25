@@ -2782,6 +2782,12 @@ function renderDailyPage(){
   }
 
   body.innerHTML=`
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+  <button id="sheets-sync-btn" class="btn btn-accent" style="font-size:12px;padding:5px 14px;display:flex;align-items:center;gap:5px"
+    onclick="syncDailyToSheets('${ds}')">
+    📤 同步到試算表
+  </button>
+</div>
 <datalist id="drn-list">
   ${nodes.filter(n=>n.name&&!n.nodeType).map(n=>`<option value="${escHtml(n.name)}">`).join('')}
 </datalist>
@@ -3163,6 +3169,10 @@ function renderSettingsPage(){
     </div>`).join('')}
   </div>`;
   OB_BACKUP.renderStatus();
+  GCAL.updateStatus();
+  GSHEETS.updateStatus();
+  const gsid=document.getElementById('gsheets-id-input');
+  if(gsid) gsid.value=GSHEETS.getSpreadsheetId();
   const cm=document.getElementById('cmd-mode-select');
   if(cm) cm.value=CMD.mode;
   const cf=document.getElementById('cmd-filter');
@@ -3335,6 +3345,161 @@ async function fetchGcalEvents(){
   }
 }
 
+/* ═══════════════════════════════════════
+   GOOGLE SHEETS 整合
+═══════════════════════════════════════ */
+const GSHEETS={
+  SCOPE:'https://www.googleapis.com/auth/spreadsheets',
+  CLIENT_ID:'858813478882-732hlp76l1mb1cfod932vcrgtkke3f29.apps.googleusercontent.com',
+  SHEET_NAME:'日報表',
+  DEFAULT_ID:'1cRVMpiN0tYrUiXFsjf-x_5RXnWYF7uY5_Uy-kY0jdvA',
+  tokenClient:null,
+  getToken(){ try{ return JSON.parse(localStorage.getItem('gsheets-token')||'null'); }catch(e){ return null; } },
+  isTokenValid(){ const t=this.getToken(); return t&&t.access_token&&Date.now()<(t.expires_at||0); },
+  saveToken(r){ localStorage.setItem('gsheets-token',JSON.stringify({access_token:r.access_token,expires_at:Date.now()+(r.expires_in||3600)*1000})); },
+  clearToken(){ localStorage.removeItem('gsheets-token'); },
+  getSpreadsheetId(){ return localStorage.getItem('gsheets-id')||this.DEFAULT_ID; },
+  setSpreadsheetId(id){ localStorage.setItem('gsheets-id',id); },
+  updateStatus(){
+    const el=document.getElementById('gsheets-status');
+    if(el) el.textContent=this.isTokenValid()?'✅ 已連結':'未連結';
+  },
+  initClient(){
+    if(!window.google?.accounts?.oauth2){ toast('GIS 尚未載入'); return; }
+    this.tokenClient=window.google.accounts.oauth2.initTokenClient({
+      client_id:this.CLIENT_ID,
+      scope:this.SCOPE,
+      callback:(resp)=>{
+        if(resp.error){ toast('Sheets 授權失敗：'+resp.error); return; }
+        GSHEETS.saveToken(resp);
+        GSHEETS.updateStatus();
+        toast('✅ Google Sheets 已連結');
+      }
+    });
+  },
+  requestToken(cb){
+    if(!this.tokenClient){ this.initClient(); }
+    if(!this.tokenClient){ toast('GIS 未就緒，請重整頁面'); return; }
+    this._cb=cb;
+    this.tokenClient.callback=(resp)=>{
+      if(resp.error){ toast('Sheets 授權失敗：'+resp.error); return; }
+      GSHEETS.saveToken(resp);
+      GSHEETS.updateStatus();
+      toast('✅ Google Sheets 已連結');
+      if(GSHEETS._cb){ GSHEETS._cb(); GSHEETS._cb=null; }
+    };
+    this.tokenClient.requestAccessToken({prompt:''});
+  }
+};
+
+function startSheetsOAuth(){ ensureGisLoaded(()=>{ GSHEETS.initClient(); GSHEETS.requestToken(); }); }
+function resetSheetsAuth(){ GSHEETS.clearToken(); GSHEETS.updateStatus(); toast('已清除 Sheets 連結'); }
+function saveSheetsId(){
+  const v=document.getElementById('gsheets-id-input')?.value?.trim();
+  if(v){ GSHEETS.setSpreadsheetId(v); toast('✅ 試算表 ID 已儲存'); }
+}
+
+/* ── Sheets API helpers ── */
+async function sheetsGet(path){
+  const token=GSHEETS.getToken().access_token;
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,{headers:{Authorization:`Bearer ${token}`}});
+  if(r.status===401){ GSHEETS.clearToken(); throw new Error('Token expired'); }
+  return r.json();
+}
+async function sheetsPost(path,body){
+  const token=GSHEETS.getToken().access_token;
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,{
+    method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  if(r.status===401){ GSHEETS.clearToken(); throw new Error('Token expired'); }
+  return r.json();
+}
+async function sheetsPut(path,body){
+  const token=GSHEETS.getToken().access_token;
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`,{
+    method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  return r.json();
+}
+
+const SHEET_HEADERS=['日期','邀約','電話','問卷','跟進','成交','大事1','目標1','大事2','目標2','大事3','目標3','連結人數','達標連結','感謝Top3','優化Top3','明天要做','同步時間'];
+
+async function ensureDailySheet(sid){
+  const meta=await sheetsGet(`${sid}?fields=sheets.properties`);
+  const exists=(meta.sheets||[]).find(s=>s.properties?.title===GSHEETS.SHEET_NAME);
+  if(exists) return exists.properties.sheetId;
+  // create sheet
+  const res=await sheetsPost(`${sid}:batchUpdate`,{requests:[{addSheet:{properties:{title:GSHEETS.SHEET_NAME}}}]});
+  const newId=res.replies?.[0]?.addSheet?.properties?.sheetId;
+  // write header
+  await sheetsPut(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A1')}?valueInputOption=USER_ENTERED`,
+    {values:[SHEET_HEADERS]});
+  return newId;
+}
+
+async function findDateRow(sid,ds){
+  const res=await sheetsGet(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A:A')}`);
+  const vals=res.values||[];
+  for(let i=0;i<vals.length;i++){
+    if(vals[i][0]===ds) return i+1; // 1-based row
+  }
+  return -1;
+}
+
+function buildDailyRow(ds){
+  const r=dailyReports[ds]||{};
+  const bt=r.bigThree||[{},{},{}];
+  const conns=r.connections||[];
+  const goalConns=conns.filter(c=>c.hasGoal).length;
+  const grats=(r.gratitude||[]).filter(Boolean).slice(0,3).join(' / ');
+  const opts=(r.optimize||[]).filter(Boolean).slice(0,3).join(' / ');
+  return[
+    ds,
+    r['act-invite']||0, r['act-calls']||0, r['act-forms']||0, r['act-followup']||0, r['act-close']||0,
+    bt[0]?.task||'', bt[0]?.goal||'',
+    bt[1]?.task||'', bt[1]?.goal||'',
+    bt[2]?.task||'', bt[2]?.goal||'',
+    conns.length, goalConns,
+    grats, opts,
+    r.tomorrow||'',
+    new Date().toLocaleString('zh-TW')
+  ];
+}
+
+async function syncDailyToSheets(ds){
+  if(!GSHEETS.isTokenValid()){
+    ensureGisLoaded(()=>{ GSHEETS.initClient(); GSHEETS.requestToken(()=>syncDailyToSheets(ds)); });
+    return;
+  }
+  const sid=GSHEETS.getSpreadsheetId();
+  if(!sid){ toast('請先設定試算表 ID'); return; }
+  const btn=document.getElementById('sheets-sync-btn');
+  if(btn){ btn.textContent='⏳ 同步中…'; btn.disabled=true; }
+  try{
+    await ensureDailySheet(sid);
+    const row=buildDailyRow(ds);
+    const existRow=await findDateRow(sid,ds);
+    if(existRow>0){
+      // update existing row
+      await sheetsPut(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A'+existRow)}?valueInputOption=USER_ENTERED`,
+        {values:[row]});
+      toast('✅ 試算表已更新（'+ds+'）');
+    } else {
+      // append new row
+      await sheetsPost(`${sid}/values/${encodeURIComponent(GSHEETS.SHEET_NAME+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+        {values:[row]});
+      toast('✅ 已新增到試算表（'+ds+'）');
+    }
+  }catch(e){
+    console.error('[gsheets]',e);
+    toast('❌ 同步失敗：'+e.message);
+  }finally{
+    if(btn){ btn.textContent='📤 同步到試算表'; btn.disabled=false; }
+  }
+}
+
 // Load GIS script lazily when settings page opens
 function ensureGisLoaded(cb){
   if(window.google?.accounts?.oauth2){ cb&&cb(); return; }
@@ -3345,6 +3510,7 @@ function ensureGisLoaded(cb){
   s.onload=()=>{
     const cid=GCAL.getClientId();
     if(cid) GCAL.initClient(cid);
+    GSHEETS.initClient();
     cb&&cb();
   };
   document.head.appendChild(s);
