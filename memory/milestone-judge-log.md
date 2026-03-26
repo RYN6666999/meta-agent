@@ -1138,3 +1138,18 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-26 15:29 | auto-git-score | 分數 70 | 📥 達到閾值（70/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=65），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-26-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-26-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/crm.css +10
+  其他變更 tools/crm/crm.js +10
+  其他變更 tools/crm/index.html +10
+
+---
