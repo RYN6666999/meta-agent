@@ -40,6 +40,7 @@
     <button class="tab-btn" onclick="switchPage('docs')">📁 文件</button>
     <button class="tab-btn" onclick="switchPage('sales')">💰 業績</button>
     <button class="tab-btn" onclick="switchPage('ai')">🤖 AI助理</button>
+    <button class="tab-btn" onclick="switchPage('students')">🎓 學員</button>
     <button class="tab-btn" onclick="switchPage('settings')">⚙️ 設定</button>
   </div>
   <div class="header-stats" id="header-stats"></div>
@@ -478,6 +479,32 @@
       <div style="font-size:11px;color:var(--text-subtle);margin-top:8px">完整備份：人脈節點、業績記錄、日報表、月份目標、活動、任務。匯入前系統會再次確認。</div>
     </div>
   </div>
+</div>
+
+<!-- Students Page -->
+<div class="page" id="page-students">
+  <div class="students-page">
+    <div class="students-topbar">
+      <input class="field-input" id="students-search" placeholder="🔍 搜尋姓名、電話…"
+        oninput="studentSearch(this.value)" style="flex:1;max-width:260px;min-width:140px">
+      <span style="flex:1"></span>
+      <button class="stu-reminder-bell" onclick="showTodayReminders()" title="今日待跟進">
+        🔔<span id="students-reminder-count" class="reminder-badge"></span>
+      </button>
+      <button class="btn btn-accent" onclick="addStudentModal()">＋ 新增學員</button>
+    </div>
+    <div class="students-list" id="students-list"></div>
+  </div>
+</div>
+
+<!-- Student Drawer -->
+<div class="student-drawer-overlay" id="student-drawer-overlay" onclick="closeStudentDrawer()"></div>
+<div class="student-drawer" id="student-drawer">
+  <div class="student-drawer-header">
+    <div class="student-drawer-title">學員資料</div>
+    <button class="panel-close" onclick="closeStudentDrawer()">✕</button>
+  </div>
+  <div class="student-drawer-body" id="student-drawer-body"></div>
 </div>
 
 <!-- Side Panel -->

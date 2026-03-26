@@ -41,6 +41,7 @@ let nodes=[];
 let events=[];
 let tasks=[];
 let chatHistory=[];
+let studentsData=[];
 
 /* ═══════════════════════════════════════
    UNDO STACK（僅 nodes，最多 50 步）
@@ -98,6 +99,7 @@ function loadData(){
   try{events=JSON.parse(localStorage.getItem(STORE.K.events)||'[]');}catch(e){events=[];}
   try{tasks=JSON.parse(localStorage.getItem(STORE.K.tasks)||'[]');}catch(e){tasks=[];}
   try{chatHistory=JSON.parse(localStorage.getItem(STORE.K.chat)||'[]');}catch(e){chatHistory=[];}
+  try{studentsData=JSON.parse(localStorage.getItem(STORE.K.students)||'[]');}catch(e){studentsData=[];}
 }
 
 function saveData(){ pushUndo(); STORE.saveNodes(); }
@@ -236,6 +238,7 @@ const STORE = {
     aiModel:             'crm-ai-model',
     apiKey:              'crm-apikey',
     aiEndpoint:          'crm-ai-endpoint',
+    students:            'crm-students',
   },
   saveNodes()               { localStorage.setItem(STORE.K.nodes,               JSON.stringify(nodes)); },
   saveEvents()              { localStorage.setItem(STORE.K.events,              JSON.stringify(events)); },
@@ -246,6 +249,7 @@ const STORE = {
   saveMonthlySalesTargets() { localStorage.setItem(STORE.K.monthlySalesTargets, JSON.stringify(monthlySalesTargets)); },
   saveShortcuts()           { localStorage.setItem(STORE.K.shortcuts,           JSON.stringify(sk)); },
   saveDocs()                { localStorage.setItem(STORE.K.docs,                JSON.stringify(docsData)); },
+  saveStudents()            { localStorage.setItem(STORE.K.students,            JSON.stringify(studentsData)); },
   saveCmd()                 { localStorage.setItem(STORE.K.cmdMode, CMD.mode); localStorage.setItem(STORE.K.cmdWhite, JSON.stringify([...CMD.white])); localStorage.setItem(STORE.K.cmdBlack, JSON.stringify([...CMD.black])); },
   getMyRank()               { return localStorage.getItem(STORE.K.profileRank) || 'director'; },
   getMyRate()               { return RANK_RATES[STORE.getMyRank()] || 0.15; },
@@ -2057,7 +2061,7 @@ async function sendChat(){
    PAGE SWITCHING
 ═══════════════════════════════════════ */
 // display type each page needs when visible
-const PAGE_DISPLAY={crm:'flex',daily:'block',events:'flex',docs:'block',sales:'block',ai:'flex',settings:'block'};
+const PAGE_DISPLAY={crm:'flex',daily:'block',events:'flex',docs:'block',sales:'block',ai:'flex',students:'block',settings:'block'};
 
 function switchPage(page){
   currentPage=page;
@@ -2068,7 +2072,7 @@ function switchPage(page){
   if(el) el.style.display=PAGE_DISPLAY[page]||'block';
   // Update tab highlights
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  const idx={crm:0,daily:1,events:2,docs:3,sales:4,ai:5,settings:6}[page]??0;
+  const idx={crm:0,daily:1,events:2,docs:3,sales:4,ai:5,students:6,settings:7}[page]??0;
   document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
   if(page==='crm'){setTimeout(()=>{drawEdges();},50);}
   if(page==='daily'){renderDailyPage();}
@@ -2076,6 +2080,7 @@ function switchPage(page){
   if(page==='docs'){renderDocs();}
   if(page==='sales'){renderSales();}
   if(page==='ai'){renderChat();updateAiModelBadge();renderQuickPrompts(currentPersona);}
+  if(page==='students'){renderStudentsPage();checkStudentReminders();}
   if(page==='settings'){renderSettingsPage();}
 }
 
@@ -3217,6 +3222,7 @@ function exportAll(){
     dailyReports,
     monthlyGoals,
     monthlySalesTargets,
+    studentsData,
   };
   const json=JSON.stringify(data,null,2);
   const b=new Blob([json],{type:'application/json'});
@@ -3245,6 +3251,7 @@ function importAll(ev){
       if(d.dailyReports)      { dailyReports=d.dailyReports;      STORE.saveDailyReports(); }
       if(d.monthlyGoals)      { monthlyGoals=d.monthlyGoals;      STORE.saveMonthlyGoals(); }
       if(d.monthlySalesTargets){ monthlySalesTargets=d.monthlySalesTargets; STORE.saveMonthlySalesTargets(); }
+      if(d.studentsData)      { studentsData=d.studentsData;               STORE.saveStudents(); }
       renderNodes();
       toast('✅ 備份匯入成功');
     }catch(err){toast('匯入失敗：'+err.message);}
@@ -4093,5 +4100,392 @@ function init(){
   updateAiModelBadge();
   OB_BACKUP.init();
 }
+
+/* ═══════════════════════════════════════
+   STUDENTS MODULE
+═══════════════════════════════════════ */
+const STUDENT_FIXED_TAGS=[
+  {id:'student',  label:'學員',      color:'#3fb950'},
+  {id:'employee', label:'從業',      color:'#58a6ff'},
+  {id:'referral', label:'轉介紹',    color:'#d29922'},
+  {id:'no-train', label:'未參與內訓',color:'#f85149'},
+];
+const CONTACT_METHODS=['電話','Line','面談','視訊'];
+const CONTACT_RESULTS=['未接聽','接通無進展','有興趣','約定下次','里程碑推進','其他'];
+
+function newStudent(){
+  return{
+    id:uid(),name:'',phone:'',source:'',sourceNodeId:null,
+    joinDate:new Date().toISOString().slice(0,10),
+    tags:[],customTags:[],
+    suite:{financialPlan:false,onlineCourse:false,offlineCourse:false,handbook:false,coachGroup:false},
+    milestones:{formFilled:false,paymentDone:false,finDataReady:false,internalTraining:false},
+    goals:'',notes:'',contacts:[],createdAt:Date.now()
+  };
+}
+function newContact(){
+  return{
+    id:uid(),date:new Date().toISOString().slice(0,10),
+    method:'電話',result:'接通無進展',mood:3,
+    content:'',nextDate:'',reminder:false,createdAt:Date.now()
+  };
+}
+
+// ── State ──
+let _currentStudentId=null;
+let _studentEditingContactId=null;
+let _studentFilter={q:'',tags:[]};
+
+// ── Helpers ──
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _slugResult(s){const m={'未接聽':'no-answer','接通無進展':'no-progress','有興趣':'interested','約定下次':'scheduled','里程碑推進':'milestone','其他':'other'};return m[s]||'other';}
+function _getNextFollowUp(s){const t=new Date().toISOString().slice(0,10);const f=s.contacts.filter(c=>c.nextDate&&c.nextDate>=t).map(c=>c.nextDate).sort();return f[0]||null;}
+function _getLastContact(s){if(!s.contacts.length)return null;return s.contacts.map(c=>c.date).sort().slice(-1)[0];}
+
+// ── Render page ──
+function renderStudentsPage(){
+  const container=document.getElementById('students-list');
+  if(!container)return;
+  const today=new Date().toISOString().slice(0,10);
+
+  // Reminder badge
+  let dueCount=0;
+  studentsData.forEach(s=>s.contacts.forEach(c=>{if(c.nextDate===today&&c.reminder)dueCount++;}));
+  const bell=document.getElementById('students-reminder-count');
+  if(bell)bell.textContent=dueCount>0?String(dueCount):'';
+
+  // Filter
+  let filtered=studentsData.filter(s=>{
+    if(_studentFilter.q){
+      const q=_studentFilter.q.toLowerCase();
+      if(!s.name.toLowerCase().includes(q)&&!s.phone.includes(q))return false;
+    }
+    return true;
+  });
+  filtered.sort((a,b)=>{
+    const na=_getNextFollowUp(a),nb=_getNextFollowUp(b);
+    if(na&&nb)return na.localeCompare(nb);
+    if(na)return -1;if(nb)return 1;
+    return(b.createdAt||0)-(a.createdAt||0);
+  });
+
+  if(filtered.length===0){
+    container.innerHTML=`<div class="students-empty">
+      <div style="font-size:3rem">🎓</div>
+      <div style="color:var(--text-muted);margin-top:8px">${studentsData.length===0?'尚無學員，點擊「＋ 新增學員」開始':'沒有符合條件的學員'}</div>
+    </div>`;return;
+  }
+  container.innerHTML=filtered.map(s=>_renderStudentCard(s,today)).join('');
+}
+
+function _renderStudentCard(s,today){
+  const next=_getNextFollowUp(s),last=_getLastContact(s);
+  const isOverdue=next&&next<today,isToday=next&&next===today;
+  const ms=s.milestones;
+  const msDots=[
+    {k:'formFilled',l:'報名表'},{k:'paymentDone',l:'完款'},
+    {k:'finDataReady',l:'財規'},{k:'internalTraining',l:'內訓'}
+  ].map(m=>`<span class="stu-ms-dot${ms[m.k]?' done':''}" title="${m.l}"></span>`).join('');
+  const tagPills=[
+    ...s.tags.map(tid=>{const t=STUDENT_FIXED_TAGS.find(x=>x.id===tid);return t?`<span class="stu-tag" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}44">${t.label}</span>`:'';}),
+    ...s.customTags.map(t=>`<span class="stu-tag">${escHtml(t)}</span>`)
+  ].join('');
+  const suiteCount=Object.values(s.suite).filter(Boolean).length;
+  const nextLabel=next?`<span class="stu-next-follow${isOverdue?' overdue':isToday?' today':''}">${isOverdue?'⚠ 逾期':isToday?'📅 今天':'🔔'} ${next}</span>`:'';
+  const lastLabel=last?`<span class="stu-last-contact">聯繫 ${last}</span>`:'';
+  return`<div class="student-card" onclick="openStudentDrawer('${s.id}')">
+  <div class="stu-card-top">
+    <div class="stu-card-name">${escHtml(s.name)||'<span style="color:var(--text-subtle)">未命名</span>'}</div>
+    <div class="stu-ms-dots">${msDots}</div>
+  </div>
+  <div class="stu-tags-row">${tagPills||'<span style="color:var(--text-subtle);font-size:11px">無標籤</span>'}</div>
+  <div class="stu-card-bottom">
+    <div class="stu-suite-wrap"><div class="stu-suite-bar" style="width:${suiteCount/5*100}%"></div></div>
+    <span style="font-size:11px;color:var(--text-muted)">${suiteCount}/5</span>
+    <span style="flex:1"></span>
+    ${lastLabel}${nextLabel}
+  </div>
+</div>`;
+}
+
+// ── Drawer ──
+function openStudentDrawer(id){
+  _currentStudentId=id;
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  document.getElementById('student-drawer')?.classList.add('open');
+  document.getElementById('student-drawer-overlay')?.classList.add('show');
+  _renderStudentDrawer(s);
+}
+function closeStudentDrawer(){
+  _currentStudentId=null;_studentEditingContactId=null;
+  document.getElementById('student-drawer')?.classList.remove('open');
+  document.getElementById('student-drawer-overlay')?.classList.remove('show');
+}
+function _renderStudentDrawer(s){
+  const body=document.getElementById('student-drawer-body');if(!body)return;
+  const today=new Date().toISOString().slice(0,10);
+  const fixedTagsHtml=STUDENT_FIXED_TAGS.map(t=>`
+    <label class="stu-tag-check">
+      <input type="checkbox" value="${t.id}" ${s.tags.includes(t.id)?'checked':''}
+        onchange="studentToggleTag('${s.id}','${t.id}',this.checked)">
+      <span class="stu-tag-pill" style="--tc:${t.color}">${t.label}</span>
+    </label>`).join('');
+  const customTagsHtml=s.customTags.map((t,i)=>`
+    <span class="stu-custom-tag-pill">${escHtml(t)}
+      <button onclick="studentRemoveCustomTag('${s.id}',${i})" class="stu-tag-remove" title="移除">✕</button>
+    </span>`).join('');
+  const sorted=[...s.contacts].sort((a,b)=>b.date.localeCompare(a.date));
+  const timelineHtml=sorted.length===0
+    ?'<div style="color:var(--text-subtle);font-size:13px;padding:12px 0">尚無聯繫記錄</div>'
+    :sorted.map(c=>_renderContactEntry(s,c,today)).join('');
+  body.innerHTML=`
+  <div class="drawer-section">
+    <div class="drawer-section-title">基本資料</div>
+    <div class="field-row">
+      <div class="field-group"><div class="field-label">姓名</div>
+        <input class="field-input" value="${escHtml(s.name)}" oninput="studentField('${s.id}','name',this.value)" placeholder="學員姓名"></div>
+      <div class="field-group"><div class="field-label">電話</div>
+        <input class="field-input" value="${escHtml(s.phone)}" oninput="studentField('${s.id}','phone',this.value)" placeholder="0912-345-678"></div>
+    </div>
+    <div class="field-row">
+      <div class="field-group"><div class="field-label">來源</div>
+        <input class="field-input" value="${escHtml(s.source)}" oninput="studentField('${s.id}','source',this.value)" placeholder="介紹人 / 活動 / 自來"></div>
+      <div class="field-group"><div class="field-label">加入日期</div>
+        <input class="field-input" type="date" value="${s.joinDate}" oninput="studentField('${s.id}','joinDate',this.value)"></div>
+    </div>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">狀態標籤</div>
+    <div class="stu-tags-grid">${fixedTagsHtml}</div>
+    <div class="stu-custom-tags-row">
+      ${customTagsHtml}
+      <button class="stu-add-tag-btn" onclick="studentAddCustomTag('${s.id}')">＋ 自訂</button>
+    </div>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">三件套進度</div>
+    <div class="stu-checklist">
+      <label class="stu-check-item"><input type="checkbox" ${s.suite.financialPlan?'checked':''} onchange="studentSuite('${s.id}','financialPlan',this.checked)"><span>💼 財務規劃</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.suite.onlineCourse?'checked':''} onchange="studentSuite('${s.id}','onlineCourse',this.checked)"><span>💻 線上課程</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.suite.offlineCourse?'checked':''} onchange="studentSuite('${s.id}','offlineCourse',this.checked)"><span>🏫 線下課程</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.suite.handbook?'checked':''} onchange="studentSuite('${s.id}','handbook',this.checked)"><span>📖 講義已領</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.suite.coachGroup?'checked':''} onchange="studentSuite('${s.id}','coachGroup',this.checked)"><span>🏃 教練陪跑群組</span></label>
+    </div>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">里程碑</div>
+    <div class="stu-checklist">
+      <label class="stu-check-item"><input type="checkbox" ${s.milestones.formFilled?'checked':''} onchange="studentMilestone('${s.id}','formFilled',this.checked)"><span>📝 填寫報名表</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.milestones.paymentDone?'checked':''} onchange="studentMilestone('${s.id}','paymentDone',this.checked)"><span>💰 完款</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.milestones.finDataReady?'checked':''} onchange="studentMilestone('${s.id}','finDataReady',this.checked)"><span>📊 財規資料準備好</span></label>
+      <label class="stu-check-item"><input type="checkbox" ${s.milestones.internalTraining?'checked':''} onchange="studentMilestone('${s.id}','internalTraining',this.checked)"><span>🎯 參與過內訓</span></label>
+    </div>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">目標規劃</div>
+    <textarea class="field-input" rows="3" style="resize:vertical" oninput="studentField('${s.id}','goals',this.value)" placeholder="學員目標、期望、規劃...">${escHtml(s.goals)}</textarea>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">備註</div>
+    <textarea class="field-input" rows="2" style="resize:vertical" oninput="studentField('${s.id}','notes',this.value)" placeholder="其他備註...">${escHtml(s.notes)}</textarea>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>聯繫時間軸</span>
+      <button class="btn btn-accent btn-sm" onclick="addContactEntry('${s.id}')">＋ 新增聯繫</button>
+    </div>
+    <div id="contact-timeline">${timelineHtml}</div>
+  </div>
+  <div class="drawer-section">
+    <button class="btn" style="color:var(--red);font-size:12px" onclick="deleteStudent('${s.id}')">🗑 刪除此學員</button>
+  </div>`;
+}
+
+function _renderContactEntry(s,c,today){
+  const isEditing=_studentEditingContactId===c.id;
+  if(isEditing){
+    return`<div class="contact-entry editing" id="contact-${c.id}">
+      <div class="field-row">
+        <div class="field-group"><div class="field-label">日期</div>
+          <input class="field-input" type="date" id="ce-date-${c.id}" value="${c.date}"></div>
+        <div class="field-group"><div class="field-label">聯繫方式</div>
+          <select class="field-input" id="ce-method-${c.id}">${CONTACT_METHODS.map(m=>`<option ${c.method===m?'selected':''}>${m}</option>`).join('')}</select></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><div class="field-label">聯繫結果</div>
+          <select class="field-input" id="ce-result-${c.id}">${CONTACT_RESULTS.map(r=>`<option ${c.result===r?'selected':''}>${r}</option>`).join('')}</select></div>
+        <div class="field-group"><div class="field-label">情緒意願</div>
+          <div class="stu-mood-row" id="ce-mood-${c.id}" data-mood="${c.mood||3}">
+            ${[1,2,3,4,5].map(n=>`<button type="button" class="stu-mood-btn${(c.mood||3)>=n?' active':''}" onclick="setContactMood('${c.id}',${n})">★</button>`).join('')}
+          </div></div>
+      </div>
+      <div class="field-group"><div class="field-label">聯繫內容</div>
+        <textarea class="field-input" id="ce-content-${c.id}" rows="2" style="resize:vertical">${escHtml(c.content)}</textarea></div>
+      <div class="field-row">
+        <div class="field-group"><div class="field-label">下次跟進日期</div>
+          <input class="field-input" type="date" id="ce-nextdate-${c.id}" value="${c.nextDate||''}"></div>
+        <div class="field-group" style="padding-top:22px">
+          <label class="stu-reminder-toggle">
+            <input type="checkbox" id="ce-reminder-${c.id}" ${c.reminder?'checked':''}>
+            <span>🔔 開啟提醒</span>
+          </label></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn" onclick="cancelEditContact()">取消</button>
+        <button class="btn btn-accent" onclick="saveContactEntry('${s.id}','${c.id}')">儲存</button>
+      </div>
+    </div>`;
+  }
+  const resultCls=`cr-${_slugResult(c.result)}`;
+  const moodStr='★'.repeat(c.mood||0)+'☆'.repeat(5-(c.mood||0));
+  const nextLabel=c.nextDate?(c.nextDate<today?`<span class="stu-next-follow overdue">⚠ ${c.nextDate}</span>`:c.nextDate===today?`<span class="stu-next-follow today">📅 今天</span>`:`<span class="stu-next-follow">🔔 ${c.nextDate}</span>`):'';
+  return`<div class="contact-entry" onclick="editContactEntry('${c.id}')">
+  <div class="contact-entry-header">
+    <span class="contact-date">${c.date}</span>
+    <span class="contact-method-badge">${c.method}</span>
+    <span class="contact-result-badge ${resultCls}">${c.result}</span>
+    <span class="contact-mood">${moodStr}</span>
+    <button class="btn-icon-sm" onclick="event.stopPropagation();deleteContactEntry('${s.id}','${c.id}')" title="刪除">🗑</button>
+  </div>
+  ${c.content?`<div class="contact-content">${escHtml(c.content)}</div>`:''}
+  ${nextLabel?`<div style="margin-top:4px">${nextLabel}</div>`:''}
+</div>`;
+}
+
+// ── CRUD ──
+function addStudentModal(){
+  const s=newStudent();
+  studentsData.unshift(s);
+  STORE.saveStudents();
+  renderStudentsPage();
+  openStudentDrawer(s.id);
+}
+function deleteStudent(id){
+  if(!confirm('確定要刪除此學員及所有記錄？'))return;
+  studentsData=studentsData.filter(s=>s.id!==id);
+  STORE.saveStudents();
+  closeStudentDrawer();
+  renderStudentsPage();
+  toast('已刪除學員');
+}
+function studentField(id,field,value){
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  s[field]=value;STORE.saveStudents();
+  clearTimeout(studentField._t);
+  studentField._t=setTimeout(()=>renderStudentsPage(),400);
+}
+function studentSuite(id,key,val){
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  s.suite[key]=val;STORE.saveStudents();renderStudentsPage();
+}
+function studentMilestone(id,key,val){
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  s.milestones[key]=val;STORE.saveStudents();renderStudentsPage();
+}
+function studentToggleTag(id,tagId,checked){
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  if(checked){if(!s.tags.includes(tagId))s.tags.push(tagId);}
+  else{s.tags=s.tags.filter(t=>t!==tagId);}
+  STORE.saveStudents();renderStudentsPage();
+}
+function studentAddCustomTag(id){
+  const tag=prompt('輸入自訂標籤名稱：');
+  if(!tag||!tag.trim())return;
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  if(!s.customTags.includes(tag.trim())){
+    s.customTags.push(tag.trim());STORE.saveStudents();
+    _renderStudentDrawer(s);renderStudentsPage();
+  }
+}
+function studentRemoveCustomTag(id,idx){
+  const s=studentsData.find(x=>x.id===id);if(!s)return;
+  s.customTags.splice(idx,1);STORE.saveStudents();
+  _renderStudentDrawer(s);renderStudentsPage();
+}
+
+// ── Contact Timeline ──
+function addContactEntry(studentId){
+  const s=studentsData.find(x=>x.id===studentId);if(!s)return;
+  const c=newContact();s.contacts.unshift(c);
+  STORE.saveStudents();
+  _studentEditingContactId=c.id;
+  _renderStudentDrawer(s);
+}
+function editContactEntry(contactId){
+  _studentEditingContactId=contactId;
+  const s=studentsData.find(x=>x.contacts.some(c=>c.id===contactId));
+  if(s)_renderStudentDrawer(s);
+}
+function cancelEditContact(){
+  if(_studentEditingContactId){
+    const s=studentsData.find(x=>x.contacts.some(c=>c.id===_studentEditingContactId));
+    if(s){
+      const c=s.contacts.find(c=>c.id===_studentEditingContactId);
+      if(c&&!c.content&&!c.nextDate){
+        s.contacts=s.contacts.filter(x=>x.id!==_studentEditingContactId);
+        STORE.saveStudents();
+      }
+    }
+  }
+  _studentEditingContactId=null;
+  const s=_currentStudentId?studentsData.find(x=>x.id===_currentStudentId):null;
+  if(s)_renderStudentDrawer(s);
+}
+function saveContactEntry(studentId,contactId){
+  const s=studentsData.find(x=>x.id===studentId);if(!s)return;
+  const c=s.contacts.find(x=>x.id===contactId);if(!c)return;
+  c.date=document.getElementById(`ce-date-${contactId}`)?.value||c.date;
+  c.method=document.getElementById(`ce-method-${contactId}`)?.value||c.method;
+  c.result=document.getElementById(`ce-result-${contactId}`)?.value||c.result;
+  c.content=document.getElementById(`ce-content-${contactId}`)?.value||'';
+  c.nextDate=document.getElementById(`ce-nextdate-${contactId}`)?.value||'';
+  c.reminder=document.getElementById(`ce-reminder-${contactId}`)?.checked||false;
+  const moodEl=document.getElementById(`ce-mood-${contactId}`);
+  if(moodEl)c.mood=parseInt(moodEl.dataset.mood)||3;
+  if(c.reminder&&c.nextDate)_requestNotifPerm();
+  STORE.saveStudents();
+  _studentEditingContactId=null;
+  _renderStudentDrawer(s);
+  renderStudentsPage();
+  toast('已儲存聯繫記錄');
+}
+function setContactMood(contactId,mood){
+  const el=document.getElementById(`ce-mood-${contactId}`);if(!el)return;
+  el.dataset.mood=mood;
+  el.querySelectorAll('.stu-mood-btn').forEach((btn,i)=>btn.classList.toggle('active',i<mood));
+}
+function deleteContactEntry(studentId,contactId){
+  if(!confirm('確定刪除這筆聯繫記錄？'))return;
+  const s=studentsData.find(x=>x.id===studentId);if(!s)return;
+  s.contacts=s.contacts.filter(c=>c.id!==contactId);
+  STORE.saveStudents();_renderStudentDrawer(s);renderStudentsPage();
+  toast('已刪除聯繫記錄');
+}
+
+// ── Notifications ──
+function _requestNotifPerm(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default')Notification.requestPermission();
+}
+function checkStudentReminders(){
+  const today=new Date().toISOString().slice(0,10);
+  const due=[];
+  studentsData.forEach(s=>s.contacts.forEach(c=>{
+    if(c.nextDate===today&&c.reminder)due.push(s.name||'未命名學員');
+  }));
+  if(due.length>0)toast(`🔔 今日需跟進 ${due.length} 位學員：${due.slice(0,3).join('、')}${due.length>3?'…':''}`,4500);
+}
+function showTodayReminders(){
+  const today=new Date().toISOString().slice(0,10);
+  const due=[];
+  studentsData.forEach(s=>s.contacts.forEach(c=>{
+    if(c.nextDate===today)due.push({name:s.name||'未命名',method:c.method,reminder:c.reminder});
+  }));
+  if(!due.length){toast('今日沒有待跟進學員');return;}
+  alert('📅 今日待跟進：\n'+due.map(d=>`・${d.name}（${d.method}）${d.reminder?'🔔':''}`).join('\n'));
+}
+
+// ── Search ──
+function studentSearch(q){_studentFilter.q=q;renderStudentsPage();}
 
 document.addEventListener('DOMContentLoaded',init);
