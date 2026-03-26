@@ -316,7 +316,7 @@ function initDrafts(){
       if(isSensitive(el))return;
       const id=el.id;if(!id)return;
       const v=DRAFT.get(id);
-      if(v!==undefined && (el.value===''||el.dataset.restore==='force')){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}))}
+      if(v!==undefined && (el.value===''||el.dataset.restore==='force')){try{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}}
     });
   };
   restore(document);
