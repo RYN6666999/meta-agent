@@ -1,0 +1,26 @@
+# ── Auth State（絕對不入庫）──
+auth/sites/
+
+# ── SSH 私鑰 ──
+**/*.pem
+**/*.key
+host/ssh/known_hosts
+host/ssh/authorized_keys
+
+# ── Log ──
+**/*.log
+logs/
+
+# ── Node ──
+node_modules/
+runner/node_modules/
+runner/dist/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── 環境變數 ──
+.env
+.env.*
+!.env.example

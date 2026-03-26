@@ -1,0 +1,18 @@
+{
+  "job_id": "web-001",
+  "type": "web",
+  "steps": [
+    {
+      "kind": "web",
+      "site": "fundodo",
+      "action": "open_page",
+      "url": "https://fundodo.net/fundodo/"
+    },
+    {
+      "kind": "web",
+      "site": "fundodo",
+      "action": "get_text",
+      "selector": "h1"
+    }
+  ]
+}

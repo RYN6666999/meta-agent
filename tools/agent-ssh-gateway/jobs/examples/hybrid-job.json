@@ -1,0 +1,26 @@
+{
+  "job_id": "hybrid-001",
+  "type": "hybrid",
+  "steps": [
+    {
+      "kind": "web",
+      "site": "fundodo",
+      "action": "open_page",
+      "url": "https://fundodo.net/fundodo/"
+    },
+    {
+      "kind": "web",
+      "site": "fundodo",
+      "action": "get_text",
+      "selector": "h1"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo web-step done, now running ssh"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    }
+  ]
+}

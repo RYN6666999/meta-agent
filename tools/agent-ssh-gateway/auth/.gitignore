@@ -1,0 +1,6 @@
+# auth/ 目錄下所有內容皆不入庫
+# 僅保留此 .gitignore 與 .gitkeep
+
+*
+!.gitignore
+!.gitkeep

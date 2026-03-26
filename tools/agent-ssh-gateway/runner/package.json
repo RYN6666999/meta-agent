@@ -1,0 +1,20 @@
+{
+  "name": "agent-runner",
+  "version": "0.2.0",
+  "description": "AI Agent SSH Gateway - Job Runner",
+  "private": true,
+  "scripts": {
+    "refresh-auth": "ts-node src/refresh-auth.ts",
+    "run-job": "ts-node src/run-job.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright": "^1.43.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0"
+  }
+}

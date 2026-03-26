@@ -1,0 +1,20 @@
+{
+  "ssh": {
+    "host": "127.0.0.1",
+    "user": "agentbot",
+    "keyPath": "~/.ssh/agentbot_ed25519",
+    "port": 22,
+    "strictHostKeyChecking": "accept-new",
+    "connectTimeoutSec": 10
+  },
+  "sites": {
+    "fundodo":    { "loginUrl": "https://fundodo.net/fundodo/" },
+    "github":     { "loginUrl": "https://github.com/login" },
+    "cloudflare": { "loginUrl": "https://dash.cloudflare.com/login" },
+    "genspark":   { "loginUrl": "https://www.genspark.ai" },
+    "google":     { "loginUrl": "https://accounts.google.com" }
+  },
+  "runner": {
+    "jobTimeoutMs": 120000
+  }
+}
