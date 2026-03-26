@@ -34,3 +34,7 @@
 [health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
 [health_check] ✅ Groq API: HTTP 200
 [health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-03-25-health-check.md
+[health_check] ✅ LightRAG: HTTP 200 (timeout=5s)
+[health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
+[health_check] ✅ Groq API: HTTP 200
+[health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-03-26-health-check.md
