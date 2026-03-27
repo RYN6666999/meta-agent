@@ -16,10 +16,12 @@ const STATUS_LABELS={green:'高意願',yellow:'觀察中',red:'冷淡',gray:'無
 const STATUS_ORDER=['green','yellow','red','gray'];
 
 function newNode(){
+  const now=Date.now();
   return{
     id:uid(),parentId:null,x:0,y:0,
     nodeType:'contact',  // 'contact' | 'note'
     name:'新聯繫人',status:'yellow',collapsed:false,
+    createdAt:now,updatedAt:now,lastContactAt:null,
     info:{
       age:'',zodiac:'',hometown:'',personality:'',interests:'',
       howMet:'',background:'',
@@ -309,7 +311,7 @@ const DRAFT={
 };
 function initDrafts(){
   DRAFT.load();
-  const isSensitive=(el)=>el.type==='password'||el.dataset.nodraft==='true';
+  const isSensitive=(el)=>el.type==='password'||el.type==='file'||el.dataset.nodraft==='true';
   const restore=(root)=>{
     const els=root.querySelectorAll?.('input[id], textarea[id]')||[];
     els.forEach(el=>{
@@ -1217,6 +1219,11 @@ function savePanel(){
   body.querySelectorAll('[data-region].checked').forEach(el=>regionsChecked.push(el.dataset.region));
   n.info.regions=regionsChecked;
 
+  // 時間追蹤
+  n.updatedAt=Date.now();
+  if(n.info.lastContact) n.lastContactAt=new Date(n.info.lastContact).getTime()||n.lastContactAt;
+  if(!n.createdAt) n.createdAt=Date.now();
+
   document.getElementById('panel-title').textContent=n.name||'聯繫人資料';
   saveData();
   // update node card
@@ -1301,6 +1308,11 @@ function renderPanel(n){
         </div>
         <div class="field-group"><div class="field-label">標籤（逗號分隔）</div><input class="field-input" data-info="tags-input" value="${escHtml(tagsVal)}" oninput="savePanel()" placeholder="VIP, 客戶, 介紹人"></div>
         <div class="field-group"><div class="field-label">備注</div><textarea class="field-input field-textarea" data-info="notes" oninput="savePanel()" placeholder="備注說明">${escHtml(inf.notes)}</textarea></div>
+        <div class="node-timestamps">
+          <span title="建立時間">🕐 建立 ${n.createdAt?new Date(n.createdAt).toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}):'—'}</span>
+          <span title="最後編輯">✏️ 編輯 ${n.updatedAt&&n.updatedAt!==n.createdAt?new Date(n.updatedAt).toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}):'—'}</span>
+          <span title="最後聯繫">📞 聯繫 ${inf.lastContact||'—'}</span>
+        </div>
       </div>
     </div>
 

@@ -1465,6 +1465,14 @@ body.admin-page{background:var(--bg);color:var(--text);font-family:'Inter',-appl
   background-color:var(--bg);
 }
 
+/* ── Node timestamps ── */
+.node-timestamps{
+  display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;
+  padding:8px 10px;border-radius:8px;background:var(--surface2);
+  border:1px solid var(--border);
+}
+.node-timestamps span{font-size:11px;color:var(--text-subtle);}
+
 /* ═══════════════════════════════════════
    STUDENTS PAGE
 ═══════════════════════════════════════ */
