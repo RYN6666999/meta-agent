@@ -1690,8 +1690,11 @@ const AI_PROVIDERS={
   grok:{
     label:'Grok (xAI)',
     models:[
-      'grok-4',
-      'grok-3',
+      'grok-4.20-0309-reasoning',
+      'grok-4.20-0309-non-reasoning',
+      'grok-4-1-fast-reasoning',
+      'grok-4-1-fast-non-reasoning',
+      'grok-4.20-multi-agent-0309',
       'grok-3-beta',
       'grok-3-mini-beta',
       'grok-2-1212',
