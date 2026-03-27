@@ -1194,6 +1194,31 @@ function closePanel(){
   panelNodeId=null;
 }
 
+function markContactedToday(){
+  if(!panelNodeId)return;
+  const n=findNode(panelNodeId);if(!n)return;
+  const today=new Date().toISOString().slice(0,10);
+  n.info.lastContact=today;
+  n.lastContactAt=Date.now();
+  n.updatedAt=Date.now();
+  if(!n.createdAt)n.createdAt=Date.now();
+  saveData();
+  // 同步更新面板欄位
+  const el=document.querySelector('[data-info="lastContact"]');
+  if(el)el.value=today;
+  const hint=document.getElementById('quick-contact-hint');
+  if(hint)hint.textContent='上次：'+today;
+  const ts=document.querySelector('.node-timestamps');
+  if(ts){
+    ts.querySelectorAll('span')[2].textContent='📞 聯繫 '+today;
+    ts.querySelectorAll('span')[1].textContent='✏️ 編輯 '+today;
+  }
+  // 更新節點卡片
+  const wrap=document.querySelector(`.node-wrap[data-id="${n.id}"]`);
+  if(wrap){const lbl=wrap.querySelector('.node-last-contact');if(lbl)lbl.textContent=today;}
+  toast('✅ 已記錄今日聯繫（'+today+'）');
+}
+
 function savePanel(){
   if(!panelNodeId)return;
   const n=findNode(panelNodeId);if(!n)return;
@@ -1266,6 +1291,14 @@ function renderPanel(n){
   const ROLES=['潛在客戶','轉介紹中心','學員','從業人員'];
 
   body.innerHTML=`
+    <!-- 快捷：今天聯繫到 -->
+    <div class="quick-contact-bar">
+      <button class="quick-contact-btn" onclick="markContactedToday()">
+        📞 今天聯繫到
+      </button>
+      <span class="quick-contact-hint" id="quick-contact-hint">${inf.lastContact?'上次：'+inf.lastContact:''}</span>
+    </div>
+
     <!-- 基本資料 -->
     <div class="field-group">
       <div class="field-label">姓名</div>
@@ -2546,9 +2579,11 @@ function renderCrmListView(){
     }));
   } else if(crmView==='contact'){
     const sorted=[...nonRoot].sort((a,b)=>{
-      const da=a.info.lastContact||'';
-      const db=b.info.lastContact||'';
-      return crmSortAsc?da.localeCompare(db):db.localeCompare(da);
+      // 優先用 lastContactAt（毫秒時間戳，精度高）
+      // fallback 用 info.lastContact（手動填日期字串）
+      const ta=a.lastContactAt||(a.info.lastContact?new Date(a.info.lastContact).getTime():0)||0;
+      const tb=b.lastContactAt||(b.info.lastContact?new Date(b.info.lastContact).getTime():0)||0;
+      return crmSortAsc?ta-tb:tb-ta;
     });
     groups=[{label:'全部（依最近聯繫排序）',items:sorted}];
   }

@@ -1465,6 +1465,21 @@ body.admin-page{background:var(--bg);color:var(--text);font-family:'Inter',-appl
   background-color:var(--bg);
 }
 
+/* ── Quick contact bar ── */
+.quick-contact-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;margin-bottom:4px;
+  background:var(--green-bg);border-bottom:1px solid var(--green-border);
+}
+.quick-contact-btn{
+  display:flex;align-items:center;gap:6px;
+  background:var(--green);color:#fff;border:none;
+  border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:opacity .15s;white-space:nowrap;
+}
+.quick-contact-btn:hover{opacity:.85;}
+.quick-contact-hint{font-size:12px;color:var(--green);opacity:.8;}
+
 /* ── Node timestamps ── */
 .node-timestamps{
   display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;
