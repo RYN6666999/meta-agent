@@ -1,64 +1,134 @@
 ---
 date: 2026-03-27
-session: meta-agent — Session 89
-status: 建設中
-generated: 2026-03-27 09:02
+session: agent-ssh-gateway P8.1 完成 + P8.2 設計
+status: P8.1 Done / P8.2 Draft
+generated: 2026-03-27 手動更新
 ---
 
-# 最新交接文件
+# 最新交接文件 — AI Agent SSH Gateway
 
-## 系統狀態（2026-03-27 09:02 自動生成）
+## Phase 狀態總覽
 
-| 服務 | 狀態 |
+| Phase | 名稱 | 狀態 |
+|-------|------|------|
+| P1–P5 | SSH Gateway + Playwright + Runner | ✅ Done |
+| P6 | n8n Job Trigger | ✅ Done |
+| P7 | 分級風控（enforce 上線） | ✅ Done（2026-03-27 封版）|
+| P7.1 | audit 觀察期 + rm pattern 修正 | ✅ Done |
+| P7.2 | enforce 正式上線 + rollback drill | ✅ Done |
+| P8 | AUTH_EXPIRED runner 端 | ✅ Done |
+| P8.1 | Telegram 通知（n8n native node）| ✅ Done（2026-03-27）|
+| P8.2 | TG 雙向指令頻道（daemon 方案）| 🔵 Draft，設計完成待實作 |
+| P9 | 多主機支援 | 📝 Draft |
+
+---
+
+## 當前事實（已驗證）
+
+### 部署狀態
+- 部署路徑：`/usr/local/bin/` — `agent-gateway.sh`、`gateway-policy.sh`、`agent-switch`
+- `GATEWAY_MODE=enforce`（正式生效）
+- Log：`/Users/agentbot/logs/agent-ssh.log`
+
+### Telegram Bot（P8.1）
+| 項目 | 值 |
+|------|-----|
+| Bot username | `@Qwekdbjsjw_bot` |
+| Bot ID | `8569580187` |
+| Token | 存於 `.secrets.json`（gitignored）|
+| Chat ID | `1469326872`（Ryan @RYN1491）|
+| n8n Credential | `Agent SSH Gateway Bot`（id: `t5ML2WeYvrnTvenU`，type: `telegramApi`）|
+
+### n8n Workflows
+
+| ID | 名稱 | 狀態 |
+|----|------|------|
+| `SHhtbahAm28jNVVJ` | AUTH_EXPIRED 通知 (P8.1) | ✅ active |
+| `RgpDAHpX723AfTbv` | TG 指令頻道 (P8.2) | ⚠️ inactive（需 HTTPS）|
+| `Jrypa0wEQ0deyZBp` | n8n Job Trigger (P6) | ⚠️ inactive |
+
+### P8.1 E2E 驗收（2026-03-27）
+| 測試 | 結果 |
 |------|------|
-| LightRAG | ❌ |
-| n8n | ❌ |
-
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：149
-
----
-
-## 未完成項目
-
-
-## 下一步（立刻執行）
-1. Gap-1｜Bug Closeout 一致性（P0）
-2. Gap-2｜重大變更 guard 命中率（P0）
-3. Gap-3｜KG 維護節律（P1）
+| POST /webhook/auth-expired | ✅ Workflow started |
+| Code node 格式化 | ✅ |
+| Telegram native node 送出 | ✅ 實際收到 HTML 格式通知 |
+| 非阻塞 | ✅ runner exit code 不受影響 |
 
 ---
 
-## 最近 Git 提交
-- `d9ee956 auto: [error_fix+misc] score=185 超過閾值 50 自動備份`
-- `e3efb60 fix: SW v7 強制 PWA 更新 + initDrafts file input bug`
-- `fe34ef4 fix: 強制 PWA 更新 - SW cache v5→v6，廢棄舊快取`
-- `6297e69 feat: 新增學員管理頁面（v7/v12）`
-- `2d3cc6b auto: [error_fix+misc] score=65 超過閾值 50 自動備份`
-- `5076f19 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+## P8.2 設計（下一個 AI 直接實作）
 
-## 最近 Error Log
-- 2026-03-27-mobile-bridge-tunnel-down.md
-- 2026-03-27-mobile-bridge-api-down.md
-- 2026-03-27-health-check.md
-- 2026-03-26-mobile-bridge-tunnel-down.md
-- 2026-03-26-mobile-bridge-api-down.md
+### 問題
+n8n TelegramTrigger activate 失敗：`bad webhook: An HTTPS URL must be provided`
 
-## 最近驗證
-- E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
+### 解法：`agent-tg-daemon.sh`（agentbot 上的 polling daemon）
 
-## 最近 Code Intelligence
-- 2026-03-27 08:01:10 | trigger=health_check_failure | unavailable | provider unavailable
+優點：不需 HTTPS、不需 n8n、指令審核複用 gateway-policy.sh
+
+**核心邏輯草稿**：
+```bash
+TOKEN="8569580187:AAGWHAt0Lq-SMK6gh8CyvFBP82aBP11CHOk"
+CHAT_ID="1469326872"   # 只接受此 chat_id 的指令
+OFFSET=0
+
+while true; do
+  RESP=$(curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates?offset=${OFFSET}&timeout=5")
+  # 解析 text，過濾 chat_id，通過 gateway-policy 審核，執行，sendMessage 回應
+  sleep 1
+done
+```
+
+**支援指令**：
+- `/status` → tail /Users/agentbot/logs/agent-ssh.log
+- `/jobs` → ls /Users/agentbot/jobs/failed/
+- `/requeue <job_id>` → 顯示指令（二次確認後執行）
+- `/help` → 列指令
+
+**部署步驟**：
+1. 寫 `agent-tg-daemon.sh`
+2. `sudo cp` 到 `/usr/local/bin/` + chmod 755
+3. 寫 launchd plist 到 `/Library/LaunchDaemons/com.agentbot.tg-daemon.plist`
+4. `sudo launchctl load` 常駐
+5. Telegram 傳 `/help` E2E 驗收
 
 ---
 
-## 關鍵路徑
-| 項目 | 路徑/URL |
-|------|---------|
-| 工作目錄 | `/Users/ryan/meta-agent/` |
-| 法典 | `/Users/ryan/meta-agent/law.json` |
-| 完整計劃 | `/Users/ryan/meta-agent/memory/master-plan.md` |
-| LightRAG | http://localhost:9621 |
-| n8n | http://localhost:5678 |
-| memory webhook | http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract |
-| extract-session | `bash /Users/ryan/meta-agent/scripts/extract-session.sh '對話內容'` |
+## 重要已知事實
+
+- `agent-switch status` 在非 agentbot 身份下顯示 UNKNOWN（正常，`.ssh/` 是 drwx------）
+- LINE Notify 已死（2025-03-31）
+- n8n Docker 連 host 用 `host.docker.internal`，不是 `127.0.0.1`
+- n8n Code node 沙箱無 `process.env`
+
+## 絕對不能動（P7 封版）
+
+- `/usr/local/bin/agent-gateway.sh`
+- `/usr/local/bin/gateway-policy.sh`
+- `/usr/local/bin/agent-switch`
+- `GATEWAY_MODE=enforce`
+- Job schema
+
+---
+
+## 下一個 AI 的任務
+
+**優先**：實作 `agent-tg-daemon.sh`（設計已完成，直接寫）
+
+不要做：
+- 不要改 P7 封版
+- 不要啟用 `RgpDAHpX723AfTbv`（需 HTTPS）
+- 不要重評估通知方案（已定案 Telegram + daemon）
+
+---
+
+## 核心路徑
+
+| 項目 | 路徑 |
+|------|------|
+| Repo | `/Users/ryan/meta-agent/tools/agent-ssh-gateway/` |
+| Runner config | `runner/runner.config.json` |
+| Secrets | `.secrets.json`（gitignored）|
+| Jobs | `jobs/{incoming,running,done,failed}/` |
+| Gateway log | `/Users/agentbot/logs/agent-ssh.log` |
+| n8n | `http://localhost:5678` |

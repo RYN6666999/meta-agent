@@ -159,7 +159,7 @@ rm[[:space:]].*[[:space:]]+/(etc|boot|System|usr|private|bin|sbin|var/root)(/|[[
 
 ## P8 — AUTH_EXPIRED 通知與 Re-queue（P5.3 升級）
 
-**Status: Decided**（方案 B 已定案，runner 端已實作，2026-03-27）
+**Status: Promoted（P8 runner + P8.1 通知已落地，P8.2 設計完成待實作）**
 
 ### 決策
 採方案 B：**n8n 通知 → 人工補登 → re-queue**。
@@ -168,69 +168,69 @@ rm[[:space:]].*[[:space:]]+/(etc|boot|System|usr|private|bin|sbin|var/root)(/|[[
 - runner 跑在 SSH session，`headless: false` 需要 DISPLAY / Quartz，環境不穩定
 - 2FA/CAPTCHA 自動化邊界不明，最終仍需人工介入 + 通知
 - 自動重登有觸發風控鎖帳的風險
-- 方案 B 是方案 A 的超集（通知 + 人工補登 ≥ headful 等待）
 
-### 落地架構
+### 落地架構（實際）
 
 ```
 auth_expired 發生
   ↓
 run-job.ts notifyAuthExpired()
-  → POST jobs/failed/<id>.json 路徑 + site + login_url 到 n8n webhook
-  → best-effort（5s timeout，失敗只記 log，不影響 exit code）
+  → POST /webhook/auth-expired（best-effort，5s timeout）
   ↓
-n8n webhook → 發 Slack / Line 通知
-  訊息：site=xxx, job_id=xxx, login_url=xxx
-  操作指引：
-    1. SITE=xxx npm run refresh-auth
-    2. cp jobs/failed/<id>.json jobs/incoming/<id>.json
+n8n: Code（HTML 格式化）→ Telegram node（原生）
+  → @RYN1491 收到通知
+  訊息：site / job_id / login_url / re-queue 指令
   ↓
-（選配）n8n 等待人工確認 → SSH step 自動 re-queue
+人工補登 → cp job.json jobs/incoming/ → 重跑
 ```
 
-### 實作檔案
-- `runner/src/config.ts` — 新增 `AuthNotifyConfig` + `getAuthNotifyConfig()`
-- `runner/src/run-job.ts` — 新增 `notifyAuthExpired()`，在 auth_expired 分支呼叫
-- `runner/runner.config.json` — 新增 `_authNotify_DISABLED`（啟用時改 key 為 `authNotify`）
+### 實作檔案（已落地）
+- `runner/src/config.ts` — `AuthNotifyConfig` + `getAuthNotifyConfig()`
+- `runner/src/run-job.ts` — `notifyAuthExpired()`，best-effort POST
+- `runner/runner.config.json` — `authNotify.webhookUrl` 已啟用
+- `runner/.secrets.json` — Telegram token + chat_id（gitignored）
 
-### 實作檔案
-- `runner/src/config.ts` — 新增 `AuthNotifyConfig` + `getAuthNotifyConfig()`
-- `runner/src/run-job.ts` — 新增 `notifyAuthExpired()`，在 auth_expired 分支呼叫
-- `runner/runner.config.json` — `authNotify.webhookUrl = http://localhost:5678/webhook/auth-expired`
+### n8n Workflow（已落地）
 
-### n8n Workflow
-- **ID**: `SHhtbahAm28jNVVJ`
-- **名稱**: SSH Gateway — AUTH_EXPIRED 通知 (P8.1)
-- **Webhook URL（啟動後）**: `http://localhost:5678/webhook/auth-expired`
-- **測試 URL（未啟動）**: `http://localhost:5678/webhook-test/auth-expired`
-- **通知方式**: Telegram Bot（`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`，直接寫在 Code node）
-- **注意**: Line Notify 已於 2025-03-31 停服，改用 Telegram
+| 項目 | 值 |
+|------|-----|
+| Workflow ID | `SHhtbahAm28jNVVJ` |
+| 名稱 | SSH Gateway — AUTH_EXPIRED 通知 (P8.1) |
+| 狀態 | active = true |
+| Webhook URL | `http://localhost:5678/webhook/auth-expired` |
+| 通知方式 | n8n 原生 Telegram node（credential: t5ML2WeYvrnTvenU） |
+| Bot | `@Qwekdbjsjw_bot`，chat_id: `1469326872` |
 
-### 驗收結果（2026-03-27）
+**注意**：LINE Notify 已於 2025-03-31 停服。舊 DELTA.md 描述的 Code node HTTP 方案已廢棄，現為原生 Telegram node。
 
-| 項目 | 結果 |
-|------|------|
-| webhook 接收 payload | ✅ status=200，body 正確解析 |
-| runner → webhook 鏈路 | ✅ runner log: `auth_notify sent status=200` |
-| n8n execution 成功 | ✅ exec_id=173, status=success, mode=webhook |
-| 真實 AUTH_EXPIRED 觸發 | ✅ fundodo session 過期，exit=4，payload 含正確 login_url |
-| LINE_NOTIFY_TOKEN 缺少時 | ✅ 靜默回 `skipped: true`，不拋錯，exit code 不受影響 |
-| 非阻塞（webhook 失敗） | ✅ best-effort，WARN log，不影響 job 主語義 |
+### P8.2 — TG 雙向指令頻道（Draft）
 
-**唯一待完成**：取得 Telegram Bot token + chat_id，填入 n8n workflow `Send Telegram Notify` 節點第 2-3 行：
-```javascript
-const TELEGRAM_BOT_TOKEN = 'YOUR_BOT_TOKEN';
-const TELEGRAM_CHAT_ID   = 'YOUR_CHAT_ID';
+**Status: Draft**
+
+n8n TelegramTrigger 需 HTTPS，本地環境不適用。
+改採 **`agent-tg-daemon.sh`**（SSH polling daemon，部署在 agentbot 機器上）：
+
 ```
-取得步驟：
-1. Telegram 搜尋 `@BotFather` → `/newbot` → 取得 `BOT_TOKEN`
-2. 搜尋你的 bot，傳一則訊息
-3. 開 `https://api.telegram.org/bot<TOKEN>/getUpdates` → 取 `result[0].message.chat.id`
+while true; do
+  # curl getUpdates（long-poll）
+  # 解析 message.text → 通過 gateway-policy.sh 審核
+  # 執行 → sendMessage 回覆
+done
+```
 
-### 尚未決定（留 P8.2）
-- 人工確認後 n8n 自動 re-queue（HTTP callback 或 SSH step）
+支援指令：`/status` / `/requeue <job_id>` / `/jobs` / `/help`
+
+已建但 inactive 的 n8n workflow `RgpDAHpX723AfTbv` 保留作為備用（若未來有 HTTPS/Cloudflare Tunnel）。
+
+**待實作**：
+- [ ] `agent-tg-daemon.sh`（已有完整設計）
+- [ ] launchd plist 常駐
+- [ ] 部署到 agentbot
+
+### 尚未決定（P8.x）
+- 人工確認後自動 re-queue（目前仍需人工貼指令）
 - site-specific 通知策略（重要 site 加急）
-- 若 n8n 未啟動時 webhook 失敗的 fallback（目前: 靜默記 WARN）
+- agent-tg-daemon.sh 指令 ALLOWLIST 定義
 
 ---
 

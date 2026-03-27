@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.agentbot.tg-daemon.plist — P8.2 Telegram 指令頻道 launchd agent
+
+  部署位置：~/Library/LaunchAgents/com.agentbot.tg-daemon.plist
+
+  安裝步驟：
+    1. 部署 agent-tg-daemon.sh：
+         sudo cp host/bin/agent-tg-daemon.sh /usr/local/bin/
+         sudo chmod 755 /usr/local/bin/agent-tg-daemon.sh
+
+    2. 部署 plist：
+         cp host/launchd/com.agentbot.tg-daemon.plist \
+            ~/Library/LaunchAgents/com.agentbot.tg-daemon.plist
+
+    3. 載入並啟動：
+         launchctl load ~/Library/LaunchAgents/com.agentbot.tg-daemon.plist
+         launchctl start com.agentbot.tg-daemon
+
+    4. 確認執行：
+         launchctl list | grep tg-daemon
+         tail -f ~/meta-agent/tools/agent-ssh-gateway/logs/tg-daemon.log
+
+  管理：
+    停止：launchctl stop com.agentbot.tg-daemon
+    卸載：launchctl unload ~/Library/LaunchAgents/com.agentbot.tg-daemon.plist
+    重啟：launchctl kickstart -k gui/$(id -u)/com.agentbot.tg-daemon
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.agentbot.tg-daemon</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/agent-tg-daemon.sh</string>
+  </array>
+
+  <!-- 登入後自動啟動 -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- crash 或退出後自動重啟 -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- 最短重啟間隔（秒），避免 crash loop 打爆 API -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway/logs/tg-daemon.stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway/logs/tg-daemon.stderr.log</string>
+
+  <!-- 工作目錄 -->
+  <key>WorkingDirectory</key>
+  <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway</string>
+
+  <!-- 環境變數 -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- 專案目錄（必填，讓 daemon 找到 .secrets.json 和 jobs/）-->
+    <key>AGENT_SSH_GATEWAY_DIR</key>
+    <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway</string>
+  </dict>
+</dict>
+</plist>
