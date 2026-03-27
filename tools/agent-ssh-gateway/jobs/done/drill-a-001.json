@@ -1,0 +1,14 @@
+{
+  "job_id": "drill-a-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo enforce_ok"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    }
+  ]
+}

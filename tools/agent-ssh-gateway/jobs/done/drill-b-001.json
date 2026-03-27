@@ -1,0 +1,18 @@
+{
+  "job_id": "drill-b-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo legacy_ok"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "ls /Users/agentbot/workspace"
+    }
+  ]
+}

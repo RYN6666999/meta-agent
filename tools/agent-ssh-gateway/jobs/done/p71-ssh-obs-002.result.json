@@ -1,0 +1,56 @@
+{
+  "job_id": "p71-ssh-obs-002",
+  "status": "done",
+  "started_at": "2026-03-27T06:16:40.990Z",
+  "finished_at": "2026-03-27T06:16:43.773Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello_from_p71\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello_from_p71\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    }
+  ]
+}

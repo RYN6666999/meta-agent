@@ -1,0 +1,30 @@
+{
+  "job_id": "p71-ssh-obs-002",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "mkdir -p /Users/agentbot/workspace/test-p71"
+    },
+    {
+      "kind": "ssh",
+      "command": "touch /Users/agentbot/workspace/test-p71/hello.txt"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo hello_from_p71 > /Users/agentbot/workspace/test-p71/hello.txt"
+    },
+    {
+      "kind": "ssh",
+      "command": "cat /Users/agentbot/workspace/test-p71/hello.txt"
+    },
+    {
+      "kind": "ssh",
+      "command": "grep hello /Users/agentbot/workspace/test-p71/hello.txt"
+    },
+    {
+      "kind": "ssh",
+      "command": "rm -rf /Users/agentbot/workspace/test-p71"
+    }
+  ]
+}

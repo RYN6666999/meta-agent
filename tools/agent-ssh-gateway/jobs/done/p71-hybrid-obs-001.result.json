@@ -1,0 +1,38 @@
+{
+  "job_id": "p71-hybrid-obs-001",
+  "status": "done",
+  "started_at": "2026-03-27T06:17:03.018Z",
+  "finished_at": "2026-03-27T06:17:07.555Z",
+  "steps": [
+    {
+      "kind": "web",
+      "status": "ok",
+      "output": {
+        "url": "https://fundodo.net/fundodo/"
+      }
+    },
+    {
+      "kind": "web",
+      "status": "ok",
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "web-step done, now running terminal\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "Fri Mar 27 14:17:07 CST 2026\n",
+        "stderr": ""
+      }
+    }
+  ]
+}

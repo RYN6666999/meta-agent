@@ -23,10 +23,16 @@ export interface SiteConfig {
   loginUrl: string;
 }
 
+export interface AuthNotifyConfig {
+  webhookUrl: string;   // n8n webhook URL（POST target）
+  timeoutMs?: number;   // HTTP timeout，預設 5000ms
+}
+
 export interface RunnerConfig {
-  ssh:    SshConfig;
-  sites:  Record<string, SiteConfig>;
-  runner: { jobTimeoutMs: number };
+  ssh:         SshConfig;
+  sites:       Record<string, SiteConfig>;
+  runner:      { jobTimeoutMs: number };
+  authNotify?: AuthNotifyConfig;  // 未設定時靜默，不影響 job 流程
 }
 
 // ── 載入 ──────────────────────────────────────────────────────────────
@@ -60,6 +66,11 @@ export function getSshConfig(): SshConfig {
 /** 取得指定 site 的 loginUrl */
 export function getSiteLoginUrl(site: string): string | undefined {
   return loadConfig().sites[site]?.loginUrl;
+}
+
+/** 取得 authNotify 設定，未設定時回傳 null */
+export function getAuthNotifyConfig(): AuthNotifyConfig | null {
+  return loadConfig().authNotify ?? null;
 }
 
 /** ~ 展開 */

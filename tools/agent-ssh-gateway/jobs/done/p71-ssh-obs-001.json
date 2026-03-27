@@ -1,0 +1,22 @@
+{
+  "job_id": "p71-ssh-obs-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo p71_ok"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "ls -la /Users/agentbot/workspace"
+    },
+    {
+      "kind": "ssh",
+      "command": "pwd"
+    }
+  ]
+}

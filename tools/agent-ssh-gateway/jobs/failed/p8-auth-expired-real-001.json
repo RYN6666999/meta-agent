@@ -1,0 +1,12 @@
+{
+  "job_id": "p8-auth-expired-real-001",
+  "type": "web",
+  "steps": [
+    {
+      "kind": "web",
+      "site": "fundodo",
+      "action": "open_page",
+      "url": "https://fundodo.net/fundodo/login"
+    }
+  ]
+}

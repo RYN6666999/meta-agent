@@ -346,7 +346,7 @@ mode=audit decision=allow category=allowlist cmd=echo hello reason=in allowlist
 
 ### P7 驗收結果（2026-03-27）
 
-8 個驗收 case 全過（真實 SSH_ORIGINAL_COMMAND 路徑）：
+8 個驗收 case 全過（真實 SSH 路徑）：
 
 | Case | 命令 | Mode | 預期 | 結果 |
 |------|------|------|------|------|
@@ -359,4 +359,115 @@ mode=audit decision=allow category=allowlist cmd=echo hello reason=in allowlist
 | 5c | `sudo ls` | break-glass | deny/hard-deny | ✅ |
 | 6 | `htop` | break-glass | allow/break-glass | ✅ |
 
-P6 回歸結果：`echo / date / ls / npm` 全在 allowlist，P6 job 流程不受影響。
+P6 回歸：`echo / date / ls / npm` 全在 allowlist，P6 job 流程不受影響。
+
+### P7.1 觀察期結果（2026-03-27）
+
+跑 4 輪真實 job（ssh-only x2 / n8n trigger x1 / hybrid x1），發現並修正一個 hard-deny 誤觸：
+
+**`rm -rf /workspace/...` 被舊 rm pattern 誤擋**
+- 原因：Phase 1 繼承的 rm pattern 過寬，`rm -rf <任意含/路徑>` 都擋
+- 修正：改為只擋根目錄 `/` 和系統路徑（/etc /boot /System /usr /private /bin /sbin /var/root）
+- 結果：workspace 下 `rm -rf` 正常通行，系統路徑仍擋
+
+**P7.1 decision 統計（觀察期）**：
+
+| category | 次數 | 備註 |
+|----------|----:|------|
+| allowlist | 25 | 所有真實 job 命令 |
+| hard-deny | 11 | 包含 2 次誤觸（已修正） |
+| unknown | 2 | `htop`（人工測試，非 job 依賴） |
+| observe | 1 | `jq`（驗證測試） |
+
+結論：真實 job 命令面已全覆蓋，allowlist 穩定，可評估 P7.2 enforce 上線。
+
+### P7.2 Rollback 演練與 enforce 正式上線（2026-03-27）
+
+**Rollback 演練 A**（enforce → audit，8 秒）：
+- enforce 下 `fortune`（unknown）被擋
+- `agent-switch mode audit` → 立即恢復通行
+- log 可清楚區分 enforce deny vs audit allow
+
+**Rollback 演練 B**（enforce → legacy-blacklist）：
+- `agent-switch mode legacy-blacklist` → 正常 job 跑通
+- hard-deny（sudo）在 legacy-blacklist 仍擋住
+
+**enforce 正式切換**：
+- ssh-only job（echo / date / ls / mkdir / rm -rf /workspace/...）: ✅ DONE
+- n8n-style job: ✅ DONE
+- hard-deny: ✅
+
+**發現的新事實：agent-switch status 在非 agentbot 身份下誤報**
+- `/Users/agentbot/.ssh/` 是 `drwx------`，ryan 無法讀取
+- gateway 以 agentbot 身份透過 ForceCommand 執行，能正確看到 `enabled.flag`
+- `agent-switch status` 已更新顯示為 `UNKNOWN`（非 OFF），避免混淆
+- 功能正確，僅 UX 問題
+
+---
+
+## Phase 8 — AUTH_EXPIRED 通知與 Re-queue（P5.3 升級）
+
+### 方案決策：B（n8n 通知 + 人工補登）
+
+否決方案 A（headful browser）的理由：
+- runner 跑在 SSH session，`headless: false` 需要 DISPLAY，環境不穩定
+- 2FA/CAPTCHA 自動化邊界不明，最終仍需人工介入
+- 自動重登有觸發風控鎖帳的風險
+
+### P8 runner 端落地（2026-03-27）
+
+**`config.ts`** — 新增 `AuthNotifyConfig` + `getAuthNotifyConfig()`
+
+**`run-job.ts`** — 新增 `notifyAuthExpired(jobId, site, filename)`：
+- 偵測 `auth_expired` 時 best-effort POST 到 n8n webhook
+- 5s timeout，失敗只記 WARN，不影響 exit code 或 job 狀態
+- Payload：`{ event, job_id, site, job_file, login_url, failed_at }`
+- console.error 提示已更新為包含 re-queue 指令
+
+**`runner.config.json`** — 新增 `authNotify.webhookUrl`（已啟用，指向本機 n8n）
+
+| 項目 | 說明 |
+|------|------|
+| 回滾方式 | 移除 `authNotify` key 即退回舊行為 |
+| 向後相容 | `authNotify` 未設定時靜默跳過，無副作用 |
+
+### P8.1 n8n Workflow 落地（2026-03-27）
+
+**Workflow ID**: `SHhtbahAm28jNVVJ`
+**Webhook URL**: `http://localhost:5678/webhook/auth-expired`
+
+架構：
+```
+POST /webhook/auth-expired (onReceived 立即回應 200)
+  ↓
+Code node: 格式化訊息 → https POST 到 Line Notify API
+  header: Authorization: Bearer ${LINE_NOTIFY_TOKEN}
+  body:   message=🔐 AUTH_EXPIRED\nsite:...\njob:...\n補救:...
+```
+
+通知訊息格式（Line）：
+```
+🔐 AUTH_EXPIRED — 需要人工補登
+site     : fundodo
+job_id   : abc-20260327
+login    : https://fundodo.net/fundodo/
+
+補救步驟:
+1. SITE=fundodo npm run refresh-auth
+2. cp jobs/failed/abc-20260327.json jobs/incoming/abc-20260327.json
+
+⏰ 2026-03-27T14:30:00.000Z
+```
+
+### 啟用步驟（P8.1 尚需完成）
+
+1. 取得 Line Notify token（https://notify-bot.line.me/my/）
+2. 在 n8n Docker 設定 `LINE_NOTIFY_TOKEN=<token>`
+3. 啟動 workflow `SHhtbahAm28jNVVJ`（active = true）
+4. curl 驗證 + 真實 AUTH_EXPIRED 觸發測試
+
+### 未改動項目
+
+- `gateway-policy.sh` / `agent-gateway.sh` / `agent-switch`：無修改
+- Job schema（Job / WebStep / SshStep）：無修改
+- P7 的所有封版內容：無修改

@@ -1,0 +1,18 @@
+{
+  "job_id": "drill-a-block",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo before_block"
+    },
+    {
+      "kind": "ssh",
+      "command": "fortune"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo after_block"
+    }
+  ]
+}

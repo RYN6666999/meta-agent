@@ -20,11 +20,13 @@
  *   4 = AUTH_EXPIRED
  */
 
-import * as fs   from "fs";
-import * as path from "path";
-import { WorkerSession }  from "./playwright-worker";
-import { runSshCommand }  from "./ssh-worker";
-import { loadConfig }     from "./config";
+import * as fs    from "fs";
+import * as http  from "http";
+import * as https from "https";
+import * as path  from "path";
+import { WorkerSession }     from "./playwright-worker";
+import { runSshCommand }     from "./ssh-worker";
+import { loadConfig, getAuthNotifyConfig, getSiteLoginUrl } from "./config";
 
 // ── P5.1 Runner structured log ────────────────────────────────────────
 //
@@ -207,6 +209,77 @@ function validateTypeKindConsistency(job: Job): string[] {
   return errors;
 }
 
+// ── P8 AUTH_EXPIRED 通知 ──────────────────────────────────────────────
+//
+// 偵測到 auth_expired 時，best-effort POST 到 n8n webhook。
+// 失敗只記 log，不影響 job 最終狀態或 exit code。
+
+async function notifyAuthExpired(
+  jobId:    string,
+  site:     string,
+  filename: string,
+): Promise<void> {
+  const cfg = getAuthNotifyConfig();
+  if (!cfg) return;  // authNotify 未設定，靜默跳過
+
+  const loginUrl = getSiteLoginUrl(site);
+  const payload  = JSON.stringify({
+    event:     "auth_expired",
+    job_id:    jobId,
+    site,
+    job_file:  `jobs/failed/${filename}`,
+    login_url: loginUrl ?? null,
+    failed_at: new Date().toISOString(),
+  });
+
+  await new Promise<void>((resolve) => {
+    let url: URL;
+    try {
+      url = new URL(cfg.webhookUrl);
+    } catch {
+      rlog({ level: "WARN", job_id: jobId, msg: `auth_notify: 無效 webhookUrl="${cfg.webhookUrl}"` });
+      return resolve();
+    }
+
+    const isHttps  = url.protocol === "https:";
+    const mod      = isHttps ? https : http;
+    const timeout  = cfg.timeoutMs ?? 5_000;
+    const port     = url.port ? parseInt(url.port, 10) : (isHttps ? 443 : 80);
+
+    const req = mod.request(
+      {
+        hostname: url.hostname,
+        port,
+        path:     url.pathname + url.search,
+        method:   "POST",
+        headers:  {
+          "Content-Type":   "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        res.resume();  // consume body（不需要讀）
+        rlog({ level: "INFO", job_id: jobId, msg: `auth_notify sent status=${res.statusCode}` });
+        resolve();
+      },
+    );
+
+    req.setTimeout(timeout, () => {
+      req.destroy();
+      rlog({ level: "WARN", job_id: jobId, msg: `auth_notify timeout (${timeout}ms)` });
+      resolve();
+    });
+
+    req.on("error", (err) => {
+      rlog({ level: "WARN", job_id: jobId, msg: `auth_notify error: ${err.message}` });
+      resolve();
+    });
+
+    req.write(payload);
+    req.end();
+  });
+}
+
 // ── 主程式 ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -325,11 +398,12 @@ async function main(): Promise<void> {
   console.log(`[run-job] ${jobStatus.toUpperCase()}: ${jobId} → jobs/${jobStatus === "done" ? "done" : "failed"}/${filename}`);
   rlog({ level: jobStatus === "done" ? "INFO" : "ERROR", job_id: jobId, status: jobStatus, msg: jobError ?? "ok" });
 
-  // P5.3 AUTH_EXPIRED retry hint
+  // P8 AUTH_EXPIRED 通知 + P5.3 retry hint
   if (jobStatus === "auth_expired" && authExpiredSite) {
+    await notifyAuthExpired(jobId, authExpiredSite, filename);
     console.error(`\n[run-job] AUTH_EXPIRED: site="${authExpiredSite}" session 已過期`);
     console.error(`  1. 重新登入: SITE=${authExpiredSite} npm run refresh-auth`);
-    console.error(`  2. 登入完成後重新執行: npm run run-job -- ${jobFile}`);
+    console.error(`  2. 登入完成後重新投 job: cp jobs/failed/${filename} jobs/incoming/${filename}`);
   }
 
   if (jobStatus === "done")         process.exit(0);

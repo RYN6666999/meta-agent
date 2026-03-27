@@ -1,0 +1,14 @@
+{
+  "job_id": "p8-notify-test-001",
+  "status": "failed",
+  "started_at": "2026-03-27T07:02:38.638Z",
+  "finished_at": "2026-03-27T07:02:38.641Z",
+  "steps": [
+    {
+      "kind": "web",
+      "status": "error",
+      "error": "找不到 p8-fake-site 的 auth state，請先執行：\n  SITE=p8-fake-site LOGIN_URL=<登入頁網址> npm run refresh-auth\n  期望路徑: /Users/ryan/meta-agent/tools/agent-ssh-gateway/auth/sites/p8-fake-site/auth-state.json"
+    }
+  ],
+  "error": "找不到 p8-fake-site 的 auth state，請先執行：\n  SITE=p8-fake-site LOGIN_URL=<登入頁網址> npm run refresh-auth\n  期望路徑: /Users/ryan/meta-agent/tools/agent-ssh-gateway/auth/sites/p8-fake-site/auth-state.json"
+}

@@ -62,7 +62,7 @@ interface Job {
 
 ## P7 — 分級風控升級（Controlled Allowlist Mode）
 
-**Status: Promoted**（已實作，audit 觀察期進行中）
+**Status: Promoted**（已實作，P7.1 觀察期完成，P7.2 enforce 正式上線）
 
 實作檔案：
 - `host/bin/gateway-policy.sh`（新增）— 模式設定 + 三層規則
@@ -76,72 +76,156 @@ interface Job {
 
 ## P7.1 — audit 觀察期與 allowlist 收斂
 
-**Status: Draft**
+**Status: Promoted**（已完成，2026-03-27）
 
-### 目標
-在 P7 `audit` 模式下收集真實命令面，建立 enforce 的切換門檻。
+### 觀察結果
 
-### 步驟
-1. 部署 P7 至 agentbot，設定 `GATEWAY_MODE=audit`
-2. 跑 N 輪真實 job（ssh-only / n8n trigger / hybrid）
-3. 分析 `agent-ssh.log`：
-   ```bash
-   grep "category=unknown" /Users/agentbot/logs/agent-ssh.log | \
-     grep -oP 'cmd=\S+' | sort | uniq -c | sort -rn
-   ```
-4. 將常見 unknown command 移入 `ALLOWLIST`
-5. 將偶發或風險不明的保留在 `OBSERVELIST`
-6. 觀察期結束條件：連續 10 輪 job 無新 unknown command
+| 類別 | 命令 | 出現次數 | 場景 | 結論 |
+|------|------|------:|------|------|
+| allowlist | echo, date, ls, mkdir, touch, cat, grep, rm, pwd | 25 | 真實 job | 穩定，不需調整 |
+| unknown | htop | 2 | 人工測試 | keep unknown（非 job 依賴） |
+| hard-deny 誤觸 | rm -rf /workspace/... | 2 | 舊 rm pattern 太寬 | **已修正** |
 
-### enforce 切換門檻（待確認）
-- [ ] ssh-only job 5 次無 unknown
-- [ ] n8n trigger job 5 次無 unknown
-- [ ] hybrid job 3 次無 unknown
-- [ ] rollback 演練完成一次
+### 修正紀錄
+
+**rm hard-deny pattern 收斂（P7.1 主要產出）**
+
+舊 pattern（Phase 1 遺留，過寬）：
+```
+rm[[:space:]]+-[^[:space:]]*r[^[:space:]]*[[:space:]].*/'
+rm[[:space:]]+-rf[[:space:]]+
+```
+
+新 pattern（只擋根目錄與系統路徑）：
+```
+rm[[:space:]].*[[:space:]]+/([[:space:]]|$)
+rm[[:space:]].*[[:space:]]+/(etc|boot|System|usr|private|bin|sbin|var/root)(/|[[:space:]]|$)
+```
+
+**已驗證**：`rm -rf /Users/agentbot/workspace/...` 放行，`rm -rf /` / `/etc` / `/usr` 擋住。
+
+### enforce 切換門檻
+- [x] ssh-only job 通過（p71-ssh-obs-001, 002）
+- [x] n8n trigger job 通過（p71-n8n-*）
+- [x] hybrid job 通過（p71-hybrid-obs-001）
+- [x] unknown 已趨穩（只有人工測試的 htop，真實 job 無 unknown）
+- [ ] rollback 演練（仍建議在切 enforce 前執行一次）
 
 ---
 
 ## P7.2 — enforce 正式上線
 
-**Status: Draft**（待 P7.1 完成後評估）
+**Status: Promoted**（已完成，2026-03-27）
 
-### 前置條件
-- P7.1 觀察期完成
-- allowlist 穩定（無新 unknown）
-- rollback 流程文件化
+### Rollback 演練結果
 
-### 切換方式
-```bash
-sudo agent-switch mode enforce
-```
+**Drill A：enforce → 誤擋 → 切回 audit**
+- enforce 下 `fortune`（unknown）被擋：exit=1 ✅
+- 切回 audit：`agent-switch mode audit`，8 秒內完成 ✅
+- audit 下相同命令 gateway 放行（OS 找不到 binary 是 exit=127，不是 gateway 拒絕）✅
 
-### 注意
-enforce 上線後，新工具或新命令首次使用都會被拒。
-建議保持 `legacy-blacklist` 為一鍵回退。
+**Drill B：enforce → 誤擋 → 切回 legacy-blacklist**
+- enforce 下 `fortune` 擋住 ✅
+- 切回 `legacy-blacklist`：正常 job 跑通 ✅
+- hard-deny（sudo）在 legacy-blacklist 仍擋住 ✅
+
+**Drill B 補充：break-glass 確認非常態 rollback**
+- break-glass 允許命令通過（包含記錄），但 hard-deny 照樣擋
+- 定性為：救火用，不作為日常 fallback
+
+### 正式切換結果（2026-03-27 14:24）
+
+`GATEWAY_MODE` 已正式切換為 `enforce`。
+
+驗收：
+- ssh-only job（含 mkdir / touch / rm -rf workspace）: ✅ DONE
+- n8n-style job（date / echo）: ✅ DONE
+- hard-deny（sudo）: ✅ 擋住
+
+### 已知事實：agent-switch status 顯示問題
+
+`/Users/agentbot/.ssh/` 是 `drwx------`，非 agentbot 身份（如 ryan）無法讀取，
+導致 `agent-switch status` 誤報 `UNKNOWN`。
+
+實際狀態：
+- `enabled.flag` 存在（root 所有，`-rw-------`）
+- Gateway 以 agentbot 身份執行，`-f` 判斷能正確看到
+- SSH 連線與 gateway 決策均正常運作
+
+`agent-switch status` 已更新文字為 `UNKNOWN（以真實 SSH 測試確認）`，
+避免誤導。待下次 sudo 部署時一併更新。
 
 ---
 
-## P8 — AUTH_EXPIRED 自動重試（P5.3 升級）
+## P8 — AUTH_EXPIRED 通知與 Re-queue（P5.3 升級）
 
-**Status: Draft**
+**Status: Decided**（方案 B 已定案，runner 端已實作，2026-03-27）
 
-### 目標
-目前 P5.3 偵測到 AUTH_EXPIRED 只輸出提示訊息（exit 4）。
-P8 目標：真正無人值守，不需人工觸發 `refresh-auth`。
+### 決策
+採方案 B：**n8n 通知 → 人工補登 → re-queue**。
 
-### 可能方案
-- 方案 A：偵測到 AUTH_EXPIRED → 自動 launch headful browser → 等待人工登入 → 繼續 job
-- 方案 B：偵測到 AUTH_EXPIRED → 透過 n8n 發通知（Slack / Line） → 人工補登後重新投 job
+方案 A（headful browser 等待）否決理由：
+- runner 跑在 SSH session，`headless: false` 需要 DISPLAY / Quartz，環境不穩定
+- 2FA/CAPTCHA 自動化邊界不明，最終仍需人工介入 + 通知
+- 自動重登有觸發風控鎖帳的風險
+- 方案 B 是方案 A 的超集（通知 + 人工補登 ≥ headful 等待）
 
-### 風險
-- 網站風控可能偵測自動化重登並鎖帳號
-- 2FA / CAPTCHA 無法自動完成，邊界在哪裡需要定義
-- 人工補登界線：哪些 site 可以嘗試自動、哪些必須人工
+### 落地架構
 
-### 尚未決定
-- retry policy：失敗幾次後放棄？
-- site-specific login hooks（不同網站的登入流程差異很大）
-- job 重試語義：AUTH_EXPIRED 後，原 job 是否自動重新入隊
+```
+auth_expired 發生
+  ↓
+run-job.ts notifyAuthExpired()
+  → POST jobs/failed/<id>.json 路徑 + site + login_url 到 n8n webhook
+  → best-effort（5s timeout，失敗只記 log，不影響 exit code）
+  ↓
+n8n webhook → 發 Slack / Line 通知
+  訊息：site=xxx, job_id=xxx, login_url=xxx
+  操作指引：
+    1. SITE=xxx npm run refresh-auth
+    2. cp jobs/failed/<id>.json jobs/incoming/<id>.json
+  ↓
+（選配）n8n 等待人工確認 → SSH step 自動 re-queue
+```
+
+### 實作檔案
+- `runner/src/config.ts` — 新增 `AuthNotifyConfig` + `getAuthNotifyConfig()`
+- `runner/src/run-job.ts` — 新增 `notifyAuthExpired()`，在 auth_expired 分支呼叫
+- `runner/runner.config.json` — 新增 `_authNotify_DISABLED`（啟用時改 key 為 `authNotify`）
+
+### 實作檔案
+- `runner/src/config.ts` — 新增 `AuthNotifyConfig` + `getAuthNotifyConfig()`
+- `runner/src/run-job.ts` — 新增 `notifyAuthExpired()`，在 auth_expired 分支呼叫
+- `runner/runner.config.json` — `authNotify.webhookUrl = http://localhost:5678/webhook/auth-expired`
+
+### n8n Workflow
+- **ID**: `SHhtbahAm28jNVVJ`
+- **名稱**: SSH Gateway — AUTH_EXPIRED 通知 (P8.1)
+- **Webhook URL（啟動後）**: `http://localhost:5678/webhook/auth-expired`
+- **測試 URL（未啟動）**: `http://localhost:5678/webhook-test/auth-expired`
+- **通知方式**: Line Notify（`LINE_NOTIFY_TOKEN` 環境變數）
+
+### 驗收結果（2026-03-27）
+
+| 項目 | 結果 |
+|------|------|
+| webhook 接收 payload | ✅ status=200，body 正確解析 |
+| runner → webhook 鏈路 | ✅ runner log: `auth_notify sent status=200` |
+| n8n execution 成功 | ✅ exec_id=173, status=success, mode=webhook |
+| 真實 AUTH_EXPIRED 觸發 | ✅ fundodo session 過期，exit=4，payload 含正確 login_url |
+| LINE_NOTIFY_TOKEN 缺少時 | ✅ 靜默回 `skipped: true`，不拋錯，exit code 不受影響 |
+| 非阻塞（webhook 失敗） | ✅ best-effort，WARN log，不影響 job 主語義 |
+
+**唯一待完成**：取得 Line Notify token 後填入 n8n workflow `Send Line Notify` 節點第 3 行：
+```javascript
+const LINE_NOTIFY_TOKEN = 'YOUR_TOKEN_HERE';
+```
+token 取得處：https://notify-bot.line.me/my/
+
+### 尚未決定（留 P8.2）
+- 人工確認後 n8n 自動 re-queue（HTTP callback 或 SSH step）
+- site-specific 通知策略（重要 site 加急）
+- 若 n8n 未啟動時 webhook 失敗的 fallback（目前: 靜默記 WARN）
 
 ---
 

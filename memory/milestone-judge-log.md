@@ -1242,3 +1242,34 @@
   其他變更 tools/agent-ssh-gateway/runner/src/run-job.ts +10
 
 ---
+
+## 2026-03-27 14:13 | auto-git-score | 分數 230 | 📥 達到閾值（230/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=150），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-27-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-27-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/agent-ssh-gateway/DELTA.md +10
+  其他變更 tools/agent-ssh-gateway/FUTURE.md +10
+  其他變更 tools/agent-ssh-gateway/README.md +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-gateway.sh +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-switch +10
+  其他變更 tools/agent-ssh-gateway/host/bin/gateway-policy.sh +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/container-test2.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/container-test2.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/n8n-ssh-20260327053640142.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/n8n-ssh-20260327053640142.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/n8n-trigger-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/n8n-trigger-job.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/examples/n8n-trigger-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/container-test.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/container-test.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/incoming/n8n-ssh-20260327053500174.json +10
+  其他變更 tools/agent-ssh-gateway/scripts/diagnose-n8n-p6.sh +10
+  其他變更 tools/agent-ssh-gateway/scripts/run-job-n8n.sh +10
+
+---

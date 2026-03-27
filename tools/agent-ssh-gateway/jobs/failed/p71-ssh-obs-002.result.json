@@ -1,0 +1,59 @@
+{
+  "job_id": "p71-ssh-obs-002",
+  "status": "failed",
+  "started_at": "2026-03-27T06:14:52.859Z",
+  "finished_at": "2026-03-27T06:14:55.526Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello_from_p71\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello_from_p71\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "error",
+      "output": {
+        "stdout": "",
+        "stderr": "[gateway] 拒絕: hard-deny pattern matched\n",
+        "exitCode": 1
+      },
+      "error": "exit code 1"
+    }
+  ],
+  "error": "exit code 1"
+}

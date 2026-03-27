@@ -1,0 +1,30 @@
+{
+  "job_id": "p72-enforce-final",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo enforce_final_ok"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "ls /Users/agentbot/workspace"
+    },
+    {
+      "kind": "ssh",
+      "command": "mkdir -p /Users/agentbot/workspace/p72-test"
+    },
+    {
+      "kind": "ssh",
+      "command": "touch /Users/agentbot/workspace/p72-test/ok.txt"
+    },
+    {
+      "kind": "ssh",
+      "command": "rm -rf /Users/agentbot/workspace/p72-test"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "job_id": "p71-n8n-20260327141650",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo n8n_p71_ok"
+    },
+    {
+      "kind": "ssh",
+      "command": "ls /Users/agentbot/workspace"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo done"
+    }
+  ]
+}

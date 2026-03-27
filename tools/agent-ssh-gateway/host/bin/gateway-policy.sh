@@ -34,9 +34,9 @@ HARD_DENY=(
   # 危險下載執行
   'curl[^|]*\|[[:space:]]*(ba)?sh'
   'wget[^|]*\|[[:space:]]*(ba)?sh'
-  # 破壞性刪除
-  'rm[[:space:]]+-[^[:space:]]*r[^[:space:]]*[[:space:]].*/'
-  'rm[[:space:]]+-rf[[:space:]]+'
+  # 破壞性刪除（只擋系統路徑和根目錄，workspace 下允許 rm -rf）
+  'rm[[:space:]].*[[:space:]]+/([[:space:]]|$)'
+  'rm[[:space:]].*[[:space:]]+/(etc|boot|System|usr|private|bin|sbin|var/root)(/|[[:space:]]|$)'
   # 系統破壞
   '(^|[[:space:]])reboot([[:space:]]|$)'
   '(^|[[:space:]])shutdown([[:space:]]|$)'

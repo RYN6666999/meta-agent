@@ -1,0 +1,24 @@
+{
+  "job_id": "drill-a-001",
+  "status": "done",
+  "started_at": "2026-03-27T06:23:40.456Z",
+  "finished_at": "2026-03-27T06:23:41.543Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "enforce_ok\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "Fri Mar 27 14:23:41 CST 2026\n",
+        "stderr": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "job_id": "p8-notify-test-001",
+  "type": "web",
+  "steps": [
+    {
+      "kind": "web",
+      "site": "p8-fake-site",
+      "action": "open_page",
+      "url": "https://example.com"
+    }
+  ]
+}

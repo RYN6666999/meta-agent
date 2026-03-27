@@ -169,9 +169,13 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx agen
 sudo agent-switch on
 sudo agent-switch status
 # 輸出範例：
-#   Gateway 開關 : ON
-#   Gateway Mode : audit
-#   => 狀態：READY
+#   Gateway 開關 : UNKNOWN（/Users/agentbot/.ssh/ 是 drwx------，以真實 SSH 測試確認）
+#   Gateway Mode : enforce
+#   => 狀態：PARTIAL 或 READY（依 authorized_keys 是否存在而定）
+#
+# 說明：agent-switch status 若以非 agentbot 身份執行，無法讀取 .ssh/，
+#       enabled.flag 狀態會顯示 UNKNOWN，屬正常。
+#       以真實 SSH 連線能否成功作為開關狀態的真實依據。
 ```
 
 ---
@@ -609,12 +613,15 @@ agent-switch mode legacy-blacklist # 緊急回退
 agent-switch mode break-glass      # 緊急放寬（臨時）
 ```
 
-### enforce 的切換門檻
+### 目前預設模式
 
-只有在以下條件全部達成後才應切換至 `enforce` 作為正式預設：
-- 最近 N 輪真實 job 沒有新的 `category=unknown` 出現
-- ssh-only / n8n trigger / hybrid 驗收全過
-- rollback 演練已執行過一次
+**`enforce`**（2026-03-27 起，P7.2 完成後正式切換）
+
+切換門檻已全部達成：
+- ✅ 真實 job 三條路徑穩定（ssh-only / n8n / hybrid）
+- ✅ 真實 job unknown = 0
+- ✅ rm false positive 已修正
+- ✅ rollback 演練完成（Drill A: 8 秒切回 audit；Drill B: legacy-blacklist 驗證）
 
 ### 誤擋時的 rollback 順序
 
@@ -643,7 +650,9 @@ grep "decision=deny" /Users/agentbot/logs/agent-ssh.log | tail -20
 | Phase 4 | Runner 整合 SSH job | ✅ 完成（併入 Phase 3） |
 | Phase 5 | Log 規範與錯誤處理 | ✅ 完成 |
 | Phase 6 | n8n Job Trigger 整合（Execute Command 模式） | ✅ 完成 |
-| Phase 7 | 分級風控升級（Controlled Allowlist Mode） | ✅ 完成（audit 觀察期中） |
+| Phase 7 | 分級風控升級（Controlled Allowlist Mode） | ✅ 完成 |
+| Phase 7.1 | Audit 觀察期與 Allowlist 收斂（rm pattern 修正） | ✅ 完成 |
+| Phase 7.2 | Rollback 演練 + enforce 正式上線 | ✅ 完成 |
 
 ---
 

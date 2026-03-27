@@ -1,0 +1,14 @@
+{
+  "job_id": "p72-n8n-20260327142505",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo p72_n8n_ok"
+    }
+  ]
+}

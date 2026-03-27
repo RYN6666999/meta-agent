@@ -113,10 +113,12 @@ case "${CMD}" in
     echo "=== agent-switch 狀態 ==="
 
     # enabled.flag
+    # 注意：/Users/agentbot/.ssh/ 是 drwx------，非 agentbot 身份可能無法讀取。
+    # 以真實 SSH 測試結果為準，此處僅供參考。
     if [[ -f "${ENABLED_FLAG}" ]]; then
       echo "  Gateway 開關 : ON  (${ENABLED_FLAG} 存在)"
     else
-      echo "  Gateway 開關 : OFF (${ENABLED_FLAG} 不存在)"
+      echo "  Gateway 開關 : UNKNOWN (${ENABLED_FLAG} 不可讀或不存在；以真實 SSH 測試確認)"
     fi
 
     # authorized_keys

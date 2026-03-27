@@ -1,0 +1,27 @@
+{
+  "job_id": "drill-a-block",
+  "status": "failed",
+  "started_at": "2026-03-27T06:23:44.274Z",
+  "finished_at": "2026-03-27T06:23:45.207Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "before_block\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "error",
+      "output": {
+        "stdout": "",
+        "stderr": "[gateway] 拒絕: 命令不在白名單（enforce mode）\n",
+        "exitCode": 1
+      },
+      "error": "exit code 1"
+    }
+  ],
+  "error": "exit code 1"
+}

@@ -16,5 +16,9 @@
   },
   "runner": {
     "jobTimeoutMs": 120000
+  },
+  "authNotify": {
+    "webhookUrl": "http://localhost:5678/webhook/auth-expired",
+    "timeoutMs": 5000
   }
 }
