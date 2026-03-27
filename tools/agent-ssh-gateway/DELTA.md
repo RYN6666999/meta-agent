@@ -197,12 +197,12 @@ SITE=github npm run refresh-auth    # URL 自動從 runner.config.json 查詢
 | 原計劃 Phase | 現況 |
 |-------------|------|
 | Phase 4：Runner 整合 SSH job | **已完成**（併入 Phase 3） |
-| Phase 5：Log 規範與錯誤處理 | **未開始**，但生產強化部分已提前完成 |
+| Phase 5：Log 規範與錯誤處理 | **已完成** |
 
-Phase 5 剩餘待完成項目：
-- Log rotation（`agent-ssh.log` 無上限）
-- Runner 層的結構化 log（目前只有 console.log）
-- AUTH_EXPIRED 自動重試流程
+Phase 5 完成項目：
+- Log rotation（`agent-gateway.sh` `rotate_log()`，超過 512KB 自動輪轉，保留 3 份）→ P5.2
+- Runner 結構化 log（`run-job.ts` `rlog()`，JSON Lines 寫入 `logs/runner.log`）→ P5.1
+- AUTH_EXPIRED retry hint（偵測後輸出明確指引 + exit code 4）→ P5.3
 
 ---
 

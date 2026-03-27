@@ -1,0 +1,22 @@
+{
+  "job_id": "web-001",
+  "status": "done",
+  "started_at": "2026-03-27T04:26:58.072Z",
+  "finished_at": "2026-03-27T04:26:59.839Z",
+  "steps": [
+    {
+      "kind": "web",
+      "status": "ok",
+      "output": {
+        "url": "https://fundodo.net/fundodo/"
+      }
+    },
+    {
+      "kind": "web",
+      "status": "ok",
+      "output": {
+        "text": ""
+      }
+    }
+  ]
+}

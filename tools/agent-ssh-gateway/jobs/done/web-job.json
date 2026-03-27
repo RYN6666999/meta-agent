@@ -1,6 +1,6 @@
 {
-  "job_id": "hybrid-001",
-  "type": "hybrid",
+  "job_id": "web-001",
+  "type": "web",
   "steps": [
     {
       "kind": "web",
@@ -13,14 +13,6 @@
       "site": "fundodo",
       "action": "get_text",
       "selector": "h1"
-    },
-    {
-      "kind": "ssh",
-      "command": "echo web-step done, now running terminal"
-    },
-    {
-      "kind": "ssh",
-      "command": "date"
     }
   ]
 }

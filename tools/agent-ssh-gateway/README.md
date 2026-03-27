@@ -217,7 +217,7 @@ sudo rm -rf /Users/agentbot
 
 ## Log 格式
 
-`/home/agentbot/logs/agent-ssh.log`：
+`/Users/agentbot/logs/agent-ssh.log`：
 
 ```
 2026-03-26T14:00:00 | ALLOW | cmd=echo hello
@@ -300,13 +300,11 @@ AUTH_EXPIRED: github session 已過期，請重新執行：
 
 ```json
 {
-  "id": "job-001",
+  "job_id": "web-001",
   "type": "web",
-  "site": "github",
-  "target": "https://github.com",
-  "actions": [
-    { "type": "goto", "url": "https://github.com/dashboard" },
-    { "type": "getText", "selector": "h1" }
+  "steps": [
+    { "kind": "web", "site": "github", "action": "open_page", "url": "https://github.com/dashboard" },
+    { "kind": "web", "site": "github", "action": "get_text",  "selector": "h1" }
   ]
 }
 ```
@@ -418,10 +416,10 @@ jobs/failed/<id>.json     → 失敗（含 error 欄位）
 |-------|------|------|
 | Phase 0 | 專案骨架 | ✅ 完成 |
 | Phase 1 | SSH Gateway 最小可用版（黑名單 + 開關 + log） | ✅ 完成 |
-| Phase 2 | Playwright auth state 登入與重用 | 待實作 |
-| Phase 3 | Job Runner 完整實作（web job） | 待實作 |
-| Phase 4 | Runner 整合 SSH job | 待實作 |
-| Phase 5 | Log 規範與錯誤處理 | 待實作 |
+| Phase 2 | Playwright auth state 登入與重用 | ✅ 完成 |
+| Phase 3 | Job Runner 完整實作（web + ssh hybrid） | ✅ 完成 |
+| Phase 4 | Runner 整合 SSH job | ✅ 完成（併入 Phase 3） |
+| Phase 5 | Log 規範與錯誤處理 | ✅ 完成 |
 
 ---
 

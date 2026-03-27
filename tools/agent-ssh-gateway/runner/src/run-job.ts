@@ -26,6 +26,34 @@ import { WorkerSession }  from "./playwright-worker";
 import { runSshCommand }  from "./ssh-worker";
 import { loadConfig }     from "./config";
 
+// ── P5.1 Runner structured log ────────────────────────────────────────
+//
+// 每次執行寫入 logs/runner.log（JSON Lines 格式）。
+// 只用 fs.appendFileSync，不引入任何 logging framework。
+
+const RUNNER_LOG_DIR  = path.resolve(__dirname, "../../logs");
+const RUNNER_LOG_FILE = path.join(RUNNER_LOG_DIR, "runner.log");
+
+interface LogEntry {
+  ts:       string;
+  level:    "INFO" | "WARN" | "ERROR";
+  job_id?:  string;
+  step?:    number;
+  kind?:    string;
+  status?:  string;
+  msg:      string;
+}
+
+function rlog(entry: Omit<LogEntry, "ts">): void {
+  const line = JSON.stringify({ ts: new Date().toISOString(), ...entry });
+  try {
+    fs.mkdirSync(RUNNER_LOG_DIR, { recursive: true });
+    fs.appendFileSync(RUNNER_LOG_FILE, line + "\n", "utf-8");
+  } catch {
+    // log 寫入失敗不應中斷主流程
+  }
+}
+
 // ── AUTH_EXPIRED 語義 ─────────────────────────────────────────────────
 //
 // 使用自定義 Error class，讓 main() 以 instanceof 判斷，
@@ -237,6 +265,7 @@ async function main(): Promise<void> {
   if (jobPath.startsWith(DIR.incoming)) fs.unlinkSync(jobPath);
 
   console.log(`[run-job] 開始執行: ${jobId} (type=${job.type}, steps=${job.steps.length})`);
+  rlog({ level: "INFO", job_id: jobId, msg: `job start type=${job.type} steps=${job.steps.length}` });
 
   const startedAt  = new Date().toISOString();
   const stepResults: StepResult[] = [];
@@ -245,6 +274,7 @@ async function main(): Promise<void> {
 
   let jobStatus: JobResult["status"] = "done";
   let jobError: string | undefined;
+  let authExpiredSite: string | undefined;
 
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -261,7 +291,8 @@ async function main(): Promise<void> {
     ]);
   } catch (err) {
     if (err instanceof AuthExpiredError) {
-      jobStatus = "auth_expired";
+      jobStatus       = "auth_expired";
+      authExpiredSite = err.site;
     } else {
       jobStatus = "failed";
     }
@@ -292,6 +323,14 @@ async function main(): Promise<void> {
   fs.unlinkSync(runningPath);
 
   console.log(`[run-job] ${jobStatus.toUpperCase()}: ${jobId} → jobs/${jobStatus === "done" ? "done" : "failed"}/${filename}`);
+  rlog({ level: jobStatus === "done" ? "INFO" : "ERROR", job_id: jobId, status: jobStatus, msg: jobError ?? "ok" });
+
+  // P5.3 AUTH_EXPIRED retry hint
+  if (jobStatus === "auth_expired" && authExpiredSite) {
+    console.error(`\n[run-job] AUTH_EXPIRED: site="${authExpiredSite}" session 已過期`);
+    console.error(`  1. 重新登入: SITE=${authExpiredSite} npm run refresh-auth`);
+    console.error(`  2. 登入完成後重新執行: npm run run-job -- ${jobFile}`);
+  }
 
   if (jobStatus === "done")         process.exit(0);
   if (jobStatus === "auth_expired") process.exit(4);
@@ -312,12 +351,14 @@ async function executeSteps(
     if (step.kind === "web") {
       const r = await runWebStep(step, sessions);
       results.push(r);
+      rlog({ level: r.status === "ok" ? "INFO" : "ERROR", step: i, kind: "web", status: r.status, msg: r.error ?? "ok" });
       if (r.status === "AUTH_EXPIRED") throw new AuthExpiredError(step.site);
       if (r.status === "error")        throw new Error(r.error ?? "web step failed");
 
     } else if (step.kind === "ssh") {
       const r = await runSshStep(step);
       results.push(r);
+      rlog({ level: r.status === "ok" ? "INFO" : "ERROR", step: i, kind: "ssh", status: r.status, msg: r.error ?? "ok" });
       if (r.status === "error") throw new Error(r.error ?? "ssh step failed");
     }
   }

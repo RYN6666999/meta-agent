@@ -1,0 +1,18 @@
+{
+  "job_id": "ssh-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo hello from agentbot"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "ls -la /Users/agentbot/workspace"
+    }
+  ]
+}

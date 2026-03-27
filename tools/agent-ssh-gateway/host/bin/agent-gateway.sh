@@ -19,9 +19,27 @@ WORKSPACE="${AGENT_HOME}/workspace"
 LOG_DIR="${AGENT_HOME}/logs"
 LOG_FILE="${LOG_DIR}/agent-ssh.log"
 
-# ── Log 初始化 ────────────────────────────────────────────────────────
+# ── Log 初始化 + Rotation ─────────────────────────────────────────────
+#
+# P5.2 size-based rotation：超過 512KB 時輪轉，最多保留 3 份備份。
+# stat 語法：macOS 用 -f%z，Linux 用 -c%s。
+
+LOG_MAX_BYTES=524288  # 512 KB
 
 mkdir -p "${LOG_DIR}"
+
+rotate_log() {
+  [[ -f "${LOG_FILE}" ]] || return 0
+  local size
+  size=$(stat -f%z "${LOG_FILE}" 2>/dev/null || stat -c%s "${LOG_FILE}" 2>/dev/null || echo 0)
+  if (( size > LOG_MAX_BYTES )); then
+    [[ -f "${LOG_FILE}.2" ]] && mv "${LOG_FILE}.2" "${LOG_FILE}.3"
+    [[ -f "${LOG_FILE}.1" ]] && mv "${LOG_FILE}.1" "${LOG_FILE}.2"
+    mv "${LOG_FILE}" "${LOG_FILE}.1"
+  fi
+}
+
+rotate_log
 
 log() {
   local level="$1"
