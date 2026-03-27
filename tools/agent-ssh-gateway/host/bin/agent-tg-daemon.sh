@@ -15,7 +15,8 @@
 #   1. 環境變數 TG_BOT_TOKEN / TG_AUTHORIZED_CHAT_ID
 #   2. SECRETS_FILE（.secrets.json）
 
-set -uo pipefail
+# 不用 set -e / set -u：daemon 需要在子命令失敗時繼續運行
+set -o pipefail 2>/dev/null || true
 
 # ── 路徑設定 ─────────────────────────────────────────────────────────
 
@@ -161,17 +162,12 @@ cmd_jobs() {
     return
   fi
 
-  local jobs
-  mapfile -t jobs < <(find "${failed_dir}" -maxdepth 1 -name "*.json" ! -name "*.result.json" -exec basename {} .json \; 2>/dev/null | sort)
-
-  if [[ ${#jobs[@]} -eq 0 ]]; then
-    echo "No failed jobs."
-    return
-  fi
-
-  local out
-  out="<b>Failed Jobs (${#jobs[@]})</b>\n"
-  for job_id in "${jobs[@]}"; do
+  # bash 3.2 相容：用 while read 取代 mapfile
+  local job_list=""
+  local job_count=0
+  while IFS= read -r job_id; do
+    [[ -z "${job_id}" ]] && continue
+    job_count=$(( job_count + 1 ))
     local ts=""
     local result_file="${failed_dir}/${job_id}.result.json"
     if [[ -f "${result_file}" ]]; then
@@ -185,10 +181,17 @@ except:
     pass
 " 2>/dev/null)
     fi
-    out+="• <code>${job_id}</code> ${ts}\n"
-  done
-  out+="\nUse /requeue &lt;job_id&gt; to re-queue"
-  printf '%b' "${out}"
+    job_list="${job_list}• <code>${job_id}</code> ${ts}"$'\n'
+  done < <(find "${failed_dir}" -maxdepth 1 -name "*.json" ! -name "*.result.json" \
+    -exec basename {} .json \; 2>/dev/null | sort)
+
+  if [[ ${job_count} -eq 0 ]]; then
+    echo "No failed jobs."
+    return
+  fi
+
+  printf '<b>Failed Jobs (%s)</b>\n\n%s\nUse /requeue &lt;job_id&gt; to re-queue' \
+    "${job_count}" "${job_list}"
 }
 
 cmd_requeue() {
@@ -271,7 +274,7 @@ dispatch() {
     /help)    reply=$(cmd_help) ;;
     /start)   reply=$(cmd_help) ;;
     *)
-      reply="Unknown command: <code>${cmd}</code>\n\nUse /help to see available commands."
+      reply=$(printf 'Unknown command: <code>%s</code>\n\nUse /help to see available commands.' "${cmd}")
       ;;
   esac
 
@@ -280,9 +283,11 @@ dispatch() {
 
 # ── Main Loop ────────────────────────────────────────────────────────
 
+TMP_FILE=$(mktemp)
+
 cleanup() {
-  log "INFO daemon stopping"
-  [[ -f "${PID_FILE}" ]] && rm -f "${PID_FILE}"
+  log "INFO daemon stopping pid=$$"
+  rm -f "${TMP_FILE}" "${PID_FILE}"
 }
 trap cleanup EXIT TERM INT
 
@@ -291,8 +296,6 @@ log "INFO daemon started pid=$$ authorized_chat_id=${AUTHORIZED_CHAT_ID}"
 log "INFO jobs_dir=${JOBS_DIR}"
 
 LAST_UPDATE_ID=0
-TMP_FILE=$(mktemp)
-trap 'rm -f "${TMP_FILE}"; cleanup' EXIT TERM INT
 
 while true; do
   # Long-poll: timeout=30 讓 Telegram 伺服器等最多 30 秒再回應
@@ -327,7 +330,8 @@ while true; do
       continue
     fi
 
-    dispatch "${chat_id}" "${text}"
+    # 子 shell 隔離：一個指令失敗不影響 daemon 主迴圈
+    ( dispatch "${chat_id}" "${text}" ) || log "WARN dispatch failed for cmd text=${text}"
 
   done < <(parse_updates "${TMP_FILE}")
 
