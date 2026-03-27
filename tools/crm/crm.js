@@ -1643,12 +1643,28 @@ function deleteEvent(id){
 const AI_PROVIDERS={
   claude:{
     label:'Claude (Anthropic)',
-    models:['claude-sonnet-4-6','claude-opus-4-6','claude-haiku-4-5-20251001','claude-3-5-haiku-20241022'],
+    models:[
+      'claude-opus-4-6',
+      'claude-sonnet-4-6',
+      'claude-haiku-4-5-20251001',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+    ],
     keyPlaceholder:'sk-ant-…'
   },
   openai:{
     label:'GPT (OpenAI)',
-    models:['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-3.5-turbo'],
+    models:[
+      'o3',
+      'o3-mini',
+      'o1',
+      'o1-mini',
+      'gpt-4o',
+      'gpt-4o-mini',
+      'gpt-4-turbo',
+      'gpt-3.5-turbo',
+    ],
     keyPlaceholder:'sk-…'
   },
   gemini:{
@@ -1673,8 +1689,22 @@ const AI_PROVIDERS={
   },
   grok:{
     label:'Grok (xAI)',
-    models:['grok-3-beta','grok-3-mini-beta','grok-2-1212'],
+    models:[
+      'grok-4',
+      'grok-3',
+      'grok-3-beta',
+      'grok-3-mini-beta',
+      'grok-2-1212',
+    ],
     keyPlaceholder:'xai-…'
+  },
+  openrouter:{
+    label:'OpenRouter',
+    models:[],
+    keyPlaceholder:'sk-or-…',
+    endpoint:'https://openrouter.ai/api/v1/chat/completions',
+    modelsUrl:'https://openrouter.ai/api/v1/models',
+    dynamic:true
   },
   custom:{
     label:'自定義',
@@ -1723,16 +1753,72 @@ function onAiProviderChange(){
       ms.parentNode.insertBefore(mi,ms.nextSibling);
     } else {mi.style.display='';}
     document.getElementById('ai-custom-endpoint-row').style.display='flex';
+  } else if(provider==='openrouter'){
+    ms.style.display='';
+    const mi=document.getElementById('ai-custom-model-input');
+    if(mi)mi.style.display='none';
+    // 顯示端點（預填）
+    document.getElementById('ai-custom-endpoint-row').style.display='flex';
+    const ep=document.getElementById('ai-custom-endpoint');
+    if(ep&&!ep.value)ep.value=p.endpoint;
+    // 如果已有快取模型就填入
+    const cached=JSON.parse(localStorage.getItem('crm-openrouter-models')||'[]');
+    if(cached.length)ms.innerHTML=cached.map(m=>`<option value="${m}">${m}</option>`).join('');
+    else ms.innerHTML='<option value="">— 請點「載入模型」—</option>';
+    // 顯示載入按鈕
+    let fetchBtn=document.getElementById('ai-fetch-models-btn');
+    if(!fetchBtn){
+      fetchBtn=document.createElement('button');
+      fetchBtn.id='ai-fetch-models-btn';fetchBtn.className='btn btn-sm';
+      fetchBtn.style.whiteSpace='nowrap';
+      fetchBtn.textContent='🔄 載入模型';
+      fetchBtn.onclick=fetchDynamicModels;
+      ms.parentNode.insertBefore(fetchBtn,ms.nextSibling);
+    } else {fetchBtn.style.display='';}
   } else {
     ms.style.display='';
     const mi=document.getElementById('ai-custom-model-input');
     if(mi)mi.style.display='none';
+    // 隱藏動態載入按鈕
+    const fetchBtn=document.getElementById('ai-fetch-models-btn');
+    if(fetchBtn)fetchBtn.style.display='none';
     ms.innerHTML=p.models.map(m=>`<option value="${m}">${m}</option>`).join('');
     document.getElementById('ai-custom-endpoint-row').style.display='none';
   }
   const ki=document.getElementById('ai-apikey-input');
   if(ki)ki.placeholder=p.keyPlaceholder||'API Key…';
   saveAiSettings();
+}
+
+async function fetchDynamicModels(){
+  const provider=document.getElementById('ai-provider-select')?.value||'';
+  const p=AI_PROVIDERS[provider];
+  if(!p?.modelsUrl){toast('此供應商不支援動態模型');return;}
+  const apiKey=document.getElementById('ai-apikey-input')?.value||'';
+  const btn=document.getElementById('ai-fetch-models-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ 載入中…';}
+  try{
+    const res=await fetch(p.modelsUrl,{
+      headers:apiKey?{Authorization:`Bearer ${apiKey}`,'HTTP-Referer':'https://fdd-crm.pages.dev'}:{}
+    });
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    // OpenRouter: data.data[].id
+    const ids=(data.data||data.models||[]).map(m=>m.id||m.name||m).filter(Boolean).sort();
+    if(!ids.length)throw new Error('無模型資料');
+    localStorage.setItem('crm-openrouter-models',JSON.stringify(ids));
+    const ms=document.getElementById('ai-model-select');
+    if(ms){
+      ms.innerHTML=ids.map(m=>`<option value="${m}">${m}</option>`).join('');
+      const saved=localStorage.getItem(STORE.K.aiModel);
+      if(saved&&ids.includes(saved))ms.value=saved;
+    }
+    toast(`✅ 已載入 ${ids.length} 個模型`);
+  }catch(e){
+    toast('載入失敗：'+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🔄 載入模型';}
+  }
 }
 
 function renderAiSettingsCard(){
@@ -1749,8 +1835,30 @@ function renderAiSettingsCard(){
       document.getElementById('ai-custom-endpoint-row').style.display='flex';
       const ep=document.getElementById('ai-custom-endpoint');
       if(ep)ep.value=s.endpoint;
+    } else if(s.provider==='openrouter'){
+      ms.style.display='';
+      document.getElementById('ai-custom-endpoint-row').style.display='flex';
+      const ep=document.getElementById('ai-custom-endpoint');
+      if(ep&&!ep.value)ep.value=p.endpoint;
+      const cached=JSON.parse(localStorage.getItem('crm-openrouter-models')||'[]');
+      if(cached.length){
+        ms.innerHTML=cached.map(m=>`<option value="${m}">${m}</option>`).join('');
+        if(s.model)ms.value=s.model;
+      } else {
+        ms.innerHTML='<option value="">— 請點「載入模型」—</option>';
+      }
+      let fetchBtn=document.getElementById('ai-fetch-models-btn');
+      if(!fetchBtn){
+        fetchBtn=document.createElement('button');
+        fetchBtn.id='ai-fetch-models-btn';fetchBtn.className='btn btn-sm';
+        fetchBtn.style.whiteSpace='nowrap';fetchBtn.textContent='🔄 載入模型';
+        fetchBtn.onclick=fetchDynamicModels;
+        ms.parentNode.insertBefore(fetchBtn,ms.nextSibling);
+      } else {fetchBtn.style.display='';}
     } else {
       ms.style.display='';
+      const fetchBtn=document.getElementById('ai-fetch-models-btn');
+      if(fetchBtn)fetchBtn.style.display='none';
       ms.innerHTML=p.models.map(m=>`<option value="${m}">${m}</option>`).join('');
       if(s.model)ms.value=s.model;
       document.getElementById('ai-custom-endpoint-row').style.display='none';
@@ -2094,8 +2202,9 @@ async function sendChat(){
       chatHistory.push({role:'assistant',content:d.candidates?.[0]?.content?.parts?.[0]?.text||d.error?.message||'無回應'});
 
     } else {
-      const endpoint=s.provider==='custom'&&s.endpoint?s.endpoint
+      const endpoint=(s.provider==='custom'||s.provider==='openrouter')&&s.endpoint?s.endpoint
         :s.provider==='grok'?'https://api.x.ai/v1/chat/completions'
+        :s.provider==='openrouter'?'https://openrouter.ai/api/v1/chat/completions'
         :'https://api.openai.com/v1/chat/completions';
       const msgs=[{role:'system',content:systemMsg},
         ...chatHistory.filter(m=>m.role==='user'||m.role==='assistant')
