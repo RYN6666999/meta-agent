@@ -1273,3 +1273,51 @@
   其他變更 tools/agent-ssh-gateway/scripts/run-job-n8n.sh +10
 
 ---
+
+## 2026-03-27 15:13 | auto-git-score | 分數 400 | 📥 達到閾值（400/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=235），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-27-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-27-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/agent-ssh-gateway/DELTA.md +10
+  其他變更 tools/agent-ssh-gateway/FUTURE.md +10
+  其他變更 tools/agent-ssh-gateway/README.md +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-switch +10
+  其他變更 tools/agent-ssh-gateway/host/bin/gateway-policy.sh +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/drill-a-001.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/drill-a-001.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/drill-b-001.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/drill-b-001.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-hybrid-obs-001.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-hybrid-obs-001.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-n8n-20260327141650.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-n8n-20260327141650.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-ssh-obs-001.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-ssh-obs-001.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-ssh-obs-002.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p71-ssh-obs-002.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p72-enforce-final.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p72-enforce-final.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p72-n8n-20260327142505.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/p72-n8n-20260327142505.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/drill-a-block-retry.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/drill-a-block-retry.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/drill-a-block.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/drill-a-block.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/p71-ssh-obs-002.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/p71-ssh-obs-002.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/p8-auth-expired-real-001.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/p8-auth-expired-real-001.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/p8-notify-test-001.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/p8-notify-test-001.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/incoming/p8-real-auth-test.json +10
+  其他變更 tools/agent-ssh-gateway/runner/runner.config.json +10
+  其他變更 tools/agent-ssh-gateway/runner/src/config.ts +10
+  其他變更 tools/agent-ssh-gateway/runner/src/run-job.ts +10
+
+---

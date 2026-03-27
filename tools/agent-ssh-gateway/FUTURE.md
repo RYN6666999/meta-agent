@@ -203,7 +203,8 @@ n8n webhook → 發 Slack / Line 通知
 - **名稱**: SSH Gateway — AUTH_EXPIRED 通知 (P8.1)
 - **Webhook URL（啟動後）**: `http://localhost:5678/webhook/auth-expired`
 - **測試 URL（未啟動）**: `http://localhost:5678/webhook-test/auth-expired`
-- **通知方式**: Line Notify（`LINE_NOTIFY_TOKEN` 環境變數）
+- **通知方式**: Telegram Bot（`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`，直接寫在 Code node）
+- **注意**: Line Notify 已於 2025-03-31 停服，改用 Telegram
 
 ### 驗收結果（2026-03-27）
 
@@ -216,11 +217,15 @@ n8n webhook → 發 Slack / Line 通知
 | LINE_NOTIFY_TOKEN 缺少時 | ✅ 靜默回 `skipped: true`，不拋錯，exit code 不受影響 |
 | 非阻塞（webhook 失敗） | ✅ best-effort，WARN log，不影響 job 主語義 |
 
-**唯一待完成**：取得 Line Notify token 後填入 n8n workflow `Send Line Notify` 節點第 3 行：
+**唯一待完成**：取得 Telegram Bot token + chat_id，填入 n8n workflow `Send Telegram Notify` 節點第 2-3 行：
 ```javascript
-const LINE_NOTIFY_TOKEN = 'YOUR_TOKEN_HERE';
+const TELEGRAM_BOT_TOKEN = 'YOUR_BOT_TOKEN';
+const TELEGRAM_CHAT_ID   = 'YOUR_CHAT_ID';
 ```
-token 取得處：https://notify-bot.line.me/my/
+取得步驟：
+1. Telegram 搜尋 `@BotFather` → `/newbot` → 取得 `BOT_TOKEN`
+2. 搜尋你的 bot，傳一則訊息
+3. 開 `https://api.telegram.org/bot<TOKEN>/getUpdates` → 取 `result[0].message.chat.id`
 
 ### 尚未決定（留 P8.2）
 - 人工確認後 n8n 自動 re-queue（HTTP callback 或 SSH step）
