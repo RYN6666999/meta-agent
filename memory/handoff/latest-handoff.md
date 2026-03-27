@@ -1,21 +1,21 @@
 ---
-date: 2026-03-26
-session: meta-agent — Session 88
+date: 2026-03-27
+session: meta-agent — Session 89
 status: 建設中
-generated: 2026-03-26 23:52
+generated: 2026-03-27 09:02
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-26 23:52 自動生成）
+## 系統狀態（2026-03-27 09:02 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(94777) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：148
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**Turn 計數**：149
 
 ---
 
@@ -30,25 +30,25 @@ generated: 2026-03-26 23:52
 ---
 
 ## 最近 Git 提交
+- `d9ee956 auto: [error_fix+misc] score=185 超過閾值 50 自動備份`
 - `e3efb60 fix: SW v7 強制 PWA 更新 + initDrafts file input bug`
 - `fe34ef4 fix: 強制 PWA 更新 - SW cache v5→v6，廢棄舊快取`
 - `6297e69 feat: 新增學員管理頁面（v7/v12）`
 - `2d3cc6b auto: [error_fix+misc] score=65 超過閾值 50 自動備份`
 - `5076f19 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
-- `05d4109 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
 
 ## 最近 Error Log
+- 2026-03-27-mobile-bridge-tunnel-down.md
+- 2026-03-27-mobile-bridge-api-down.md
+- 2026-03-27-health-check.md
 - 2026-03-26-mobile-bridge-tunnel-down.md
 - 2026-03-26-mobile-bridge-api-down.md
-- 2026-03-26-health-check.md
-- 2026-03-25-mobile-bridge-tunnel-down.md
-- 2026-03-25-mobile-bridge-api-down.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
 
 ## 最近 Code Intelligence
-- 2026-03-26 08:02:03 | trigger=health_check_failure | unavailable | provider unavailable
+- 2026-03-27 08:01:10 | trigger=health_check_failure | unavailable | provider unavailable
 
 ---
 

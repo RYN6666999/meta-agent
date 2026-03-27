@@ -1153,3 +1153,46 @@
   其他變更 tools/crm/index.html +10
 
 ---
+
+## 2026-03-27 03:02 | auto-git-score | 分數 430 | 📥 達到閾值（430/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=185），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-26-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-26-mobile-bridge-tunnel-down.md +10
+  error-log 新增根因 error-log/2026-03-27-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-27-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 tools/agent-ssh-gateway/.gitignore +10
+  其他變更 tools/agent-ssh-gateway/DELTA.md +10
+  其他變更 tools/agent-ssh-gateway/README.md +10
+  其他變更 tools/agent-ssh-gateway/SPEC.md +10
+  其他變更 tools/agent-ssh-gateway/auth/.gitignore +10
+  其他變更 tools/agent-ssh-gateway/auth/.gitkeep +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-gateway.sh +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-switch +10
+  其他變更 tools/agent-ssh-gateway/host/ssh/sshd_config.agentbot.conf +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/.gitkeep +10
+  其他變更 tools/agent-ssh-gateway/jobs/examples/hybrid-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/examples/ssh-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/examples/web-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/failed/.gitkeep +10
+  其他變更 tools/agent-ssh-gateway/jobs/incoming/.gitkeep +10
+  其他變更 tools/agent-ssh-gateway/jobs/running/.gitkeep +10
+  其他變更 tools/agent-ssh-gateway/runner/package-lock.json +10
+  其他變更 tools/agent-ssh-gateway/runner/package.json +10
+  其他變更 tools/agent-ssh-gateway/runner/runner.config.json +10
+  其他變更 tools/agent-ssh-gateway/runner/src/config.ts +10
+  其他變更 tools/agent-ssh-gateway/runner/src/playwright-worker.ts +10
+  其他變更 tools/agent-ssh-gateway/runner/src/refresh-auth.ts +10
+  其他變更 tools/agent-ssh-gateway/runner/src/run-job.ts +10
+  其他變更 tools/agent-ssh-gateway/runner/src/ssh-worker.ts +10
+  其他變更 tools/agent-ssh-gateway/runner/tsconfig.json +10
+  其他變更 tools/agent-ssh-gateway/scripts/verify-structure.sh +10
+
+---
