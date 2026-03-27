@@ -3200,7 +3200,12 @@ function saveObsidianPath(){
 function openObsidianVault(){
   const p=localStorage.getItem(STORE.K.obsidianPath)||'';
   if(!p){toast('請先設定 Obsidian Vault 路徑');return;}
-  window.open('obsidian://open?path='+encodeURIComponent(p),'_blank');
+  // 抽取 vault 名稱：iCloud 路徑取 Documents/ 後第一層，否則取最後一層資料夾
+  let vaultName=p;
+  const icloudMatch=p.match(/Documents\/([^/]+)/);
+  if(icloudMatch) vaultName=icloudMatch[1];
+  else vaultName=p.replace(/\/+$/,'').split('/').pop();
+  window.open('obsidian://open?vault='+encodeURIComponent(vaultName),'_blank');
 }
 
 /* ── Settings page ── */
