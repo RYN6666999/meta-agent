@@ -1,0 +1,377 @@
+openapi: 3.1.0
+info:
+  title: CRM Memory API
+  version: 0.1.0-mvp
+  description: |
+    fdd-crm Phase 1 記憶系統 API 規格。
+    部署於 Cloudflare Functions，儲存於 Cloudflare KV（CRM_MEMORIES）。
+    本規格是 Batch A/B/C/D 的合約層，中斷後重新接手必須先讀此檔。
+
+servers:
+  - url: https://fdd-crm.pages.dev
+    description: Production
+  - url: http://localhost:8788
+    description: Local (wrangler dev)
+
+# ═══════════════════════════════════════
+# 資料模型
+# ═══════════════════════════════════════
+components:
+  schemas:
+    Memory:
+      type: object
+      required: [id, type, subject, summary, keywords, pinned, archived, usageCount, createdAt, updatedAt, source]
+      properties:
+        id:
+          type: string
+          example: "mem_a1b2c3"
+          description: "格式：mem_{nanoid8}"
+        type:
+          type: string
+          enum: [fact, rule, episode, style]
+          description: |
+            fact    → 客觀事實（「王小明月收入 10 萬」）
+            rule    → 行動規則（「學員第一句先問財務現況」）
+            episode → 事件紀錄（「3/15 說下週再聯繫」）
+            style   → 偏好風格（「喜歡簡短直接的回應」）
+        subject:
+          type: string
+          example: "contact:王小明"
+          description: |
+            命名規則：
+            contact:{name}  → 特定聯繫人
+            user:Ryan       → 用戶自身
+            global          → 全局知識
+        summary:
+          type: string
+          maxLength: 120
+          description: "短摘要，直接注入 prompt 用"
+          example: "王小明 3/15 表示下週再聯繫"
+        detail:
+          type: string
+          nullable: true
+          description: "可選，較完整描述"
+        keywords:
+          type: array
+          items:
+            type: string
+          example: ["王小明", "下週", "聯繫"]
+        pinned:
+          type: boolean
+          default: false
+          description: "釘選 = 無論評分都進 Top 5"
+        archived:
+          type: boolean
+          default: false
+          description: "軟刪除，不物理清除"
+        usageCount:
+          type: integer
+          default: 0
+          description: "被命中次數，用於評分"
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [auto, manual]
+          description: "auto = AI 自動萃取，manual = 用戶手動輸入"
+
+    MemoryCreate:
+      type: object
+      required: [type, subject, summary]
+      properties:
+        type:
+          type: string
+          enum: [fact, rule, episode, style]
+        subject:
+          type: string
+        summary:
+          type: string
+          maxLength: 120
+        detail:
+          type: string
+          nullable: true
+        keywords:
+          type: array
+          items:
+            type: string
+          default: []
+        pinned:
+          type: boolean
+          default: false
+        source:
+          type: string
+          enum: [auto, manual]
+          default: manual
+
+    MemoryPatch:
+      type: object
+      description: "只傳要更新的欄位"
+      properties:
+        summary:
+          type: string
+        detail:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        pinned:
+          type: boolean
+        archived:
+          type: boolean
+
+    RetrieveRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: "用戶當前輸入"
+          example: "王小明這週要打電話嗎？"
+        context:
+          type: object
+          properties:
+            currentContact:
+              type: string
+              description: "當前開著的聯繫人名稱"
+              example: "王小明"
+            currentPage:
+              type: string
+              enum: [crm, students, daily, ai]
+        topK:
+          type: integer
+          default: 5
+          maximum: 10
+
+    RetrieveResponse:
+      type: object
+      properties:
+        memories:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Memory'
+              - type: object
+                properties:
+                  score:
+                    type: number
+                    description: "評分結果（0-1）"
+        promptSnippet:
+          type: string
+          description: "可直接貼入 system prompt 的格式化字串，< 500 token"
+          example: |
+            你知道以下記憶：
+            1. [rule] 學員第一句話先問財務現況
+            2. [episode] 王小明 3/15 表示下週再聯繫
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+  # ── 評分公式（非 API，供實作參考）──
+  x-scoring-formula:
+    description: |
+      score = keyword_match × 0.4
+            + freshness      × 0.3
+            + usage_norm     × 0.2
+            + type_weight    × 0.1
+
+      keyword_match : 命中關鍵字數 / 總關鍵字數
+      freshness     : 1 / (1 + days_since_last_used / 30)
+      usage_norm    : min(usageCount, 20) / 20
+      type_weight   : rule=1.0 | fact=0.8 | episode=0.6 | style=0.4
+      pinned bonus  : + 999（確保進 Top 5）
+      archived      : 直接排除不計分
+
+  # ── KV Key 規則（Batch A 必讀）──
+  x-kv-key-rules:
+    description: |
+      Namespace : CRM_MEMORIES（需在 wrangler.toml 新增綁定）
+      List index : "index"              → JSON array of all memory IDs
+      Single mem : "mem:{id}"           → JSON of Memory object
+      Archive    : "arch:{id}"          → archived memories（低頻讀取）
+
+      index 維護：
+        create → 追加 id 到 index array
+        archive → 從 index 移除，加入 arch index
+        delete（未來）→ 同 archive，但不保留 arch
+
+# ═══════════════════════════════════════
+# 端點
+# ═══════════════════════════════════════
+paths:
+
+  /api/memories:
+    get:
+      operationId: listMemories
+      summary: 列出記憶
+      tags: [Batch A]
+      parameters:
+        - name: subject
+          in: query
+          schema:
+            type: string
+          example: "contact:王小明"
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [fact, rule, episode, style]
+        - name: pinned
+          in: query
+          schema:
+            type: boolean
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 記憶列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Memory'
+                  total:
+                    type: integer
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      operationId: createMemory
+      summary: 新增記憶
+      tags: [Batch A]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryCreate'
+      responses:
+        '201':
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/memories/{id}:
+    put:
+      operationId: updateMemory
+      summary: 更新記憶
+      tags: [Batch A]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryPatch'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: deleteMemory
+      summary: 軟刪除記憶（archived=true）
+      tags: [Batch A]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/memories/retrieve:
+    post:
+      operationId: retrieveRelevantMemories
+      summary: 檢索與當前訊息最相關的 Top K 記憶
+      tags: [Batch B]
+      description: |
+        評分公式：keyword × 0.4 + freshness × 0.3 + usage × 0.2 + type × 0.1
+        pinned 記憶額外加 999 分確保進入結果。
+        回傳 promptSnippet 可直接注入 system prompt。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrieveRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrieveResponse'
+
+# ═══════════════════════════════════════
+# Batch 對應關係速查
+# ═══════════════════════════════════════
+x-batch-map:
+  BatchA:
+    implements: [listMemories, createMemory, updateMemory, deleteMemory]
+    files:
+      - tools/crm/functions/api/memories.js
+      - wrangler.toml (新增 KV binding CRM_MEMORIES)
+  BatchB:
+    implements: [retrieveRelevantMemories, 前端 memory service]
+    files:
+      - tools/crm/functions/api/memories.js (新增 /retrieve)
+      - tools/crm/crm.js (新增 memoryService 物件)
+  BatchC:
+    implements: [buildSystemPrompt 注入, sendChat 後萃取]
+    files:
+      - tools/crm/crm.js (修改 buildSystemPrompt, sendChat)
+  BatchD:
+    implements: [記憶 UI 側欄]
+    files:
+      - tools/crm/index.html
+      - tools/crm/crm.js
+      - tools/crm/crm.css
