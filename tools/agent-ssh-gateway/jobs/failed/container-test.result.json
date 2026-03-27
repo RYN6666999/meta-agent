@@ -1,0 +1,19 @@
+{
+  "job_id": "ssh-001",
+  "status": "failed",
+  "started_at": "2026-03-27T05:26:36.458Z",
+  "finished_at": "2026-03-27T05:26:36.543Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "error",
+      "output": {
+        "stdout": "",
+        "stderr": "ssh: connect to host 127.0.0.1 port 22: Connection refused\r\n",
+        "exitCode": 255
+      },
+      "error": "exit code 255"
+    }
+  ],
+  "error": "exit code 255"
+}

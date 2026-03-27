@@ -7,7 +7,9 @@
 # 用法：
 #   agent-switch on      # 啟用：建立 enabled.flag，還原 authorized_keys
 #   agent-switch off     # 停用：刪除 enabled.flag，停用 authorized_keys
-#   agent-switch status  # 查看目前狀態
+#   agent-switch status  # 查看目前狀態（含 GATEWAY_MODE）
+#   agent-switch mode <legacy-blacklist|audit|enforce|break-glass>
+#                        # 切換 P7 命令治理模式
 #
 # Exit codes：
 #   0 = 操作成功
@@ -35,6 +37,9 @@ check_ssh_dir() {
     err "${SSH_DIR} 不存在，請先建立 agentbot 帳號與 .ssh 目錄"
   fi
 }
+
+# P7：gateway-policy.sh 路徑
+POLICY_FILE="$(dirname "$0")/gateway-policy.sh"
 
 # ── 主邏輯 ───────────────────────────────────────────────────────────
 
@@ -84,6 +89,26 @@ case "${CMD}" in
     echo "[agent-switch] OFF — agent SSH 存取已停用"
     ;;
 
+  mode)
+    # P7：切換 GATEWAY_MODE
+    NEW_MODE="${2:-}"
+    case "${NEW_MODE}" in
+      legacy-blacklist|audit|enforce|break-glass) ;;
+      *)
+        echo "用法: agent-switch mode <legacy-blacklist|audit|enforce|break-glass>" >&2
+        exit 1
+        ;;
+    esac
+    if [[ ! -f "${POLICY_FILE}" ]]; then
+      err "gateway-policy.sh 不存在（${POLICY_FILE}），無法切換 mode"
+    fi
+    # 替換 GATEWAY_MODE= 那一行
+    sed -i.bak "s/^GATEWAY_MODE=.*/GATEWAY_MODE=\"${NEW_MODE}\"/" "${POLICY_FILE}" \
+      || err "無法更新 GATEWAY_MODE"
+    rm -f "${POLICY_FILE}.bak"
+    echo "[agent-switch] GATEWAY_MODE 已切換為：${NEW_MODE}"
+    ;;
+
   status)
     echo "=== agent-switch 狀態 ==="
 
@@ -106,6 +131,14 @@ case "${CMD}" in
       echo "  authorized_keys.disabled : 存在（SSH 已停用）"
     fi
 
+    # Gateway mode（P7）
+    if [[ -f "${POLICY_FILE}" ]]; then
+      current_mode=$(grep '^GATEWAY_MODE=' "${POLICY_FILE}" | head -1 | sed 's/GATEWAY_MODE=//;s/"//g')
+      echo "  Gateway Mode : ${current_mode:-unknown}"
+    else
+      echo "  Gateway Mode : legacy-blacklist（policy 檔不存在）"
+    fi
+
     # 整體判斷
     echo ""
     if [[ -f "${ENABLED_FLAG}" && -f "${AUTH_KEYS}" ]]; then
@@ -118,7 +151,8 @@ case "${CMD}" in
     ;;
 
   *)
-    echo "用法: agent-switch <on|off|status>" >&2
+    echo "用法: agent-switch <on|off|status|mode>" >&2
+    echo "      agent-switch mode <legacy-blacklist|audit|enforce|break-glass>" >&2
     exit 1
     ;;
 

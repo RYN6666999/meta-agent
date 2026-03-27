@@ -1,0 +1,24 @@
+{
+  "job_id": "n8n-ssh-20260327053640142",
+  "status": "done",
+  "started_at": "2026-03-27T05:36:43.150Z",
+  "finished_at": "2026-03-27T05:36:43.931Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "Fri Mar 27 13:36:43 CST 2026\n",
+        "stderr": "Failed to add the host to the list of known hosts (/home/node/.ssh/known_hosts).\r\n"
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "n8n_trigger_ok\n",
+        "stderr": "Failed to add the host to the list of known hosts (/home/node/.ssh/known_hosts).\r\n"
+      }
+    }
+  ]
+}

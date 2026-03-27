@@ -20,50 +20,104 @@
 
 ## P6 — n8n Job Trigger 整合
 
-**Status: Draft**
-
-### 目標
-讓 n8n workflow 可以觸發 job 並取得結果，把 SSH Gateway 接入主控腦自動化管線。
-
-### 預期資料流
-```
-n8n workflow
-  → drop job JSON 到 jobs/incoming/
-  → poll jobs/done/<id>.result.json 或 jobs/failed/<id>.result.json
-  → 取得 result 做後續判斷
-```
-
-### 可能新增介面
-- trigger source 標記（result 裡記錄由誰觸發）
-- callback URL / webhook（完成後主動通知 n8n）
-- result polling 的等待策略
-
-### 尚未決定
-- push（webhook callback）vs poll（n8n 定時查 result）
-- job 檔案落點是否改為 n8n 可直接存取的路徑
-- 權限邊界：n8n process 是否有寫入 incoming/ 的權限
+**Status: Promoted**（已移入 README.md Phase 6 章節，核心介面以 **Code node + child_process** 模式落地）
 
 ---
 
-## P7 — 白名單升級（生產安全強化）
+## P6.5 — n8n Callback URL 升級（候選）
 
 **Status: Draft**
 
 ### 目標
-將 `agent-gateway.sh` 由黑名單模式升級為白名單模式。
+讓 runner 在 job 完成後主動 POST result 到指定 URL（n8n Webhook node），
+不需 n8n 同步等待 CLI 結束。
 
-### 前置作業
-- 從 `agent-ssh.log` 取樣 agent 實際使用的命令集合
-- 確認最小必要命令集（`echo`, `date`, `ls`, `cat`, `grep`, `pwd` 等）
+### 預期資料流
+```
+n8n Write File → jobs/incoming/<id>.json（含 callback_url 欄位）
+runner 執行完  → POST callback_url，body = JobResult
+n8n Webhook    → 接收 result，繼續後續 workflow
+```
 
-### 相容策略（尚未決定）
-- 方案 A：直接切換，prototype 期間黑名單已足夠
-- 方案 B：雙模式（config flag `filter: "blacklist" | "whitelist"`）
+### 可能新增 Job 欄位
+```typescript
+interface Job {
+  // ...現有欄位不變
+  callback_url?: string;   // 可選，未填則只寫 result 檔
+}
+```
+
+### 升級條件（遇到以下任一再做）
+- n8n workflow 常因長任務（>30s）卡住，阻塞 worker thread
+- 需要 n8n 與 runner 完全解耦（不同機器）
+- 需要非同步通知，不方便在 workflow 中同步等待
 
 ### 尚未決定
-- command grammar：是否支援帶參數的允許規則（如 `ls *` 但不允許 `ls /etc`）
-- 可變參數模板（如允許 `cat <workspace 下任意路徑>`）
-- 介面變更：`agent-gateway.sh` 的設定區段是否抽出為獨立 config 檔
+- callback failure 處理語義：失敗是否影響 job status（**建議：不影響，僅記 log**）
+- timeout：callback HTTP request 最長等待（**建議：5s，best-effort**）
+- URL 安全限制：只允許 http/https，禁止非法協定，限 localhost / 私網 allowlist
+- retry policy：callback 失敗是否重送（**建議：不重送，避免複雜度**）
+
+---
+
+## P7 — 分級風控升級（Controlled Allowlist Mode）
+
+**Status: Promoted**（已實作，audit 觀察期進行中）
+
+實作檔案：
+- `host/bin/gateway-policy.sh`（新增）— 模式設定 + 三層規則
+- `host/bin/agent-gateway.sh`（升級）— 四模式決策流 + 結構化 log
+- `host/bin/agent-switch`（升級）— 新增 `mode` 子命令
+
+驗收：8 case 全過（2026-03-27），P6 回歸無誤。
+詳見 `DELTA.md` Phase 7 章節。
+
+---
+
+## P7.1 — audit 觀察期與 allowlist 收斂
+
+**Status: Draft**
+
+### 目標
+在 P7 `audit` 模式下收集真實命令面，建立 enforce 的切換門檻。
+
+### 步驟
+1. 部署 P7 至 agentbot，設定 `GATEWAY_MODE=audit`
+2. 跑 N 輪真實 job（ssh-only / n8n trigger / hybrid）
+3. 分析 `agent-ssh.log`：
+   ```bash
+   grep "category=unknown" /Users/agentbot/logs/agent-ssh.log | \
+     grep -oP 'cmd=\S+' | sort | uniq -c | sort -rn
+   ```
+4. 將常見 unknown command 移入 `ALLOWLIST`
+5. 將偶發或風險不明的保留在 `OBSERVELIST`
+6. 觀察期結束條件：連續 10 輪 job 無新 unknown command
+
+### enforce 切換門檻（待確認）
+- [ ] ssh-only job 5 次無 unknown
+- [ ] n8n trigger job 5 次無 unknown
+- [ ] hybrid job 3 次無 unknown
+- [ ] rollback 演練完成一次
+
+---
+
+## P7.2 — enforce 正式上線
+
+**Status: Draft**（待 P7.1 完成後評估）
+
+### 前置條件
+- P7.1 觀察期完成
+- allowlist 穩定（無新 unknown）
+- rollback 流程文件化
+
+### 切換方式
+```bash
+sudo agent-switch mode enforce
+```
+
+### 注意
+enforce 上線後，新工具或新命令首次使用都會被拒。
+建議保持 `legacy-blacklist` 為一鍵回退。
 
 ---
 

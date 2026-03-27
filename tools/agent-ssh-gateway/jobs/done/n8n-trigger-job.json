@@ -1,0 +1,14 @@
+{
+  "job_id": "n8n-ssh-20260327-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "date"
+    },
+    {
+      "kind": "ssh",
+      "command": "echo n8n_trigger_ok"
+    }
+  ]
+}

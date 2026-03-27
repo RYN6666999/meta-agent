@@ -1216,3 +1216,29 @@
   其他變更 tools/agent-ssh-gateway/runner/src/run-job.ts +10
 
 ---
+
+## 2026-03-27 13:13 | auto-git-score | 分數 180 | 📥 達到閾值（180/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=125），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-27-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-27-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/agent-ssh-gateway/DELTA.md +10
+  其他變更 tools/agent-ssh-gateway/FUTURE.md +10
+  其他變更 tools/agent-ssh-gateway/README.md +10
+  其他變更 tools/agent-ssh-gateway/SPEC.md +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-gateway.sh +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/hybrid-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/hybrid-job.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/ssh-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/ssh-job.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/web-job.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/done/web-job.result.json +10
+  其他變更 tools/agent-ssh-gateway/jobs/examples/hybrid-job.json +10
+  其他變更 tools/agent-ssh-gateway/runner/src/run-job.ts +10
+
+---

@@ -1,0 +1,32 @@
+{
+  "job_id": "ssh-001",
+  "status": "done",
+  "started_at": "2026-03-27T05:26:48.367Z",
+  "finished_at": "2026-03-27T05:26:49.644Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello from agentbot\n",
+        "stderr": "Failed to add the host to the list of known hosts (/home/node/.ssh/known_hosts).\r\n"
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "Fri Mar 27 13:26:49 CST 2026\n",
+        "stderr": "Failed to add the host to the list of known hosts (/home/node/.ssh/known_hosts).\r\n"
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "total 0\ndrwxr-xr-x@  2 agentbot  staff   64 Mar 26 18:11 .\ndrwxr-x---@ 14 agentbot  staff  448 Mar 26 18:11 ..\n",
+        "stderr": "Failed to add the host to the list of known hosts (/home/node/.ssh/known_hosts).\r\n"
+      }
+    }
+  ]
+}

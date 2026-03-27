@@ -50,12 +50,13 @@
 | SSH 允許群組 | 不需要 | `dseditgroup -o edit -a agentbot -t user com.apple.access_ssh` |
 | sshd_config.d | 預設存在 | 需手動建立，但 Include 指令已在預設 config |
 
-**命令過濾：白名單 → 黑名單**
+**命令過濾：白名單 → 黑名單 → P7 分級治理**
 
 原計劃 stub 是白名單設計（只有列出的命令才允許）。
-實際改為黑名單，理由：原型階段 agent 需要執行的命令無法事先全部列出（`ls`、`cat`、`echo`、`date`、`grep`⋯ 太多）。黑名單阻擋破壞性命令，其餘放行，降低開發摩擦。
+Phase 1 實際改為黑名單，理由：原型階段 agent 需要執行的命令無法事先全部列出（`ls`、`cat`、`echo`、`date`、`grep`⋯ 太多）。黑名單阻擋破壞性命令，其餘放行，降低開發摩擦。
 
-> ⚠️ 生產環境若要升級為白名單，修改 `agent-gateway.sh` 的過濾邏輯即可，介面不變。
+Phase 7 升級為分級治理（詳見後文 Phase 7 章節），不是直接切換白名單，
+而是引入 `audit / enforce / legacy-blacklist / break-glass` 四種模式。
 
 **`sshd_config.agentbot.conf` 補強**
 
@@ -192,6 +193,63 @@ SITE=github npm run refresh-auth    # URL 自動從 runner.config.json 查詢
 
 ---
 
+## Phase 6 — n8n 整合（P6-MVP）
+
+### 方案選型
+
+三種方案評估後決策：
+
+| 方案 | 決策 |
+|------|------|
+| A. Execute Command（同步） | **原始計劃，最終改以 Code node 實現** |
+| B. Poll loop + watcher daemon | 不做 |
+| C. Callback URL（push） | 保留為 P6.5 候選 |
+
+### 實際落地：Code node 模式（非 Execute Command）
+
+原計劃使用 n8n Execute Command node，但此版本 n8n（2.36.1 / n8n-with-ffmpeg）不支援該 node type。改用 **Code node + Node.js `child_process`**，行為等效：
+
+```
+Code node
+  → fs.writeFileSync  (寫 jobs/incoming/<id>.json)
+  → execSync npm run run-job  (執行 runner)
+  → fs.readFileSync  (讀 jobs/done/<id>.result.json)
+```
+
+### Docker 執行邊界（P6 發現的根本問題）
+
+n8n 跑在 Docker 容器內，`127.0.0.1` 指向容器自身，不是 host。
+
+| 項目 | 問題 | 解法 |
+|------|------|------|
+| 容器讀不到 host 的 jobs/ | 無 volume mount | 掛入 `/workspace/agent-ssh-gateway` |
+| 容器讀不到 SSH key | 無 volume mount | 掛入 `/home/node/.ssh/agentbot_ed25519:ro` |
+| 容器 SSH 連不到 host | `127.0.0.1` = 容器自身 | 改用 `host.docker.internal` |
+| readWriteFile 被拒絕 | `N8N_RESTRICT_FILE_ACCESS_TO` 白名單未包含新路徑 | 同步更新 env var |
+| Code node 無法用 `process.env` | n8n sandbox 不提供 `process` 物件 | 硬寫必要 env 變數 |
+
+### 新增 / 修改項目
+
+| 項目 | 說明 |
+|------|------|
+| `scripts/run-job-n8n.sh` | host 端薄包裝（供直接 shell 呼叫用，n8n workflow 未使用） |
+| `jobs/examples/n8n-trigger-job.json` | n8n workflow 用的 SSH job 範本 |
+| `Projects/n8n/docker-compose.yml` | 新增 2 個 volume mount + 更新 `N8N_RESTRICT_FILE_ACCESS_TO` |
+| `README.md` Phase 6 章節 | 記錄實際落地的 Code node 方式與 Docker 設定 |
+
+### 未改動項目
+
+- `run-job.ts`：無修改，CLI 介面完全不變
+- Job schema：無新增欄位
+- `runner.config.json`：無修改
+
+### FUTURE.md 更新
+
+- P6 標記為 `Promoted`（Code node 模式）
+- 新增 **P6.5** 候選：`callback_url` + webhook push 升級條件
+
+---
+
 ## 原計劃 Phase 4、5 現況
 
 | 原計劃 Phase | 現況 |
@@ -241,3 +299,64 @@ agent-ssh-gateway/
   DELTA.md                    ← 本文件（新增）
   README.md
 ```
+
+---
+
+## Phase 7 — P7 分級風控升級（Controlled Allowlist Mode）
+
+### 與原 Phase 1 黑名單的差異
+
+| 項目 | Phase 1（黑名單） | Phase 7（分級治理） |
+|------|-----------------|-------------------|
+| 過濾邏輯 | BLACKLIST array，命中擋、未命中放 | HARD_DENY + ALLOWLIST + OBSERVELIST 三層 |
+| 模式 | 單一（黑名單） | 四種（legacy / audit / enforce / break-glass） |
+| 未知命令 | 放行，無記錄 | audit：放行+記錄；enforce：拒絕 |
+| 設定方式 | 寫死在 agent-gateway.sh | 外部化至 gateway-policy.sh，可熱修改 |
+| 模式切換 | 無 | `agent-switch mode <mode>` |
+| Log 格式 | `LEVEL \| cmd=... exit=...` | 新增 `mode= decision= category= reason=` |
+| 緊急回退 | 無（只有 off） | `legacy-blacklist` mode 或 `agent-switch off` |
+
+### 為什麼不直接切白名單
+
+直接切成 `enforce` 的風險：
+- 真實工作現場命令面未完整盤點
+- 過嚴的風控會立即絆腳 n8n / runner 流程
+- 沒有觀察期，allowlist 必然不完整
+
+P7 的解法是 **audit-first**：先觀察再收斂，不在命令面不明的情況下直接 enforce。
+
+### gateway-policy.sh 的引入目的
+
+- 把規則從主腳本分離，讓調整規則不需改 agent-gateway.sh
+- 模式切換只改 `GATEWAY_MODE=` 那一行
+- 未來可以做 per-site 或 per-job-type 的不同 policy（在此版本先不實作）
+
+### P7 新增的 Log 欄位
+
+```
+mode=audit decision=allow category=allowlist cmd=echo hello reason=in allowlist
+```
+
+| 欄位 | 說明 |
+|------|------|
+| `mode` | 目前 GATEWAY_MODE |
+| `decision` | allow / deny |
+| `category` | allowlist / hard-deny / observe / unknown / legacy / break-glass |
+| `reason` | 決策原因 |
+
+### P7 驗收結果（2026-03-27）
+
+8 個驗收 case 全過（真實 SSH_ORIGINAL_COMMAND 路徑）：
+
+| Case | 命令 | Mode | 預期 | 結果 |
+|------|------|------|------|------|
+| 1 | `echo hello` | audit | allow/allowlist | ✅ |
+| 2 | `jq --version` | audit | allow/observe | ✅ |
+| 3 | `htop` | audit | allow/unknown | ✅ |
+| 4 | `htop` | enforce | deny/unknown | ✅ |
+| 5 | `sudo ls` | audit | deny/hard-deny | ✅ |
+| 5b | `sudo ls` | enforce | deny/hard-deny | ✅ |
+| 5c | `sudo ls` | break-glass | deny/hard-deny | ✅ |
+| 6 | `htop` | break-glass | allow/break-glass | ✅ |
+
+P6 回歸結果：`echo / date / ls / npm` 全在 allowlist，P6 job 流程不受影響。
