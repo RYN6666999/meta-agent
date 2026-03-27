@@ -1,8 +1,8 @@
 ---
 date: 2026-03-27
-session: agent-ssh-gateway P8.1 完成 + P8.2 設計
-status: P8.1 Done / P8.2 Draft
-generated: 2026-03-27 手動更新
+session: agent-ssh-gateway P8.2 daemon 部署中
+status: P8.1 Done / P8.2 In Progress（daemon 跑起，3 個 bug 待修）
+generated: 2026-03-27 22:10 更新
 ---
 
 # 最新交接文件 — AI Agent SSH Gateway
@@ -13,12 +13,12 @@ generated: 2026-03-27 手動更新
 |-------|------|------|
 | P1–P5 | SSH Gateway + Playwright + Runner | ✅ Done |
 | P6 | n8n Job Trigger | ✅ Done |
-| P7 | 分級風控（enforce 上線） | ✅ Done（2026-03-27 封版）|
+| P7 | 分級風控（enforce 上線） | ✅ Done（封版）|
 | P7.1 | audit 觀察期 + rm pattern 修正 | ✅ Done |
 | P7.2 | enforce 正式上線 + rollback drill | ✅ Done |
 | P8 | AUTH_EXPIRED runner 端 | ✅ Done |
 | P8.1 | Telegram 通知（n8n native node）| ✅ Done（2026-03-27）|
-| P8.2 | TG 雙向指令頻道（daemon 方案）| 🔵 Draft，設計完成待實作 |
+| **P8.2** | **TG 雙向指令頻道（daemon 方案）** | 🟡 **In Progress — daemon 運行，3 bug 待修** |
 | P9 | 多主機支援 | 📝 Draft |
 
 ---
@@ -57,40 +57,49 @@ generated: 2026-03-27 手動更新
 
 ---
 
-## P8.2 設計（下一個 AI 直接實作）
+## P8.2 現況（2026-03-27 22:10）
 
-### 問題
-n8n TelegramTrigger activate 失敗：`bad webhook: An HTTPS URL must be provided`
+### 已完成部署
+- `agent-tg-daemon.sh` 部署至 `/usr/local/bin/`
+- launchd plist：`~/Library/LaunchAgents/com.agentbot.tg-daemon.plist`
+- **pid=65089，exit code=0，持續運行中**
+- `/status` 指令 → 手機正常收到回覆 ✅
+- `/help` 指令 → 正常 ✅
 
-### 解法：`agent-tg-daemon.sh`（agentbot 上的 polling daemon）
+### 已驗收
+| 指令 | 結果 |
+|------|------|
+| `/start` | ✅ |
+| `/status` | ✅ SSH Gateway Status 格式正確 |
+| `/help` | ✅ |
 
-優點：不需 HTTPS、不需 n8n、指令審核複用 gateway-policy.sh
+### 3 個已知 Bug（待修）
 
-**核心邏輯草稿**：
+| # | Bug | 症狀 | 優先 |
+|---|-----|------|------|
+| 1 | `/jobs` 空訊息 | `400 Bad Request: message text is empty` | 🔴 高 |
+| 2 | `\n\n` 字面顯示 | Unknown command 回覆不換行 | 🟡 中 |
+| 3 | 孤立子程序 | 每次 reload 後殘留 bash 子程序 | 🟡 中 |
+
+### 下一個 AI 直接修
+
+**Bug 1 — `/jobs` 空訊息**：
 ```bash
-TOKEN="8569580187:AAGWHAt0Lq-SMK6gh8CyvFBP82aBP11CHOk"
-CHAT_ID="1469326872"   # 只接受此 chat_id 的指令
-OFFSET=0
-
-while true; do
-  RESP=$(curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates?offset=${OFFSET}&timeout=5")
-  # 解析 text，過濾 chat_id，通過 gateway-policy 審核，執行，sendMessage 回應
-  sleep 1
-done
+# agent-tg-daemon.sh 的 /jobs dispatch 段
+# 問題：jobs 目錄空或格式化輸出為空字串，sendMessage 送空
+# 修法：加 fallback「No jobs found」
 ```
 
-**支援指令**：
-- `/status` → tail /Users/agentbot/logs/agent-ssh.log
-- `/jobs` → ls /Users/agentbot/jobs/failed/
-- `/requeue <job_id>` → 顯示指令（二次確認後執行）
-- `/help` → 列指令
+**Bug 2 — `\n` 換行**：
+```bash
+# 把 "...\n\n..." 改為 $'...\n\n...'
+```
 
-**部署步驟**：
-1. 寫 `agent-tg-daemon.sh`
-2. `sudo cp` 到 `/usr/local/bin/` + chmod 755
-3. 寫 launchd plist 到 `/Library/LaunchDaemons/com.agentbot.tg-daemon.plist`
-4. `sudo launchctl load` 常駐
-5. Telegram 傳 `/help` E2E 驗收
+**Bug 3 — 孤立子程序**：
+```bash
+# 在 daemon 頂部加 trap：
+trap 'kill $(jobs -p) 2>/dev/null; exit 0' SIGTERM SIGINT
+```
 
 ---
 
@@ -113,12 +122,13 @@ done
 
 ## 下一個 AI 的任務
 
-**優先**：實作 `agent-tg-daemon.sh`（設計已完成，直接寫）
+**優先**：修 P8.2 的 3 個 bug（見上方清單），優先 Bug 1 `/jobs` 空訊息
 
 不要做：
 - 不要改 P7 封版
 - 不要啟用 `RgpDAHpX723AfTbv`（需 HTTPS）
-- 不要重評估通知方案（已定案 Telegram + daemon）
+- 不要重評估通知方案（已定案）
+- 不要重新部署 daemon（已部署，直接改 source 重新 cp + reload）
 
 ---
 

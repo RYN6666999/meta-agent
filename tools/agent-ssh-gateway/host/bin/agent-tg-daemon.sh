@@ -158,11 +158,10 @@ cmd_jobs() {
   local failed_dir="${JOBS_DIR}/failed"
 
   if [[ ! -d "${failed_dir}" ]]; then
-    echo "No failed jobs directory found."
+    printf 'No failed jobs directory found.'
     return
   fi
 
-  # bash 3.2 相容：用 while read 取代 mapfile
   local job_list=""
   local job_count=0
   while IFS= read -r job_id; do
@@ -174,24 +173,26 @@ cmd_jobs() {
       ts=$(python3 -c "
 import json, sys
 try:
-    d = json.load(open('${result_file}'))
+    d = json.load(open(sys.argv[1]))
     v = d.get('failed_at') or d.get('completed_at') or ''
     print(v[:16])
 except:
     pass
-" 2>/dev/null)
+" "${result_file}" 2>/dev/null)
     fi
-    job_list="${job_list}• <code>${job_id}</code> ${ts}"$'\n'
+    job_list="${job_list}"$'• '"${job_id} ${ts}"$'\n'
   done < <(find "${failed_dir}" -maxdepth 1 -name "*.json" ! -name "*.result.json" \
     -exec basename {} .json \; 2>/dev/null | sort)
 
   if [[ ${job_count} -eq 0 ]]; then
-    echo "No failed jobs."
+    printf 'No failed jobs.'
     return
   fi
 
-  printf '<b>Failed Jobs (%s)</b>\n\n%s\nUse /requeue &lt;job_id&gt; to re-queue' \
-    "${job_count}" "${job_list}"
+  # 用獨立 printf 避免 job_list 內含 % 被誤解析
+  printf '<b>Failed Jobs (%s)</b>\n\n' "${job_count}"
+  printf '%s' "${job_list}"
+  printf '\nUse /requeue &lt;job_id&gt; to re-queue'
 }
 
 cmd_requeue() {
@@ -278,6 +279,12 @@ dispatch() {
       ;;
   esac
 
+  # 防呆：空回覆時補預設訊息，避免 400 Bad Request: message text is empty
+  if [[ -z "${reply}" ]]; then
+    reply="(empty response)"
+    log "WARN dispatch empty reply for cmd=${cmd}"
+  fi
+
   send_message "${chat_id}" "${reply}"
 }
 
@@ -287,6 +294,9 @@ TMP_FILE=$(mktemp)
 
 cleanup() {
   log "INFO daemon stopping pid=$$"
+  # 清理所有子程序，防止 reload 後孤立程序殘留
+  kill $(jobs -p) 2>/dev/null || true
+  wait 2>/dev/null || true
   rm -f "${TMP_FILE}" "${PID_FILE}"
 }
 trap cleanup EXIT TERM INT
