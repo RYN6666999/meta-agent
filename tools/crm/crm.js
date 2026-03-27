@@ -1654,6 +1654,12 @@ const AI_PROVIDERS={
   gemini:{
     label:'Gemini (Google)',
     models:[
+      'gemini-3.1-pro-preview',
+      'gemini-3.1-flash-lite-preview',
+      'gemini-3.1-flash-image-preview',
+      'gemini-3.1-flash-live-preview',
+      'gemini-3-pro-image-preview',
+      'gemini-3-flash-preview',
       'gemini-2.5-pro-preview-05-06',
       'gemini-2.5-flash-preview-04-17',
       'gemini-2.0-flash',
