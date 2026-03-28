@@ -1,0 +1,12 @@
+{
+  "type": "shell",
+  "steps": [
+    {
+      "tool": "shell",
+      "input": {
+        "command": "echo hello-from-oracle"
+      }
+    }
+  ],
+  "job_id": "bridge-1774684616964-00a91c"
+}

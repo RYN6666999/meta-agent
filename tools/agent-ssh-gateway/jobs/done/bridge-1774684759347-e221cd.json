@@ -1,0 +1,11 @@
+{
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "host": "agentbot",
+      "command": "echo hello-bridge-e2e"
+    }
+  ],
+  "job_id": "bridge-1774684759347-e221cd"
+}

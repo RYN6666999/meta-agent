@@ -1,0 +1,16 @@
+{
+  "job_id": "bridge-1774684759347-e221cd",
+  "status": "done",
+  "started_at": "2026-03-28T07:59:22.987Z",
+  "finished_at": "2026-03-28T07:59:23.517Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello-bridge-e2e\n",
+        "stderr": ""
+      }
+    }
+  ]
+}
