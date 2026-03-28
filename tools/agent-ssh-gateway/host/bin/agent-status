@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# agent-status — P7 Lite 最小狀態檢查
+#
+# 部署位置：/usr/local/bin/agent-status（目標主機）
+#           或直接以完整路徑執行
+#
+# 輸出：
+#   - Gateway on/off 狀態
+#   - 治理層：HARD_DENY + ALLOWLIST（固定 enforce）
+#   - 近期 failed job 數
+#   - log 位置
+#
+# 用法：
+#   agent-status
+
+set -uo pipefail
+
+AGENT_HOME="/Users/agentbot"
+ENABLED_FLAG="${AGENT_HOME}/.ssh/enabled.flag"
+LOG_FILE="${AGENT_HOME}/logs/agent-ssh.log"
+
+# runner log 預設路徑（可被環境變數覆寫）
+RUNNER_LOG="${AGENT_SSH_GATEWAY_DIR:-$(dirname "$0")/../../}/logs/runner.log"
+JOBS_FAILED="${AGENT_SSH_GATEWAY_DIR:-$(dirname "$0")/../../}/jobs/failed"
+
+echo "=== agent-status (P7 Lite) ==="
+echo ""
+
+# ── Gateway ──────────────────────────────────────────────────────────
+if [[ -f "${ENABLED_FLAG}" ]]; then
+  echo "  Gateway      : ON"
+else
+  echo "  Gateway      : OFF"
+fi
+echo "  Mode         : enforce (固定，不可切換)"
+echo "  治理層       : HARD_DENY → ALLOWLIST → deny"
+echo ""
+
+# ── Failed jobs ──────────────────────────────────────────────────────
+if [[ -d "${JOBS_FAILED}" ]]; then
+  failed_count=$(ls "${JOBS_FAILED}"/*.json 2>/dev/null | grep -v '\.result\.json$' | wc -l | tr -d ' ')
+  echo "  Failed jobs  : ${failed_count}"
+  if (( failed_count > 0 )); then
+    echo "  最近失敗："
+    ls -t "${JOBS_FAILED}"/*.json 2>/dev/null | grep -v '\.result\.json$' | head -5 | while read -r f; do
+      echo "    $(basename "${f}")"
+    done
+  fi
+else
+  echo "  Failed jobs  : (jobs/failed 目錄不存在)"
+fi
+echo ""
+
+# ── Logs ─────────────────────────────────────────────────────────────
+echo "  Logs："
+if [[ -f "${LOG_FILE}" ]]; then
+  log_size=$(stat -f%z "${LOG_FILE}" 2>/dev/null || stat -c%s "${LOG_FILE}" 2>/dev/null || echo "?")
+  echo "    agent-ssh  : ${LOG_FILE} (${log_size} bytes)"
+else
+  echo "    agent-ssh  : 不存在 (${LOG_FILE})"
+fi
+
+runner_log_resolved=$(cd "$(dirname "$0")" 2>/dev/null && realpath "${RUNNER_LOG}" 2>/dev/null || echo "${RUNNER_LOG}")
+if [[ -f "${runner_log_resolved}" ]]; then
+  rlog_size=$(stat -f%z "${runner_log_resolved}" 2>/dev/null || stat -c%s "${runner_log_resolved}" 2>/dev/null || echo "?")
+  echo "    runner     : ${runner_log_resolved} (${rlog_size} bytes)"
+else
+  echo "    runner     : 不存在 (${runner_log_resolved})"
+fi
+echo ""
+
+# ── 故障排查快速入口 ──────────────────────────────────────────────────
+echo "  排查入口："
+echo "    tail -50 ${LOG_FILE}"
+echo "    tail -50 ${runner_log_resolved}"
+echo "    agent-switch status"
+echo "    agent-switch off   # 緊急關閉"

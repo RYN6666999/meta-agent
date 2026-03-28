@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # agent-queue-daemon.sh — jobs/incoming/ 監控 + 自動執行
 #
+# [OPTIONAL — P7 Lite 非核心路徑]
+# P7 Lite 日常主路徑為 CLI 直接執行：scripts/agent-run <job.json>
+# 本 daemon 保留作為「自動掃描」備援，非必要不啟動。
+# 若需停用：launchctl unload ~/Library/LaunchAgents/com.agentbot.queue-daemon.plist
+#
 # 設計：
 #   - 每 5 秒掃描 jobs/incoming/*.json
 #   - 發現後呼叫 runner/src/run-job.ts（一次一個，避免並發衝突）

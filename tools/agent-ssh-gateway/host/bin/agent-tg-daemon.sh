@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # agent-tg-daemon.sh — P8.2 Telegram 雙向指令頻道
 #
+# [OPTIONAL — P7 Lite 非核心路徑]
+# P7 Lite 日常主路徑為 CLI 直接執行：scripts/agent-run <job.json>
+# Telegram 頻道保留作為通知/查詢備援，非必要不啟動。
+# 若需停用：launchctl unload ~/Library/LaunchAgents/com.agentbot.tg-daemon.plist
+#
 # 部署位置：/usr/local/bin/agent-tg-daemon.sh（目標主機）
 # 常駐方式：launchd com.agentbot.tg-daemon
 #

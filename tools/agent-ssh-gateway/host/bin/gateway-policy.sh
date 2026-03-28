@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
-# gateway-policy.sh — P7 命令治理設定檔
+# gateway-policy.sh — P7 Lite 命令治理設定檔
 #
 # 部署位置：/usr/local/bin/gateway-policy.sh（與 agent-gateway.sh 同目錄）
-# 用途：被 agent-gateway.sh source，集中管理模式與規則
+# 用途：被 agent-gateway.sh source，集中管理規則
 #
-# 修改此檔即可切換模式或調整規則，不需改主腳本。
-# 切換模式也可用：agent-switch mode <legacy-blacklist|audit|enforce|break-glass>
+# P7 Lite：固定 enforce 模式，只保留 2 層治理：
+#   Layer 1 — HARD_DENY（永遠擋）
+#   Layer 2 — ALLOWLIST（只允許白名單）
+#
+# 日常維護只需修改 ALLOWLIST。
 
-# ── 模式選擇 ──────────────────────────────────────────────────────────
-#
-# legacy-blacklist : 舊黑名單行為（相容模式，緊急回退點）
-# audit            : 白名單觀察期；未命中允許但強制記錄（預設上線模式）
-# enforce          : 白名單正式生效；未命中直接拒絕
-# break-glass      : 緊急放寬；記錄為高風險事件，不作常態模式
-#
-GATEWAY_MODE="enforce"
-
-# ── 硬拒絕（Layer 1 — 永遠擋，不論 GATEWAY_MODE）─────────────────────
+# ── 硬拒絕（Layer 1 — 永遠擋）────────────────────────────────────────
 #
 # 格式：extended regex，match 命令任意位置（防管線繞過）
 #
@@ -34,7 +28,7 @@ HARD_DENY=(
   # 危險下載執行
   'curl[^|]*\|[[:space:]]*(ba)?sh'
   'wget[^|]*\|[[:space:]]*(ba)?sh'
-  # 破壞性刪除（只擋系統路徑和根目錄，workspace 下允許 rm -rf）
+  # 破壞性刪除（只擋系統路徑，workspace 下允許）
   'rm[[:space:]].*[[:space:]]+/([[:space:]]|$)'
   'rm[[:space:]].*[[:space:]]+/(etc|boot|System|usr|private|bin|sbin|var/root)(/|[[:space:]]|$)'
   # 系統破壞
@@ -57,12 +51,13 @@ HARD_DENY=(
   '(^|[[:space:]])passwd([[:space:]]|$)'
 )
 
-# ── 正式允許（Layer 2 — allowlist）───────────────────────────────────
+# ── 允許清單（Layer 2 — 只允許此清單內命令）──────────────────────────
 #
 # 以命令第一個 token（basename）精確比對。
-# 依據 runner / n8n job lifecycle 實際需要的最小命令集。
+# 不在此清單內的命令一律拒絕。
 #
 ALLOWLIST=(
+  # 基本查看
   "echo"
   "date"
   "pwd"
@@ -70,6 +65,10 @@ ALLOWLIST=(
   "cat"
   "grep"
   "find"
+  "which"
+  "env"
+  "printenv"
+  # 檔案操作（workspace 安全路徑下使用）
   "mkdir"
   "mv"
   "cp"
@@ -77,39 +76,33 @@ ALLOWLIST=(
   "rm"
   "chmod"
   "chown"
-  "cd"
-  "env"
-  "printenv"
-  "which"
+  # 文字處理
+  "sed"
+  "awk"
+  "jq"
+  "tee"
+  "xargs"
+  # 開發工具
   "node"
   "npm"
   "npx"
+  "python3"
+  "git"
+  # 下載（不允許 pipe to shell，已由 HARD_DENY 擋）
+  "curl"
+  "wget"
+  # 封存
+  "tar"
+  "unzip"
+  "zip"
+  # Shell 執行（非互動式，已由 HARD_DENY 擋互動式）
   "bash"
   "sh"
+  # 輔助
   "true"
   "false"
   "test"
   "["
   "sleep"
-)
-
-# ── 觀察中（Layer 3 — observelist）──────────────────────────────────
-#
-# 目前風險或必要性尚未確定；audit / enforce 模式都允許通過，但標記為 observe。
-# 待觀察期結束後，依 log 分析結果移入 ALLOWLIST 或 HARD_DENY。
-#
-OBSERVELIST=(
-  "python3"
-  "python"
-  "jq"
-  "curl"
-  "wget"
-  "git"
-  "tar"
-  "unzip"
-  "zip"
-  "sed"
-  "awk"
-  "tee"
-  "xargs"
+  "cd"
 )

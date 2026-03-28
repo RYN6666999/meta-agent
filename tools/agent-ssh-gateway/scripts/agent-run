@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# agent-run — P7 Lite 主要入口（thin wrapper）
+#
+# 用法：
+#   ./scripts/agent-run <job.json>
+#   ./scripts/agent-run jobs/incoming/my-job.json
+#
+# 等同於 cd runner && npm run run-job -- <job.json>
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
+RUNNER_DIR="${PROJECT_DIR}/runner"
+
+JOB_FILE="${1:-}"
+
+if [[ -z "${JOB_FILE}" ]]; then
+  echo "用法: agent-run <job.json>" >&2
+  exit 1
+fi
+
+# 若傳入的是相對路徑，解析為絕對路徑（相對於 project root）
+if [[ "${JOB_FILE}" != /* ]]; then
+  JOB_FILE="${PROJECT_DIR}/${JOB_FILE}"
+fi
+
+if [[ ! -f "${JOB_FILE}" ]]; then
+  echo "找不到 job 檔案: ${JOB_FILE}" >&2
+  exit 1
+fi
+
+exec npm --prefix "${RUNNER_DIR}" run run-job -- "${JOB_FILE}"
