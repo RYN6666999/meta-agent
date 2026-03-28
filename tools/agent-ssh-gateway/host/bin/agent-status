@@ -19,9 +19,11 @@ AGENT_HOME="/Users/agentbot"
 ENABLED_FLAG="${AGENT_HOME}/.ssh/enabled.flag"
 LOG_FILE="${AGENT_HOME}/logs/agent-ssh.log"
 
-# runner log 預設路徑（可被環境變數覆寫）
-RUNNER_LOG="${AGENT_SSH_GATEWAY_DIR:-$(dirname "$0")/../../}/logs/runner.log"
-JOBS_FAILED="${AGENT_SSH_GATEWAY_DIR:-$(dirname "$0")/../../}/jobs/failed"
+# runner log 預設路徑（可被環境變數覆寫，否則用 hardcoded 專案路徑）
+_DEFAULT_PROJECT="/Users/ryan/meta-agent/tools/agent-ssh-gateway"
+_PROJECT="${AGENT_SSH_GATEWAY_DIR:-${_DEFAULT_PROJECT}}"
+RUNNER_LOG="${_PROJECT}/logs/runner.log"
+JOBS_FAILED="${_PROJECT}/jobs/failed"
 
 echo "=== agent-status (P7 Lite) ==="
 echo ""
@@ -60,7 +62,7 @@ else
   echo "    agent-ssh  : 不存在 (${LOG_FILE})"
 fi
 
-runner_log_resolved=$(cd "$(dirname "$0")" 2>/dev/null && realpath "${RUNNER_LOG}" 2>/dev/null || echo "${RUNNER_LOG}")
+runner_log_resolved=$(realpath "${RUNNER_LOG}" 2>/dev/null || echo "${RUNNER_LOG}")
 if [[ -f "${runner_log_resolved}" ]]; then
   rlog_size=$(stat -f%z "${runner_log_resolved}" 2>/dev/null || stat -c%s "${runner_log_resolved}" 2>/dev/null || echo "?")
   echo "    runner     : ${runner_log_resolved} (${rlog_size} bytes)"
