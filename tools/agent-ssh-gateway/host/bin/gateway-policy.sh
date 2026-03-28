@@ -14,7 +14,7 @@
 # enforce          : 白名單正式生效；未命中直接拒絕
 # break-glass      : 緊急放寬；記錄為高風險事件，不作常態模式
 #
-GATEWAY_MODE="audit"
+GATEWAY_MODE="enforce"
 
 # ── 硬拒絕（Layer 1 — 永遠擋，不論 GATEWAY_MODE）─────────────────────
 #

@@ -155,6 +155,10 @@ interface RunnerConfig {
   runner: {
     jobTimeoutMs: number;  // 整個 job 的最長執行時間（ms）
   };
+  authNotify?: {
+    webhookUrl: string;    // AUTH_EXPIRED 時 POST 的 n8n webhook URL
+    timeoutMs:  number;    // HTTP 請求逾時（ms），預設 5000
+  };
 }
 ```
 
@@ -174,8 +178,9 @@ interface RunnerConfig {
 
 ```typescript
 loadConfig(): RunnerConfig
-getSshConfig(): SshConfig          // 合併 env var 覆寫
+getSshConfig(): SshConfig                        // 合併 env var 覆寫
 getSiteLoginUrl(site: string): string | undefined
+getAuthNotifyConfig(): AuthNotifyConfig | null   // authNotify 未設定時回傳 null
 expandHome(p: string): string
 ```
 
@@ -283,15 +288,29 @@ interface JobResult {
 | 觸發方式 | sshd ForceCommand |
 | 命令來源 | `$SSH_ORIGINAL_COMMAND` |
 | 開關檢查 | `/Users/agentbot/.ssh/enabled.flag` 存在才允許 |
-| 過濾方式 | 黑名單 regex（非白名單） |
+| 過濾方式 | P7 四模式分級治理（由 `gateway-policy.sh` 控制） |
 | 工作目錄 | `/Users/agentbot/workspace` |
 | 執行方式 | `bash -lc "<command>"` |
 | Log 路徑 | `/Users/agentbot/logs/agent-ssh.log` |
-| Log 格式 | `<ISO8601> \| ALLOW/DENY/DONE  \| cmd=... [exit=N] [reason=...]` |
+| Log 格式（P7）| `<ISO8601> \| LEVEL \| mode=... decision=... category=... cmd=... reason=...` |
+| Policy 檔 | `/usr/local/bin/gateway-policy.sh`（source 進來，可熱修改） |
 
-### 8.2 黑名單（關鍵項目）
+### 8.2 P7 四模式治理
 
-`sudo` / `su` / `rm -rf` / `reboot` / `shutdown` / `mkfs` / `dd if=` / `nc` / `ncat` / `socat` / `ssh` / `scp` / `curl|sh` / `wget|sh` / 寫入 `/etc` `/boot`
+`gateway-policy.sh` 定義三層規則與模式：
+
+| 層級 | 名稱 | 說明 |
+|------|------|------|
+| Layer 1 | `HARD_DENY` | 永遠擋，不論模式（sudo、ssh、rm /、curl\|sh 等） |
+| Layer 2 | `ALLOWLIST` | 已確認安全的命令集（echo、ls、node、npm 等） |
+| Layer 3 | `OBSERVELIST` | 觀察中（python3、jq、curl、git 等） |
+
+| 模式 | 行為 |
+|------|------|
+| `legacy-blacklist` | 舊黑名單相容模式（緊急回退） |
+| `audit` | 未命中 allowlist 仍放行，但強制記錄 |
+| `enforce` | 未命中 allowlist 直接拒絕（**目前模式**） |
+| `break-glass` | 緊急放寬，記錄為高風險事件 |
 
 ### 8.3 agent-switch
 
@@ -299,7 +318,10 @@ interface JobResult {
 |------|------|
 | `agent-switch on` | 建立 enabled.flag + 還原 authorized_keys |
 | `agent-switch off` | 刪除 enabled.flag + 停用 authorized_keys |
-| `agent-switch status` | 顯示 flag / authorized_keys / 整體狀態 |
+| `agent-switch status` | 顯示 flag / authorized_keys / GATEWAY_MODE |
+| `agent-switch mode <mode>` | 切換 GATEWAY_MODE（legacy-blacklist\|audit\|enforce\|break-glass） |
+
+> **注意**：`agent-switch status` 在非 agentbot 身份下 flag 不可讀，顯示 UNKNOWN。以真實 SSH 測試確認實際狀態。
 
 ---
 

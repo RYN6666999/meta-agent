@@ -203,34 +203,21 @@ n8n: Code（HTML 格式化）→ Telegram node（原生）
 
 **注意**：LINE Notify 已於 2025-03-31 停服。舊 DELTA.md 描述的 Code node HTTP 方案已廢棄，現為原生 Telegram node。
 
-### P8.2 — TG 雙向指令頻道（Draft）
+### P8.2 — TG 雙向指令頻道
 
-**Status: Draft**
+**Status: Promoted**（已完成，2026-03-28）
 
-n8n TelegramTrigger 需 HTTPS，本地環境不適用。
-改採 **`agent-tg-daemon.sh`**（SSH polling daemon，部署在 agentbot 機器上）：
+詳見 `DELTA.md` Phase 8 P8.2 章節。
 
-```
-while true; do
-  # curl getUpdates（long-poll）
-  # 解析 message.text → 通過 gateway-policy.sh 審核
-  # 執行 → sendMessage 回覆
-done
-```
+實作檔案：
+- `host/bin/agent-tg-daemon.sh` → `/usr/local/bin/agent-tg-daemon.sh`
+- `host/launchd/com.agentbot.tg-daemon.plist` → `~/Library/LaunchAgents/`
 
-支援指令：`/status` / `/requeue <job_id>` / `/jobs` / `/help`
-
-已建但 inactive 的 n8n workflow `RgpDAHpX723AfTbv` 保留作為備用（若未來有 HTTPS/Cloudflare Tunnel）。
-
-**待實作**：
-- [ ] `agent-tg-daemon.sh`（已有完整設計）
-- [ ] launchd plist 常駐
-- [ ] 部署到 agentbot
+運行中：launchd `com.agentbot.tg-daemon`，常駐 pid=55798。
 
 ### 尚未決定（P8.x）
 - 人工確認後自動 re-queue（目前仍需人工貼指令）
 - site-specific 通知策略（重要 site 加急）
-- agent-tg-daemon.sh 指令 ALLOWLIST 定義
 
 ---
 
