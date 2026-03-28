@@ -1498,3 +1498,17 @@
   其他變更 tools/agent-ssh-gateway/host/launchd/com.agentbot.queue-daemon.plist +10
 
 ---
+
+## 2026-03-28 14:13 | auto-git-score | 分數 60 | 📥 達到閾值（60/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=55），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-28-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-28-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/agent-ssh-gateway/FUTURE.md +10
+  其他變更 tools/agent-ssh-gateway/SPEC.md +10
+  其他變更 tools/agent-ssh-gateway/host/bin/gateway-policy.sh +10
+
+---
