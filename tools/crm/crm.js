@@ -3463,14 +3463,18 @@ const GCAL={
   saveToken(resp){
     const t={access_token:resp.access_token, expires_at:Date.now()+(resp.expires_in||3600)*1000};
     localStorage.setItem('gcal-token',JSON.stringify(t));
+    localStorage.setItem('gcal-prev-connected','1');
   },
   clearToken(){
     localStorage.removeItem('gcal-token');
+    localStorage.removeItem('gcal-prev-connected');
   },
   updateStatus(){
     const el=document.getElementById('gcal-status');
     if(!el)return;
-    el.textContent=this.isTokenValid()?'✅ 已連結':'未連結';
+    if(this.isTokenValid()) el.textContent='✅ 已連結';
+    else if(localStorage.getItem('gcal-prev-connected')) el.textContent='🔄 重連中...';
+    else el.textContent='未連結';
   },
   initClient(cid){
     if(!window.google?.accounts?.oauth2){ toast('GIS 尚未載入，請稍後再試'); return; }
@@ -3634,15 +3638,18 @@ const GSHEETS={
   tokenClient:null,
   getToken(){ try{ return JSON.parse(localStorage.getItem('gsheets-token')||'null'); }catch(e){ return null; } },
   isTokenValid(){ const t=this.getToken(); return t&&t.access_token&&Date.now()<(t.expires_at||0); },
-  saveToken(r){ localStorage.setItem('gsheets-token',JSON.stringify({access_token:r.access_token,expires_at:Date.now()+(r.expires_in||3600)*1000})); },
-  clearToken(){ localStorage.removeItem('gsheets-token'); },
+  saveToken(r){ localStorage.setItem('gsheets-token',JSON.stringify({access_token:r.access_token,expires_at:Date.now()+(r.expires_in||3600)*1000})); localStorage.setItem('gsheets-prev-connected','1'); },
+  clearToken(){ localStorage.removeItem('gsheets-token'); localStorage.removeItem('gsheets-prev-connected'); },
   getSpreadsheetId(){ return localStorage.getItem('gsheets-id')||this.DEFAULT_ID; },
   setSpreadsheetId(id){ localStorage.setItem('gsheets-id',id); },
   // "2026-03-26" → "3/26"
   tabName(ds){ const p=ds.split('-'); return `${parseInt(p[1])}/${parseInt(p[2])}`; },
   updateStatus(){
     const el=document.getElementById('gsheets-status');
-    if(el) el.textContent=this.isTokenValid()?'✅ 已連結':'未連結';
+    if(!el)return;
+    if(this.isTokenValid()) el.textContent='✅ 已連結';
+    else if(localStorage.getItem('gsheets-prev-connected')) el.textContent='🔄 重連中...';
+    else el.textContent='未連結';
   },
   initClient(){
     if(!window.google?.accounts?.oauth2){ toast('GIS 尚未載入'); return; }
@@ -4251,10 +4258,19 @@ function init(){
     }
   })();
 
-  // Init GIS lazily; if token already valid, refresh calendar events
+  // Init GIS lazily; restore Google connections silently on reload
   ensureGisLoaded(()=>{
     GCAL.updateStatus();
-    if(GCAL.isTokenValid()) fetchGcalEvents();
+    if(GCAL.isTokenValid()){
+      fetchGcalEvents();
+    } else if(localStorage.getItem('gcal-prev-connected') && GCAL.tokenClient){
+      // Token expired but user previously connected — silent re-auth (no popup if Google session active)
+      GCAL.tokenClient.requestAccessToken({prompt:''});
+    }
+    GSHEETS.updateStatus();
+    if(localStorage.getItem('gsheets-prev-connected') && !GSHEETS.isTokenValid() && GSHEETS.tokenClient){
+      GSHEETS.tokenClient.requestAccessToken({prompt:''});
+    }
   });
   // Initialize page display via JS (not CSS class) to avoid specificity conflicts
   document.querySelectorAll('.page').forEach(p=>{p.style.display='none';});
