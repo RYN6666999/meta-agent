@@ -4,3 +4,7 @@ pages_build_output_dir = "."
 [[kv_namespaces]]
 binding = "FDD_LOGINS"
 id = "e31247558c984a0b8848bd73ab0c1d87"
+
+[[kv_namespaces]]
+binding = "CRM_MEMORIES"
+id = "761e3142a9744bb2a6daff28697cd3e4"
