@@ -129,8 +129,11 @@ cmd_status() {
   local mode
   mode=$(get_gateway_mode)
 
-  local gw_status="UNKNOWN"
-  if [[ -f "${ENABLED_FLAG}" ]]; then
+  # enabled.flag 屬 root，ryan 無法讀 → 改以真實 SSH 連通性判斷
+  local gw_status="DISABLED"
+  if ssh -o BatchMode=yes -o ConnectTimeout=2 \
+       -i "${HOME}/.ssh/agentbot_ed25519" \
+       agentbot@127.0.0.1 echo ok &>/dev/null; then
     gw_status="ENABLED"
   fi
 

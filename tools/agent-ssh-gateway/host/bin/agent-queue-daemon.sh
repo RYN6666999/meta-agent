@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# agent-queue-daemon.sh — jobs/incoming/ 監控 + 自動執行
+#
+# 設計：
+#   - 每 5 秒掃描 jobs/incoming/*.json
+#   - 發現後呼叫 runner/src/run-job.ts（一次一個，避免並發衝突）
+#   - 不依賴 n8n，與 tg-daemon 互為補充
+#
+# 部署：
+#   sudo cp host/bin/agent-queue-daemon.sh /usr/local/bin/
+#   sudo chmod 755 /usr/local/bin/agent-queue-daemon.sh
+#   cp host/launchd/com.agentbot.queue-daemon.plist ~/Library/LaunchAgents/
+#   launchctl load ~/Library/LaunchAgents/com.agentbot.queue-daemon.plist
+
+set -uo pipefail
+
+# ── 路徑設定 ──────────────────────────────────────────────────────────
+
+if [[ -n "${AGENT_SSH_GATEWAY_DIR:-}" ]]; then
+  PROJECT_DIR="${AGENT_SSH_GATEWAY_DIR}"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PROJECT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+fi
+
+JOBS_INCOMING="${PROJECT_DIR}/jobs/incoming"
+RUNNER_DIR="${PROJECT_DIR}/runner"
+LOG_DIR="${PROJECT_DIR}/logs"
+LOG_FILE="${LOG_DIR}/queue-daemon.log"
+POLL_INTERVAL=5   # 秒
+
+mkdir -p "${LOG_DIR}"
+
+log() { printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S')" "$*" >> "${LOG_FILE}"; }
+
+log "INFO queue-daemon started pid=$$ project=${PROJECT_DIR}"
+
+# ── 主迴圈 ───────────────────────────────────────────────────────────
+
+while true; do
+  # 逐一處理 incoming/*.json（glob 展開失敗時跳過）
+  shopt -s nullglob
+  job_files=( "${JOBS_INCOMING}"/*.json )
+  shopt -u nullglob
+
+  for job_file in "${job_files[@]}"; do
+    job_id="$(basename "${job_file}" .json)"
+    log "INFO dispatching job_id=${job_id} file=${job_file}"
+
+    # 執行 runner，工作目錄設為 PROJECT_DIR 確保相對路徑正確
+    if (cd "${PROJECT_DIR}" && \
+        npm --prefix runner run run-job -- "${job_file}" \
+        >> "${LOG_DIR}/runner.log" 2>&1); then
+      log "INFO job done job_id=${job_id}"
+    else
+      rc=$?
+      log "WARN job finished with exit=${rc} job_id=${job_id}"
+    fi
+  done
+
+  sleep "${POLL_INTERVAL}"
+done
