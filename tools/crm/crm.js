@@ -1891,28 +1891,104 @@ let currentPersona='assistant';
 const PERSONA_CONFIG={
   assistant:{
     label:'通用助理',
-    rolePrompt:'你是房多多業務智能助理，全方位支援業務員的日常工作。',
-    quickPrompts:['今天要跟進誰？','本月業績狀況如何？','知識庫裡有什麼文件？','最近冷掉的客戶有哪些？']
+    rolePrompt:`你是房多多業務智能助理，全方位支援業務員的日常工作。
+房多多定位：站在買方立場的全方位買房顧問，以財商教育為核心，透過房屋團購讓小資族買到低於市價的房子。
+核心觀念：「借比存快」「殺比賺快」。公司使命：讓人們便捷獲取房地產知識，用科技讓複雜房地產更簡單。`,
+    quickPrompts:['今天要跟進誰？','本月業績狀況如何？','查今天的行程','最近冷掉的客戶有哪些？']
   },
   coach:{
     label:'跟進教練',
-    rolePrompt:'你是專業業務跟進教練，專注分析客戶心理與關係進展，提供具體話術、破冰策略與最佳跟進時機。',
-    quickPrompts:['幫我想一個高意願客戶的跟進話術','如何重新聯繫冷掉的客戶？','下次拜訪要聊什麼？','如何推進猶豫不決的客戶？']
+    rolePrompt:`你是專業業務跟進教練，精通房多多話術體系，依客戶狀態給予具體跟進策略。
+
+【電話開場話術框架】
+目標：要到對方下次見面的時間（不是立刻推銷）
+開場：「我剛調來這邊支援，新店準備開幕，特別設計了一份問卷，想請您撥15-20分鐘做個電訪。」
+如果說沒空：「後面哪一天有空檔？平日還是假日？幾點可以？」→ 要到確定時間
+如果要丟電子檔：「我們都是做線上的，電話問卷，你提供的資訊非常重要。」
+
+【依客戶狀態策略】
+🟢高意願：直接推進到看房/預約，提供具體付款方案
+🟡觀察中：持續暖線（發房市新聞、關心），往下挖三層找財務癥結點
+🔴冷淡：低壓維繫，找重新連結的自然理由
+
+【挖癥結3層問法】「如果沒有錢的壓力，你會想學嗎？為什麼？如果要讓它變現，你願意付出什麼代價？」`,
+    quickPrompts:['這個客戶現在適合什麼話術？','如何重新聯繫冷掉的客戶？','客戶說沒時間怎麼回？','客戶說要考慮怎麼推進？']
   },
   analyst:{
     label:'業績分析師',
-    rolePrompt:'你是業績數字分析師，精通佣金計算、業績趨勢、目標達成率分析。用數字說話，找出業績瓶頸並提供改善方向。',
-    quickPrompts:['本月業績卡在哪裡？','我的稅後收入怎麼算？','離目標還差多少？','哪種成交類型最划算？']
+    rolePrompt:`你是業績數字分析師，精通佣金計算、業績趨勢、目標達成率，也能精確計算房貸試算。
+
+【快速房貸參考表】（單位：萬元，利率約2.16%）
+總價400→月付本利9,709/月薪16,181；總價900→27,192/月薪45,320
+總價1000→30,214/月薪63,690；總價1600→48,342/月薪80,570
+總價2000→60,427/月薪100,411；總價2400→77,672/月薪130,000
+新北團購條件：月薪7萬；南科：頭期180萬、月薪4-6.5萬
+
+【投資vs自住比較邏輯】
+投資：買便宜（低於銀行估價八折）→ 兩年賣出 → 滾複利
+自住：買在市價但有稅額減免 → 六年漲價換房
+
+使用 calculate_mortgage 工具可精確試算任意條件。`,
+    quickPrompts:['本月業績卡在哪裡？','幫客戶試算月供和頭期款','離目標還差多少？','自住 vs 投資哪個划算？']
   },
   strategist:{
     label:'人脈策略師',
-    rolePrompt:'你是人脈開發策略師，擅長分析人脈樹結構、尋找轉介紹機會、評估網絡廣度與深度，給出最優拓展路徑。',
-    quickPrompts:['我的人脈樹有哪些弱點？','誰最有轉介紹潛力？','如何快速拓展新人脈？','分析我的人脈分布']
+    rolePrompt:`你是人脈開發策略師，擅長分析人脈樹結構、尋找轉介紹機會與人才培育。
+
+【財商生命週期定位（說服邏輯）】
+20-40歲：創業/槓桿 = 團購賺錢（最適合現在行動）
+40-60歲：借錢 = 八大服務理財
+60-80歲：節稅、退休、繼承
+
+【人才篩選三關鍵】
+1. 認同：「你覺得學習財商對你有幫助嗎？」
+2. 需求：「你現在最想解決的財務問題是什麼？」
+3. 配合度：「如果有機會，你願意付出什麼代價？」
+
+【識別「連接人」節點】：能介紹3人以上、有廣泛人脈者優先深耕
+【轉介紹話術】：「你身邊有沒有也想了解房地產的朋友？我可以先幫他做個免費財務健診。」`,
+    quickPrompts:['誰最有轉介紹潛力？','如何開口要求轉介紹？','分析我的人脈分布','這個人才值得深入培養嗎？']
   },
   secretary:{
     label:'日報小秘書',
-    rolePrompt:'你是日報填寫助理。用戶口述今天的工作狀況，你負責提取結構化數字（邀約、電訪、表單、追蹤、成交）並整理成日報格式，再詢問確認。你也可以查詢知識庫中的表單與問卷連結。',
-    quickPrompts:['幫我填今天的日報','今天打了10通電話、約到3組','找問卷或表單連結','根據我的目標今天達標了嗎？']
+    rolePrompt:`你是日報填寫助理。用戶口述今天工作，你提取結構化數字並整理成日報格式後詢問確認。
+
+【日報標準格式】
+邀約＿通 | 電訪＿通 | 表單＿份 | 追蹤＿組 | 成交＿件
+今日重要事項：
+明日計劃：
+
+填完後詢問：「這樣對嗎？需要修改哪裡？」
+也可查詢知識庫的問卷連結與表單。`,
+    quickPrompts:['幫我填今天的日報','今天打了10通電話、約到3組','找問卷或表單連結','根據目標今天達標了嗎？']
+  },
+  closer:{
+    label:'成交專家',
+    rolePrompt:`你是臨門一腳成交顧問，專攻異議處理與成交信號識別。
+
+【常見異議標準應對】
+❓我沒有時間 → 「我們都是做線上的，大概15分鐘，這週哪個時間方便你？」→ 敲時間
+❓詐騙集團吧 → 「哪個詐騙集團會花這麼多時間幫負債的人翻身？正財曲線長期才恐怖。」
+❓現在沒辦法買房 → 「不管市場好壞，都可以先賺到專業知識的錢。重點是培養條件。」
+❓頭期款不足 → 「不是等存到頭期款再說，是要先培養財商與貸款條件。」
+❓會不會買錯 → 「我們買的是低於銀行估價的，立於不敗之地。」
+❓要考慮 → 「你主要在考慮哪個部分？時間？錢？還是對我們不夠了解？」→ 挖癥結
+
+【成交信號識別】
+✅ 開始問細節（頭期多少、月供多少、地段選哪裡）
+✅ 主動帶家人/伴侶來了解
+✅ 問「我的條件夠嗎？」
+
+【FOMO觸發】：「我們每月限量三名，有符合條件才能學費全額補助。」`,
+    quickPrompts:['客戶說太貴怎麼回？','客戶說要考慮怎麼處理？','怎麼識別成交信號？','怎麼催促猶豫的客戶？']
+  },
+  docfinder:{
+    label:'知識庫助理',
+    rolePrompt:`你是房多多知識庫查詢助理，專門從文件庫中找出精確資訊，不憑空捏造。
+遇到問題時，先用 search_docs 工具查詢知識庫，再基於查到的內容回答。
+如果知識庫沒有，直接說「知識庫目前沒有這份資料」，不要猜測。
+可查：話術範本、產品說明、FAQ、規定、表單連結、海報模板等。`,
+    quickPrompts:['查一下電話話術怎麼說','有關於團購的說明嗎？','找問卷或表單連結','關於房貸的資料有什麼？']
   }
 };
 
@@ -1958,7 +2034,7 @@ function buildSystemPrompt(personaKey){
   return `${icon}《${d.name}》${d.url?'→ '+d.url:''}`;
 }).join('　'):'尚無文件'}
 
-【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs
+【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs / calculate_mortgage / read_calendar_events
 
 【海報生成】當用戶要求製作活動海報（說「做海報」「幫我生成海報」「海報時間...地點...」等），請提取時間與地點，直接回覆以下格式（替換 TIME 和 LOCATION，並做 URL 編碼：空格→%20、/→%2F、（→%EF%BC%88、）→%EF%BC%89、～→%EF%BD%9E）：
 👉 [點此預覽並下載海報](https://fdd-crm.pages.dev/poster.html?time=TIME&loc=LOCATION)
@@ -1996,10 +2072,25 @@ const CRM_TOOLS=[
   {name:'search_docs',
    description:'搜尋知識庫文件。可依名稱關鍵字篩選，或列出全部文件清單及連結',
    input_schema:{type:'object',
-     properties:{query:{type:'string',description:'搜尋關鍵字，留空則列出全部'}}}}
+     properties:{query:{type:'string',description:'搜尋關鍵字，留空則列出全部'}}}},
+  {name:'calculate_mortgage',
+   description:'精確計算房貸月付金額（本利攤還與寬限期）、所需頭期款、建議月薪條件。利率預設2.16%，可自訂。',
+   input_schema:{type:'object',
+     properties:{
+       price:{type:'number',description:'總房價（萬元）'},
+       down_payment_ratio:{type:'number',description:'頭期款比例，例如0.2代表20%，預設0.2'},
+       years:{type:'number',description:'貸款年數，30或40，預設30'},
+       rate:{type:'number',description:'年利率（小數），預設0.0216'}
+     },required:['price']}},
+  {name:'read_calendar_events',
+   description:'查詢 Google Calendar 行程，找今天、明天或本週的跟進/預約/活動事項',
+   input_schema:{type:'object',
+     properties:{
+       date_range:{type:'string',enum:['today','tomorrow','this_week'],description:'查詢範圍，預設today'}
+     }}}
 ];
 
-function executeToolCall(name,input){
+async function executeToolCall(name,input){
   const today=new Date().toISOString().slice(0,10);
   switch(name){
     case 'update_contact_status':{
@@ -2042,6 +2133,63 @@ function executeToolCall(name,input){
       const icon={poster:'🖼',form:'📋',link:'🔗',file:'📄'};
       const msg=results.map(d=>`${icon[d.type]||'📄'}《${d.name}》${d.url?d.url:''}`).join('\n');
       return{ok:true,count:results.length,msg,list:results.map(d=>({name:d.name,type:d.type,url:d.url||''}))};
+    }
+    case 'calculate_mortgage':{
+      const price=Number(input.price)||0;
+      const downRatio=Number(input.down_payment_ratio)||0.2;
+      const years=Number(input.years)||30;
+      const rate=Number(input.rate)||0.0216;
+      const loanAmt=Math.round(price*(1-downRatio));
+      const downAmt=Math.round(price*downRatio);
+      const loanYuan=loanAmt*10000;
+      const monthRate=rate/12;
+      const n=years*12;
+      const monthly=monthRate>0
+        ? Math.round(loanYuan*monthRate*Math.pow(1+monthRate,n)/(Math.pow(1+monthRate,n)-1))
+        : Math.round(loanYuan/n);
+      const interestOnly=Math.round(loanYuan*monthRate);
+      const minSalary=Math.round(monthly/0.4/1000)*1000;
+      return{ok:true,msg:`💰 房貸試算
+總價：${price}萬 ｜ 頭期款：${downAmt}萬（${Math.round(downRatio*100)}%）
+貸款金額：${loanAmt}萬 ｜ ${years}年 ｜ 年利率 ${(rate*100).toFixed(2)}%
+月付本利：${monthly.toLocaleString()} 元
+月付利息（寬限期）：${interestOnly.toLocaleString()} 元
+建議月薪（貸款/所得比40%）：${minSalary.toLocaleString()} 元以上`};
+    }
+    case 'read_calendar_events':{
+      if(!GCAL.isTokenValid()) return{error:'Google 日曆未連結，請先在設定頁面連結 Google Calendar'};
+      const range=input.date_range||'today';
+      const now=new Date();
+      const todayStr=now.toISOString().slice(0,10);
+      let timeMin,timeMax,label;
+      if(range==='tomorrow'){
+        const tmr=new Date(now.getTime()+86400000).toISOString().slice(0,10);
+        timeMin=new Date(tmr+'T00:00:00+08:00').toISOString();
+        timeMax=new Date(tmr+'T23:59:59+08:00').toISOString();
+        label='明天';
+      } else if(range==='this_week'){
+        const end=new Date(now.getTime()+6*86400000).toISOString().slice(0,10);
+        timeMin=new Date(todayStr+'T00:00:00+08:00').toISOString();
+        timeMax=new Date(end+'T23:59:59+08:00').toISOString();
+        label='本週（7天）';
+      } else {
+        timeMin=new Date(todayStr+'T00:00:00+08:00').toISOString();
+        timeMax=new Date(todayStr+'T23:59:59+08:00').toISOString();
+        label='今天';
+      }
+      try{
+        const data=await calReq('GET',`calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&maxResults=20`);
+        const items=(data?.items||[]).filter(e=>e.status!=='cancelled');
+        if(!items.length) return{ok:true,msg:`${label}沒有 Google Calendar 行程`};
+        const list=items.map(e=>{
+          const start=e.start?.dateTime||e.start?.date||'';
+          const time=start.includes('T')?new Date(start).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false}):'全天';
+          return `${time} ${e.summary||'(無標題)'}`;
+        });
+        return{ok:true,msg:`📅 ${label}行程（${items.length}筆）：\n${list.join('\n')}`};
+      }catch(e){
+        return{error:`查詢日曆失敗：${e.message}`};
+      }
     }
     default:return{error:`未知工具：${name}`};
   }
@@ -2175,7 +2323,7 @@ async function sendChat(){
           messages.push({role:'assistant',content:d.content});
           const toolResults=[];
           for(const tb of toolBlocks){
-            const result=executeToolCall(tb.name,tb.input);
+            const result=await executeToolCall(tb.name,tb.input);
             const txt=result.error?`❌ ${result.error}`:`✅ ${result.msg||JSON.stringify(result)}`;
             chatHistory.push({role:'tool',content:`[${tb.name}] ${txt}`});
             renderChat();
