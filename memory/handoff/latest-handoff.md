@@ -1,21 +1,21 @@
 ---
-date: 2026-03-27
-session: meta-agent — Session 1
+date: 2026-03-28
+session: meta-agent — Session 2
 status: 建設中
-generated: 2026-03-27 23:50
+generated: 2026-03-28 09:14
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-27 23:50 自動生成）
+## 系統狀態（2026-03-28 09:14 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(21961) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：149
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**Turn 計數**：150
 
 ---
 
@@ -30,25 +30,25 @@ generated: 2026-03-27 23:50
 ---
 
 ## 最近 Git 提交
+- `cc84d17 auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
+- `895c5b2 auto: [error_fix+misc] score=160 超過閾值 50 自動備份`
 - `4d765bd auto: [error_fix+misc] score=65 超過閾值 50 自動備份`
 - `cad93a0 docs: CRM 記憶 MVP Phase 1 追蹤板 + OpenAPI 規格`
 - `aca0cf7 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
 - `ea0b28b auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
-- `9fd748a fix: 加入 OpenRouter 供應商選項到 HTML 下拉選單`
-- `d47e464 fix: 更新 Grok 模型 ID 為最新版本（4.20 系列）`
 
 ## 最近 Error Log
+- 2026-03-28-mobile-bridge-tunnel-down.md
+- 2026-03-28-mobile-bridge-api-down.md
+- 2026-03-28-health-check.md
 - 2026-03-27-mobile-bridge-tunnel-down.md
 - 2026-03-27-mobile-bridge-api-down.md
-- 2026-03-27-health-check.md
-- 2026-03-26-mobile-bridge-tunnel-down.md
-- 2026-03-26-mobile-bridge-api-down.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
 
 ## 最近 Code Intelligence
-- 2026-03-27 08:01:10 | trigger=health_check_failure | unavailable | provider unavailable
+- 2026-03-28 08:00:06 | trigger=health_check_failure | unavailable | provider unavailable
 
 ---
 
