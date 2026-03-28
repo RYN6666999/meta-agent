@@ -1,0 +1,24 @@
+{
+  "job_id": "n8n-ssh-20260327053500174",
+  "status": "done",
+  "started_at": "2026-03-28T05:06:08.749Z",
+  "finished_at": "2026-03-28T05:06:09.502Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "Sat Mar 28 13:06:09 CST 2026\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "n8n_trigger_ok\n",
+        "stderr": ""
+      }
+    }
+  ]
+}

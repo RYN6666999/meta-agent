@@ -1,0 +1,14 @@
+{
+  "job_id": "p8-auth-expired-real-001",
+  "status": "auth_expired",
+  "started_at": "2026-03-28T05:06:10.815Z",
+  "finished_at": "2026-03-28T05:06:13.851Z",
+  "steps": [
+    {
+      "kind": "web",
+      "status": "AUTH_EXPIRED",
+      "output": null
+    }
+  ],
+  "error": "AUTH_EXPIRED: site=\"fundodo\"，請重新執行 SITE=fundodo npm run refresh-auth"
+}

@@ -29,6 +29,11 @@ LOG_DIR="${PROJECT_DIR}/logs"
 LOG_FILE="${LOG_DIR}/queue-daemon.log"
 POLL_INTERVAL=5   # 秒
 
+# launchd 不繼承 PATH，直接指向 nvm node 與 ts-node
+NODE_BIN="${HOME}/.nvm/versions/node/v20.18.3/bin/node"
+TSNODE_BIN="${RUNNER_DIR}/node_modules/.bin/ts-node"
+RUN_JOB_TS="${RUNNER_DIR}/src/run-job.ts"
+
 mkdir -p "${LOG_DIR}"
 
 log() { printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S')" "$*" >> "${LOG_FILE}"; }
@@ -43,13 +48,13 @@ while true; do
   job_files=( "${JOBS_INCOMING}"/*.json )
   shopt -u nullglob
 
-  for job_file in "${job_files[@]}"; do
+  for job_file in "${job_files[@]+"${job_files[@]}"}"; do
     job_id="$(basename "${job_file}" .json)"
     log "INFO dispatching job_id=${job_id} file=${job_file}"
 
     # 執行 runner，工作目錄設為 PROJECT_DIR 確保相對路徑正確
     if (cd "${PROJECT_DIR}" && \
-        npm --prefix runner run run-job -- "${job_file}" \
+        "${NODE_BIN}" "${TSNODE_BIN}" "${RUN_JOB_TS}" "${job_file}" \
         >> "${LOG_DIR}/runner.log" 2>&1); then
       log "INFO job done job_id=${job_id}"
     else
