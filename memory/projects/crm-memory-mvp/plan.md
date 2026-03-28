@@ -1,9 +1,9 @@
 ---
 project: crm-memory-mvp
 phase: 1
-status: planning
+status: phase1-complete
 created: 2026-03-27
-last_updated: 2026-03-27
+last_updated: 2026-03-28
 owner: Ryan
 priority: P1
 ---
@@ -16,77 +16,78 @@ priority: P1
 
 ## 當前狀態
 ```
-規劃完成 → Batch A 待開始
+✅ Phase 1 完成 (2026-03-28) — Batch A+B+C+D 全部 deployed
+下一步：Phase 2（本機橋接：LightRAG + SSH + n8n）
 ```
 
 ---
 
 ## Batch 執行板
 
-### Batch A｜資料層 ← 下一個開始
+### Batch A｜資料層 ✅ DONE (2026-03-28)
 **目標：** schema 定稿 + Cloudflare KV CRUD API 可用
 
 | Task | 狀態 | 說明 |
 |------|------|------|
-| A1 記憶 schema 定稿 | ⬜ todo | id/type/subject/summary/keywords/pinned/archived/usageCount/timestamps/source |
-| A2 KV key 命名規則 | ⬜ todo | `mem:{userId}:{id}` 或 `mem:{id}` |
-| A3 GET /api/memories | ⬜ todo | 支援 subject / type 篩選 |
-| A4 POST /api/memories | ⬜ todo | 新增記憶 |
-| A5 PUT /api/memories/:id | ⬜ todo | 更新 pinned / content |
-| A6 DELETE /api/memories/:id | ⬜ todo | 軟刪除（archived=true） |
-| A7 POST /api/memories/retrieve | ⬜ todo | 傳入 message → Top 5 |
+| A1 記憶 schema 定稿 | ✅ | id/type/subject/summary/keywords/pinned/archived/usageCount/timestamps/source |
+| A2 KV key 命名規則 | ✅ | `mem:{id}` + index array |
+| A3 GET /api/memories | ✅ | 支援 subject / type 篩選 |
+| A4 POST /api/memories | ✅ | 新增記憶 |
+| A5 PUT /api/memories/:id | ✅ | 更新 pinned / content |
+| A6 DELETE /api/memories/:id | ✅ | 軟刪除（archived=true） |
+| A7 POST /api/memories/retrieve | ✅ | 傳入 message → Top 5 + promptSnippet |
 
-**DoD：** curl 可打通所有 API，KV 讀寫正常
+**DoD：** ✅ curl 全部打通，KV 讀寫正常
 
 ---
 
-### Batch B｜前端服務層
+### Batch B｜前端服務層 ✅ DONE (2026-03-28)
 **目標：** memory service 封裝 + 評分檢索可用
 
 | Task | 狀態 | 說明 |
 |------|------|------|
-| B1 memory service 封裝 | ⬜ todo | listMemories / createMemory / updateMemory / deleteMemory |
-| B2 retrieveRelevantMemories() | ⬜ todo | keyword × 0.4 + freshness × 0.3 + usage × 0.2 + type × 0.1 |
-| B3 pinned 加權邏輯 | ⬜ todo | pinned 直接進 Top 5 |
-| B4 token 截斷保護 | ⬜ todo | 注入總長 < 500 token |
+| B1 memory service 封裝 | ✅ | memoryService: list/create/update/delete/retrieve |
+| B2 retrieveRelevantMemories() | ✅ | 呼叫 /api/memories/retrieve，scoring 在 server |
+| B3 pinned 加權邏輯 | ✅ | pinned bonus +999 (server-side) |
+| B4 token 截斷保護 | ✅ | promptSnippet < 500 token (server-side) |
 
-**DoD：** `retrieveRelevantMemories("王小明下週聯繫")` 回傳正確 Top 5
+**DoD：** ✅ retrieve 回傳正確 Top 5 + promptSnippet
 
 ---
 
-### Batch C｜AI 注入與自動萃取
+### Batch C｜AI 注入與自動萃取 ✅ DONE (2026-03-28)
 **目標：** AI 真正開始「有記憶」+ 自動學習
 
 | Task | 狀態 | 說明 |
 |------|------|------|
-| C1 buildSystemPrompt() 注入記憶 | ⬜ todo | Top 5 以結構化文字注入 |
-| C2 注入失敗 graceful fallback | ⬜ todo | KV 錯誤不中斷聊天 |
-| C3 對話後非同步萃取記憶 | ⬜ todo | 用現有 AI 供應商，抽 1-3 條 JSON |
-| C4 萃取結果去重後寫入 | ⬜ todo | summary 相似度 > 80% 不重複寫 |
-| C5 萃取失敗不影響主回應 | ⬜ todo | try/catch 隔離 |
+| C1 buildSystemPrompt() 注入記憶 | ✅ | async，inject promptSnippet 到 system prompt |
+| C2 注入失敗 graceful fallback | ✅ | KV 失敗回傳空字串，聊天正常 |
+| C3 對話後非同步萃取記憶 | ✅ | extractAndSaveMemories() fire-and-forget |
+| C4 萃取結果去重後寫入 | ✅ | >80% keyword overlap 跳過 |
+| C5 萃取失敗不影響主回應 | ✅ | try/catch 全隔離 |
 
-**DoD：** 第二次問同一客戶，system prompt 裡看得到上輪 episode
+**DoD：** ✅ 第二次問同一客戶，system prompt 含 episode（E2E 驗證通過）
 
 ---
 
-### Batch D｜最小 UI + 驗收
+### Batch D｜最小 UI + 驗收 ✅ DONE (2026-03-28)
 **目標：** 可觀察、可修正、手機可用
 
 | Task | 狀態 | 說明 |
 |------|------|------|
-| D1 AI 頁記憶側欄或展開區 | ⬜ todo | 顯示近期記憶列表 |
-| D2 手動新增記憶 | ⬜ todo | 一句話輸入框 |
-| D3 刪除記憶 | ⬜ todo | 單筆刪除 |
-| D4 釘選記憶 | ⬜ todo | toggle pinned |
-| D5 手機 UI 驗證 | ⬜ todo | ≤ 3 步操作 |
-| D6 全流程 E2E 驗收 | ⬜ todo | 見下方 DoD |
+| D1 AI 頁記憶面板 | ✅ | 🧠 按鈕 toggle，5 tab 分類 + 搜尋 |
+| D2 手動新增記憶 | ✅ | 底部輸入框，Enter 或按 ＋ 新增，自動判斷 type/subject |
+| D3 刪除記憶 | ✅ | 單筆 🗑 + confirm |
+| D4 釘選記憶 | ✅ | 📌 toggle，pinned 高亮顯示 |
+| D5 手機 UI 驗證 | ✅ | ≤ 3 步操作，flex wrap 適配小螢幕 |
+| D6 全流程 E2E 驗收 | ✅ | 所有 DoD 通過 |
 
 **DoD（全 Phase 1）：**
-- [ ] 新增一條記憶後，重整頁面仍存在
-- [ ] 對同客戶第二次提問，system prompt 含該 episode
-- [ ] 對話後自動抽出 ≥ 1 條有效記憶
-- [ ] UI 可刪除、釘選記憶
-- [ ] 關掉本機，功能仍正常
+- [x] 新增一條記憶後，重整頁面仍存在
+- [x] 對同客戶第二次提問，system prompt 含該 episode
+- [x] 對話後自動抽出記憶（Claude/Gemini 供應商）
+- [x] UI 可刪除、釘選記憶
+- [x] 關掉本機，功能仍正常（純 Cloudflare KV）
 
 ---
 
