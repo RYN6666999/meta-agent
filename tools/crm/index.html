@@ -131,8 +131,29 @@
       <span id="ai-model-badge" class="ai-model-badge">模型：—</span>
       <span style="flex:1"></span>
       <button class="btn btn-sm" onclick="generateDailyBriefing()" title="生成今日 AI 簡報">🌅 今日簡報</button>
+      <button class="btn btn-sm" id="mem-toggle-btn" onclick="toggleMemPanel()" title="記憶庫">🧠 記憶</button>
       <button class="btn btn-sm" onclick="switchPage('settings')">⚙ 設定</button>
       <button class="btn btn-sm" onclick="clearChat()">清除</button>
+    </div>
+
+    <!-- Memory Panel (D1-D5) -->
+    <div class="mem-panel" id="mem-panel" style="display:none">
+      <div class="mem-panel-header">
+        <div class="mem-tabs" id="mem-tabs">
+          <button class="mem-tab active" data-type="" onclick="switchMemTab('',this)">全部</button>
+          <button class="mem-tab" data-type="rule" onclick="switchMemTab('rule',this)">規則</button>
+          <button class="mem-tab" data-type="fact" onclick="switchMemTab('fact',this)">事實</button>
+          <button class="mem-tab" data-type="episode" onclick="switchMemTab('episode',this)">紀錄</button>
+          <button class="mem-tab" data-type="style" onclick="switchMemTab('style',this)">偏好</button>
+        </div>
+        <input class="mem-search" id="mem-search" type="text" placeholder="🔍 搜尋記憶…" oninput="renderMemPanel()">
+      </div>
+      <div class="mem-list" id="mem-list"><div class="mem-empty">載入中…</div></div>
+      <div class="mem-add-bar">
+        <input class="mem-add-input" id="mem-add-input" type="text" placeholder="手動新增記憶（一句話）…"
+          onkeydown="if(event.key==='Enter')addManualMemory()">
+        <button class="btn btn-sm btn-accent" onclick="addManualMemory()">＋</button>
+      </div>
     </div>
 
     <!-- Persona pills -->

@@ -1992,7 +1992,64 @@ const PERSONA_CONFIG={
   }
 };
 
-function buildSystemPrompt(personaKey){
+/* ═══════════════════════════════════════
+   MEMORY SERVICE  (Batch B)
+═══════════════════════════════════════ */
+const memoryService={
+  base:'/api/memories',
+
+  async list(opts={}){
+    try{
+      const p=new URLSearchParams();
+      if(opts.subject) p.set('subject',opts.subject);
+      if(opts.type)    p.set('type',opts.type);
+      if(opts.pinned!=null) p.set('pinned',opts.pinned);
+      if(opts.includeArchived) p.set('includeArchived','true');
+      const r=await fetch(`${this.base}?${p}`);
+      if(!r.ok) return[];
+      return (await r.json()).memories||[];
+    }catch{return[];}
+  },
+
+  async create(mem){
+    try{
+      const r=await fetch(this.base,{method:'POST',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(mem)});
+      if(!r.ok) return null;
+      const created=await r.json();
+      return created;
+    }catch{return null;}
+  },
+
+  async update(id,patch){
+    try{
+      const r=await fetch(`${this.base}/${id}`,{method:'PUT',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+      if(!r.ok) return null;
+      return await r.json();
+    }catch{return null;}
+  },
+
+  async delete(id){
+    try{
+      const r=await fetch(`${this.base}/${id}`,{method:'DELETE'});
+      return r.ok;
+    }catch{return false;}
+  },
+
+  // B2: retrieve Top K with scoring (keyword×0.4 + freshness×0.3 + usage×0.2 + type×0.1)
+  async retrieve(message,context={}){
+    try{
+      const r=await fetch(`${this.base}/retrieve`,{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message,context,topK:5})});
+      if(!r.ok) return{memories:[],promptSnippet:''};
+      return await r.json();
+    }catch{return{memories:[],promptSnippet:''};}
+  }
+};
+
+async function buildSystemPrompt(personaKey,memSnippet=''){
   const persona=PERSONA_CONFIG[personaKey||'assistant'];
   const login=JSON.parse(localStorage.getItem('crm-login')||'{}');
   const myRank=STORE.getMyRank();
@@ -2020,7 +2077,7 @@ function buildSystemPrompt(personaKey){
   const rankLabels={director:'主任',asst_mgr:'襄理',manager:'經理',shop_partner:'店股東',shop_head:'店長'};
 
   return `${persona.rolePrompt}
-
+${memSnippet?'\n'+memSnippet+'\n':''}
 【使用者】${login.name||'業務員'}｜${rankLabels[myRank]||myRank}｜佣金率 ${(myRate*100).toFixed(0)}%
 【今日】${today}，月底還有 ${daysLeft} 天
 【本月業績】$${summary.income.toLocaleString()} / 目標 $${salesTarget.toLocaleString()}（${salesPct}%）稅後 $${summary.net.toLocaleString()}，成交 ${summary.newCount} 件
@@ -2288,7 +2345,13 @@ async function sendChat(){
     return;
   }
 
-  const systemMsg=buildSystemPrompt(currentPersona);
+  // C1: retrieve memories (graceful fallback if KV unavailable — C2)
+  const currentContactName=(()=>{
+    const sel=document.querySelector('.node.selected .node-name');
+    return sel?sel.textContent.trim():'';
+  })();
+  const memResult=await memoryService.retrieve(msg,{currentContact:currentContactName,currentPage:'ai'});
+  const systemMsg=await buildSystemPrompt(currentPersona,memResult.promptSnippet||'');
 
   try{
     if(s.provider==='claude'){
@@ -2375,6 +2438,171 @@ async function sendChat(){
   }
   renderChat();setSendLoading(false);
   localStorage.setItem(STORE.K.chat,JSON.stringify(chatHistory));
+
+  // C3: async memory extraction (fire-and-forget, does not block UI)
+  extractAndSaveMemories(msg, chatHistory, getAiSettings()).catch(()=>{});
+}
+
+// C3-C5: extract 1-3 memories from conversation, dedup, write to KV
+async function extractAndSaveMemories(userMsg, history, aiSettings){
+  try{
+    const lastAssistant=history.filter(m=>m.role==='assistant').slice(-1)[0]?.content||'';
+    if(!lastAssistant||lastAssistant.length<20) return; // skip trivial
+    if(!aiSettings.apiKey) return; // no key, skip
+
+    const extractPrompt=`從以下對話中，提取 1-3 條值得記住的業務資訊，格式為 JSON 陣列。
+每條格式：{"type":"fact|rule|episode|style","subject":"contact:姓名 或 global 或 user:Ryan","summary":"最多120字的摘要","keywords":["關鍵字1","關鍵字2"]}
+只有確實有新資訊才提取，沒有則回傳 []。不要提取問候或通用對話。
+
+使用者說：${userMsg.slice(0,200)}
+AI 回應：${lastAssistant.slice(0,400)}
+
+只回傳 JSON 陣列，不要其他文字。`;
+
+    let raw='';
+    if(aiSettings.provider==='claude'){
+      const r=await fetch(aiSettings.apiKey?'https://api.anthropic.com/v1/messages':'/api/ai',{
+        method:'POST',
+        headers:aiSettings.apiKey
+          ?{'Content-Type':'application/json','x-api-key':aiSettings.apiKey,
+            'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'}
+          :{'Content-Type':'application/json'},
+        body:JSON.stringify(aiSettings.apiKey
+          ?{model:'claude-haiku-4-5-20251001',max_tokens:512,
+            messages:[{role:'user',content:extractPrompt}]}
+          :{provider:'anthropic',body:{model:'claude-haiku-4-5-20251001',max_tokens:512,
+            messages:[{role:'user',content:extractPrompt}]}})
+      });
+      const d=await r.json();
+      raw=d.content?.[0]?.text||'';
+    } else if(aiSettings.provider==='gemini'){
+      const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${aiSettings.apiKey}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts:[{text:extractPrompt}]}]})
+      });
+      const d=await r.json();
+      raw=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    } else {
+      return; // skip extraction for other providers
+    }
+
+    // parse JSON array
+    const m=raw.match(/\[[\s\S]*\]/);
+    if(!m) return;
+    let items;
+    try{ items=JSON.parse(m[0]); }catch{ return; }
+    if(!Array.isArray(items)||!items.length) return;
+
+    // C4: dedup against existing memories
+    const existing=await memoryService.list();
+    for(const item of items){
+      if(!item.type||!item.subject||!item.summary) continue;
+      if(item.summary.length>120) item.summary=item.summary.slice(0,120);
+      // simple dedup: skip if >80% keyword overlap with existing
+      const isDup=existing.some(e=>{
+        if(e.subject!==item.subject) return false;
+        const newWords=(item.summary||'').split(/\s+/);
+        const existWords=(e.summary||'').split(/\s+/);
+        const overlap=newWords.filter(w=>existWords.includes(w)).length;
+        return overlap/Math.max(newWords.length,1)>0.8;
+      });
+      if(isDup) continue;
+      await memoryService.create({...item,source:'auto'});
+    }
+    // Refresh memory panel if visible
+    if(document.getElementById('mem-panel')?.style.display!=='none'){
+      renderMemPanel();
+    }
+  }catch{ /* C5: extraction failures never break chat */ }
+}
+
+/* ═══════════════════════════════════════
+   MEMORY UI  (Batch D)
+═══════════════════════════════════════ */
+let _memTabType='';
+let _memCache=[];
+
+function toggleMemPanel(){
+  const panel=document.getElementById('mem-panel');
+  const btn=document.getElementById('mem-toggle-btn');
+  if(!panel)return;
+  const open=panel.style.display==='none'||!panel.style.display;
+  panel.style.display=open?'flex':'none';
+  if(btn) btn.style.fontWeight=open?'700':'';
+  if(open) renderMemPanel();
+}
+
+function switchMemTab(type,el){
+  _memTabType=type;
+  document.querySelectorAll('.mem-tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderMemPanel();
+}
+
+async function renderMemPanel(){
+  const list=document.getElementById('mem-list');
+  if(!list)return;
+  const searchQ=(document.getElementById('mem-search')?.value||'').toLowerCase();
+
+  const allMems=await memoryService.list({type:_memTabType||undefined});
+  _memCache=allMems;
+
+  const filtered=allMems.filter(m=>
+    !searchQ ||
+    m.summary.toLowerCase().includes(searchQ) ||
+    m.subject.toLowerCase().includes(searchQ) ||
+    (m.keywords||[]).some(k=>k.toLowerCase().includes(searchQ))
+  );
+
+  if(!filtered.length){
+    list.innerHTML='<div class="mem-empty">沒有記憶</div>';
+    return;
+  }
+
+  const typeLabel={fact:'事實',rule:'規則',episode:'紀錄',style:'偏好'};
+  list.innerHTML=filtered.map(m=>`
+    <div class="mem-item${m.pinned?' pinned':''}" id="memrow-${m.id}">
+      <span class="mem-badge ${m.type}">${typeLabel[m.type]||m.type}</span>
+      <div style="flex:1;min-width:0">
+        <div class="mem-summary">${escHtml(m.summary)}</div>
+        <div class="mem-subject">${escHtml(m.subject)}${m.source==='auto'?' · 自動':''}${m.pinned?' · 📌':''}</div>
+      </div>
+      <div class="mem-actions">
+        <button class="mem-action-btn${m.pinned?' pin-active':''}" title="${m.pinned?'取消釘選':'釘選'}"
+          onclick="toggleMemPin('${m.id}',${m.pinned})">📌</button>
+        <button class="mem-action-btn" title="刪除" onclick="deleteMem('${m.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function toggleMemPin(id,current){
+  await memoryService.update(id,{pinned:!current});
+  renderMemPanel();
+}
+
+async function deleteMem(id){
+  if(!confirm('確定刪除這條記憶？'))return;
+  await memoryService.delete(id);
+  renderMemPanel();
+}
+
+async function addManualMemory(){
+  const input=document.getElementById('mem-add-input');
+  const text=(input?.value||'').trim();
+  if(!text)return;
+  // Auto-detect type from keywords
+  const type=
+    /規則|規定|標準|必須|應該|原則|不能|要先/.test(text)?'rule':
+    /喜歡|偏好|習慣|風格/.test(text)?'style':
+    /說|表示|提到|回覆|下次|再聯繫|考慮|打算/.test(text)?'episode':'fact';
+  // Auto-detect subject
+  const contactMatch=text.match(/^(.{2,5})(說|表示|提到|要|想|打算)/);
+  const subject=contactMatch?`contact:${contactMatch[1]}`:'global';
+  // Extract keywords (simple: words >= 2 chars)
+  const keywords=[...new Set(text.replace(/[，。！？,.]/g,' ').split(/\s+/).filter(w=>w.length>=2))].slice(0,8);
+  await memoryService.create({type,subject,summary:text.slice(0,120),keywords,source:'manual'});
+  if(input) input.value='';
+  renderMemPanel();
 }
 
 /* ═══════════════════════════════════════
