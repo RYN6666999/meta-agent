@@ -33,6 +33,7 @@
 - `bug-closeout-autopipeline`: `bug 修完|closeout|備份修復|擴充真理源`
 - `major-change-autogit-guard`: `重大變更|high risk|milestone`
 - `kg-maintenance-loop`: `知識圖譜優化|kg 維護|漏資料|去重`
+- `agent-ssh-gateway`: `跑 job|本機執行|ssh job|gateway|自動化腳本`
 
 ## Skills Commands
 - bug closeout:
@@ -56,6 +57,14 @@
 - 技術文件：`brave`
 - 本地程式碼與檔案：先查本地（grep/search）
 - 三層查詢失敗才提問用戶
+
+## 🖥️ 本機執行路由（Gateway vs Bash）
+- **多步驟自動化 / scripts/ 下的 python3 / 需要審計 / AI 自主執行**
+  → 用 SSH Gateway：`./tools/agent-ssh-gateway/scripts/agent-run <job.json>`
+  → 結果讀：`cat tools/agent-ssh-gateway/jobs/done/<id>.result.json`
+  → 詳細操作：`.claude/skills/agent-ssh-gateway/SKILL.md`
+- **單次即時查詢 / 開發中偵錯 / Ryan 在旁確認**
+  → 用 Bash tool 直接執行
 
 ## 環境
 - macOS, 8GB RAM
