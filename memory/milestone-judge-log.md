@@ -1686,3 +1686,21 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-29 13:50 | auto-git-score | 分數 100 | 📥 達到閾值（100/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=90），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-29-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-29-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-approve +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-gateway.sh +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-status +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-switch +10
+
+---
