@@ -34,7 +34,16 @@ if [[ -f "${ENABLED_FLAG}" ]]; then
 else
   echo "  Gateway      : OFF"
 fi
-echo "  Mode         : enforce (固定，不可切換)"
+EXEC_MODE=$(cat /usr/local/var/agentbot/exec-mode 2>/dev/null || echo "auto")
+echo "  Exec Mode    : ${EXEC_MODE}"
+case "${EXEC_MODE}" in
+  approve) echo "               （aionui 人工審批 — 命令暫存，需 agent-approve run）" ;;
+  auto)    echo "               （Genspark 全自動 — 命令直接執行）" ;;
+esac
+PENDING_COUNT=$(ls /usr/local/var/agentbot/pending/*.cmd 2>/dev/null | wc -l | tr -d ' ')
+if (( PENDING_COUNT > 0 )); then
+  echo "  待審批命令   : ${PENDING_COUNT} 個 → agent-approve list"
+fi
 echo "  治理層       : HARD_DENY → ALLOWLIST → deny"
 echo ""
 

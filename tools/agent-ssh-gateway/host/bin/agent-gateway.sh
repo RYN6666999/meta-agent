@@ -22,6 +22,8 @@ set -uo pipefail
 
 AGENT_HOME="/Users/agentbot"
 ENABLED_FLAG="/usr/local/var/agentbot/enabled.flag"
+EXEC_MODE_FILE="/usr/local/var/agentbot/exec-mode"
+PENDING_DIR="/usr/local/var/agentbot/pending"
 WORKSPACE="${AGENT_HOME}/workspace"
 LOG_DIR="${AGENT_HOME}/logs"
 LOG_FILE="${LOG_DIR}/agent-ssh.log"
@@ -116,12 +118,29 @@ if ! _in_allowlist "${CMD_TOKEN}"; then
   exit 1
 fi
 
-# ── 允許通過，切換工作目錄並執行 ───────────────────────────────────
+# ── Exec Mode 檢查（approve / auto）────────────────────────────────
+#
+# auto    : 直接執行（預設，Genspark 全自動模式）
+# approve : 命令暫存 pending/，等待 agent-approve run 審批後才執行
+
+EXEC_MODE=$(cat "${EXEC_MODE_FILE}" 2>/dev/null || echo "auto")
+
+if [[ "${EXEC_MODE}" == "approve" ]]; then
+  mkdir -p "${PENDING_DIR}"
+  PENDING_ID="$(date +%Y%m%dT%H%M%S)-$$"
+  printf '%s\n' "${REQUESTED_CMD}" > "${PENDING_DIR}/${PENDING_ID}.cmd"
+  log "HOLD " "cmd=${REQUESTED_CMD} mode=approve pending_id=${PENDING_ID}"
+  echo "[gateway] APPROVE 模式：命令已暫存 (ID: ${PENDING_ID})" >&2
+  echo "[gateway] 執行 agent-approve list 查看，agent-approve run ${PENDING_ID} 審批" >&2
+  exit 2
+fi
+
+# ── Auto 模式：直接執行 ─────────────────────────────────────────────
 
 mkdir -p "${WORKSPACE}"
 cd "${WORKSPACE}" || deny "cannot cd to workspace"
 
-log "ALLOW" "cmd=${REQUESTED_CMD}"
+log "ALLOW" "cmd=${REQUESTED_CMD} mode=auto"
 
 bash -lc "${REQUESTED_CMD}"
 EXIT_CODE=$?

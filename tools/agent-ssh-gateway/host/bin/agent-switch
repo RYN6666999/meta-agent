@@ -48,23 +48,50 @@ case "${CMD}" in
     echo "[agent-switch] OFF — agent SSH 存取已停用"
     ;;
 
+  source)
+    # 切換執行來源模式：auto（Genspark 全自動）| approve（aionui 人工審批）
+    NEW_SOURCE="${2:-}"
+    case "${NEW_SOURCE}" in
+      auto|approve) ;;
+      *)
+        echo "用法: agent-switch source <auto|approve>" >&2
+        echo "  auto    — 命令直接執行（Genspark 全自動）" >&2
+        echo "  approve — 命令暫存待審批（aionui 人工確認）" >&2
+        exit 1
+        ;;
+    esac
+    printf '%s\n' "${NEW_SOURCE}" > /usr/local/var/agentbot/exec-mode
+    echo "[agent-switch] 執行模式：${NEW_SOURCE}"
+    ;;
+
   status)
     echo "=== agent-switch 狀態 ==="
     if [[ -f "${ENABLED_FLAG}" ]]; then
-      echo "  Gateway : ON  (enabled.flag 存在)"
+      echo "  Gateway    : ON"
     else
-      echo "  Gateway : OFF (enabled.flag 不存在)"
+      echo "  Gateway    : OFF"
+    fi
+    EXEC_MODE=$(cat /usr/local/var/agentbot/exec-mode 2>/dev/null || echo "auto")
+    echo "  Exec Mode  : ${EXEC_MODE}"
+    case "${EXEC_MODE}" in
+      approve) echo "             （aionui 人工審批：命令暫存，需 agent-approve run）" ;;
+      auto)    echo "             （Genspark 全自動：命令直接執行）" ;;
+    esac
+    PENDING_COUNT=$(ls /usr/local/var/agentbot/pending/*.cmd 2>/dev/null | wc -l | tr -d ' ')
+    if (( PENDING_COUNT > 0 )); then
+      echo "  待審批命令 : ${PENDING_COUNT} 個 → 執行 agent-approve list"
     fi
     echo ""
     if [[ -f "${ENABLED_FLAG}" ]]; then
-      echo "  => READY（可接受 agent 連線）"
+      echo "  => READY（可接受 agent 連線，模式=${EXEC_MODE}）"
     else
       echo "  => OFF（gateway 拒絕所有命令）"
     fi
     ;;
 
   *)
-    echo "用法: agent-switch <on|off|status>" >&2
+    echo "用法: agent-switch <on|off|status|source>" >&2
+    echo "      agent-switch source <auto|approve>" >&2
     exit 1
     ;;
 

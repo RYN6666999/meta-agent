@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# agent-approve — 審批 approve 模式下的待執行命令
+#
+# 部署位置：/usr/local/bin/agent-approve
+#
+# 用法：
+#   agent-approve list              # 列出所有待審批命令
+#   agent-approve run <id>          # 審批並執行指定命令
+#   agent-approve run-all           # 審批並執行全部待審批命令
+#   agent-approve deny <id>         # 拒絕並刪除指定命令
+#   agent-approve deny-all          # 清除所有待審批命令
+#
+# 設計原則：
+#   - approve 模式下 gateway 暫存命令到 PENDING_DIR
+#   - 此腳本讀取暫存，讓 Ryan 決定要 run 還是 deny
+#   - run 時透過 SSH 以 agentbot 身份執行（仍走 gateway）
+
+set -uo pipefail
+
+PENDING_DIR="/usr/local/var/agentbot/pending"
+SSH_KEY="${HOME}/.ssh/agentbot_ed25519"
+
+_check_pending_dir() {
+  mkdir -p "${PENDING_DIR}"
+}
+
+_list_pending() {
+  local files
+  files=$(ls "${PENDING_DIR}"/*.cmd 2>/dev/null)
+  if [[ -z "${files}" ]]; then
+    echo "  （目前沒有待審批命令）"
+    return
+  fi
+  echo "${files}" | while IFS= read -r f; do
+    local id cmd
+    id=$(basename "${f}" .cmd)
+    cmd=$(cat "${f}")
+    echo "  [${id}]"
+    echo "    命令：${cmd}"
+    echo ""
+  done
+}
+
+_run_one() {
+  local id="${1:-}"
+  local cmd_file="${PENDING_DIR}/${id}.cmd"
+  if [[ ! -f "${cmd_file}" ]]; then
+    echo "[agent-approve] 找不到 ID：${id}" >&2
+    exit 1
+  fi
+  local cmd
+  cmd=$(cat "${cmd_file}")
+  echo "[agent-approve] ▶ 執行：${cmd}"
+  ssh -i "${SSH_KEY}" -o BatchMode=yes -o ConnectTimeout=10 agentbot@localhost "${cmd}"
+  local exit_code=$?
+  rm -f "${cmd_file}"
+  echo "[agent-approve] 完成（exit=${exit_code}），已從 pending 移除"
+  return ${exit_code}
+}
+
+CMD="${1:-}"
+
+case "${CMD}" in
+
+  list)
+    _check_pending_dir
+    echo "=== 待審批命令 ==="
+    _list_pending
+    ;;
+
+  run)
+    _check_pending_dir
+    _run_one "${2:-}"
+    ;;
+
+  run-all)
+    _check_pending_dir
+    files=$(ls "${PENDING_DIR}"/*.cmd 2>/dev/null || true)
+    if [[ -z "${files}" ]]; then
+      echo "[agent-approve] 沒有待審批命令"
+      exit 0
+    fi
+    echo "[agent-approve] 執行全部待審批命令..."
+    echo "${files}" | while IFS= read -r f; do
+      id=$(basename "${f}" .cmd)
+      _run_one "${id}" || true
+    done
+    echo "[agent-approve] 全部完成"
+    ;;
+
+  deny)
+    _check_pending_dir
+    id="${2:-}"
+    cmd_file="${PENDING_DIR}/${id}.cmd"
+    if [[ ! -f "${cmd_file}" ]]; then
+      echo "[agent-approve] 找不到 ID：${id}" >&2
+      exit 1
+    fi
+    cmd=$(cat "${cmd_file}")
+    rm -f "${cmd_file}"
+    echo "[agent-approve] 已拒絕：${cmd}"
+    ;;
+
+  deny-all)
+    _check_pending_dir
+    count=$(ls "${PENDING_DIR}"/*.cmd 2>/dev/null | wc -l | tr -d ' ')
+    rm -f "${PENDING_DIR}"/*.cmd 2>/dev/null || true
+    echo "[agent-approve] 已清除 ${count} 個待審批命令"
+    ;;
+
+  *)
+    echo "用法: agent-approve <list|run <id>|run-all|deny <id>|deny-all>" >&2
+    exit 1
+    ;;
+
+esac
+
+exit 0
