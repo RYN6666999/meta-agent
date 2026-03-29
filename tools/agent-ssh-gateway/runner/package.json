@@ -6,6 +6,7 @@
   "scripts": {
     "refresh-auth": "ts-node src/refresh-auth.ts",
     "run-job": "ts-node src/run-job.ts",
+    "relay": "ts-node src/relay.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },

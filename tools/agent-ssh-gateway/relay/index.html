@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relay Monitor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+    background: #0f1117;
+    color: #e1e4e8;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; font-weight: 600; color: #f0f6fc; }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #3fb950; flex-shrink: 0;
+    box-shadow: 0 0 6px #3fb950;
+  }
+  #status-dot.offline { background: #f85149; box-shadow: 0 0 6px #f85149; }
+  #uptime { font-size: 12px; color: #8b949e; margin-left: auto; }
+  #event-count { font-size: 12px; color: #8b949e; }
+
+  /* ── Layout ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Transcript ── */
+  #transcript-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #30363d;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #30363d;
+    background: #161b22;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #transcript {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+  }
+
+  .event {
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .event.claude_code  { background: #0d1117; border-color: #1f6feb44; }
+  .event.genspark     { background: #0d1117; border-color: #3fb95044; }
+  .event.ryan         { background: #0d1117; border-color: #f8514966; }
+  .event.interrupt    { background: #2d1b1b; border-color: #f85149; }
+
+  .event-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+  }
+  .badge.claude_code { background: #1f6feb33; color: #58a6ff; }
+  .badge.genspark    { background: #3fb95033; color: #3fb950; }
+  .badge.ryan        { background: #f8514933; color: #f85149; }
+
+  .msg-type { font-size: 11px; color: #8b949e; }
+  .event-ts { font-size: 11px; color: #484f58; margin-left: auto; }
+
+  .event-body { color: #c9d1d9; }
+  .event-body .label { color: #8b949e; font-size: 11px; }
+  .event-body .value { color: #e1e4e8; }
+  .event-body .decision { color: #3fb950; font-weight: 600; }
+  .event-body .question { color: #d2a679; }
+  .event-body .instruction { color: #f85149; font-weight: 600; }
+  .next-actions { margin-top: 4px; }
+  .next-actions span {
+    display: inline-block;
+    background: #21262d;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    margin: 2px 2px 0 0;
+    color: #8b949e;
+  }
+
+  #empty-state {
+    color: #484f58;
+    font-size: 13px;
+    text-align: center;
+    margin: auto;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  /* ── Interrupt panel ── */
+  #interrupt-panel {
+    padding: 16px;
+    border-bottom: 1px solid #30363d;
+    flex-shrink: 0;
+  }
+  #interrupt-panel h2 {
+    font-size: 11px; font-weight: 600;
+    color: #8b949e; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 12px;
+  }
+
+  #task-id-input {
+    width: 100%;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e1e4e8;
+    font-size: 12px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    outline: none;
+  }
+  #task-id-input:focus { border-color: #58a6ff; }
+  #task-id-input::placeholder { color: #484f58; }
+
+  #instruction-input {
+    width: 100%;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e1e4e8;
+    font-size: 12px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    outline: none;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+  }
+  #instruction-input:focus { border-color: #58a6ff; }
+  #instruction-input::placeholder { color: #484f58; }
+
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn {
+    flex: 1;
+    padding: 7px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    min-width: 60px;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { opacity: 0.7; }
+  .btn.approve  { background: #238636; color: #fff; }
+  .btn.pause    { background: #9e6a03; color: #fff; }
+  .btn.revise   { background: #1f6feb; color: #fff; }
+  .btn.stop     { background: #b62324; color: #fff; }
+
+  #send-feedback {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #3fb950;
+    min-height: 16px;
+    text-align: center;
+  }
+
+  /* ── Status panel ── */
+  #status-panel {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  #status-panel h2 {
+    font-size: 11px; font-weight: 600;
+    color: #8b949e; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 10px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #21262d;
+    font-size: 12px;
+  }
+  .stat-label { color: #8b949e; }
+  .stat-value { color: #e1e4e8; font-weight: 500; }
+  .stat-value.green { color: #3fb950; }
+  .stat-value.red   { color: #f85149; }
+
+  #pending-interrupt-alert {
+    display: none;
+    background: #2d1b1b;
+    border: 1px solid #f85149;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #f85149;
+    margin-top: 10px;
+    text-align: center;
+  }
+  #pending-interrupt-alert.visible { display: block; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="status-dot"></div>
+  <h1>Relay Monitor</h1>
+  <span id="event-count">0 events</span>
+  <span id="uptime">—</span>
+</header>
+
+<div class="main">
+
+  <!-- Transcript -->
+  <div id="transcript-panel">
+    <div class="panel-header">
+      Transcript
+      <span id="task-filter-label" style="color:#484f58;font-weight:400"></span>
+    </div>
+    <div id="transcript">
+      <div id="empty-state">等待事件…</div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+
+    <!-- Interrupt -->
+    <div id="interrupt-panel">
+      <h2>插嘴 / Interrupt</h2>
+      <input id="task-id-input" type="text" placeholder="task_id（留空 = 最新 task）">
+      <textarea id="instruction-input" placeholder="指令內容（revise 時填寫）"></textarea>
+      <div class="btn-row">
+        <button class="btn approve" onclick="sendInterrupt('approve')">✓ Approve</button>
+        <button class="btn pause"   onclick="sendInterrupt('pause')">⏸ Pause</button>
+        <button class="btn revise"  onclick="sendInterrupt('revise')">✎ Revise</button>
+        <button class="btn stop"    onclick="sendInterrupt('stop')">✕ Stop</button>
+      </div>
+      <div id="send-feedback"></div>
+    </div>
+
+    <!-- Status -->
+    <div id="status-panel">
+      <h2>Status</h2>
+      <div class="stat-row">
+        <span class="stat-label">Relay</span>
+        <span class="stat-value green" id="stat-relay">running</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Uptime</span>
+        <span class="stat-value" id="stat-uptime">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Events</span>
+        <span class="stat-value" id="stat-events">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">claude_code</span>
+        <span class="stat-value" id="stat-cc">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">genspark</span>
+        <span class="stat-value" id="stat-gs">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">ryan</span>
+        <span class="stat-value" id="stat-ryan">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Active Tasks</span>
+        <span class="stat-value" id="stat-tasks">—</span>
+      </div>
+      <div id="pending-interrupt-alert">⚠️ Pending Interrupt</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const BASE = 'http://localhost:9300';
+let lastEventCount = 0;
+let latestTaskId = null;
+
+// ── 格式化 ──────────────────────────────────────────────
+
+function formatUptime(s) {
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
+  return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+}
+
+function formatTs(iso) {
+  return iso ? iso.slice(11, 19) : '—';
+}
+
+function renderEvent(e) {
+  const p = e.payload || {};
+  const isInterrupt = e.message_type === 'human.interrupt';
+  const cls = `event ${e.sender}${isInterrupt ? ' interrupt' : ''}`;
+
+  let body = '';
+
+  if (p.goal)        body += `<div><span class="label">Goal </span><span class="value">${esc(p.goal)}</span></div>`;
+  if (p.question)    body += `<div><span class="label">Q </span><span class="question">${esc(p.question)}</span></div>`;
+  if (p.decision)    body += `<div><span class="label">Decision </span><span class="decision">${esc(p.decision)}</span></div>`;
+  if (p.reasoning?.length) body += `<div><span class="label">Why </span><span class="value">${p.reasoning.map(esc).join(' · ')}</span></div>`;
+  if (p.next_actions?.length) {
+    body += `<div class="next-actions"><span class="label">Next </span>${p.next_actions.map(a=>`<span>${esc(a)}</span>`).join('')}</div>`;
+  }
+  if (p.confidence)  body += `<div><span class="label">Confidence </span><span class="value">${esc(p.confidence)}</span></div>`;
+  if (p.action)      body += `<div><span class="label">Action </span><span class="instruction">${esc(p.action).toUpperCase()}</span></div>`;
+  if (p.instruction) body += `<div><span class="label">Instruction </span><span class="instruction">${esc(p.instruction)}</span></div>`;
+  if (p.summary)     body += `<div><span class="label">Summary </span><span class="value">${esc(p.summary)}</span></div>`;
+  if (p.status)      body += `<div><span class="label">Status </span><span class="value">${esc(p.status)}</span></div>`;
+  if (p.last_action) body += `<div><span class="label">Last </span><span class="value">${esc(p.last_action)}</span></div>`;
+
+  if (!body) body = `<span class="label">${esc(e.message_type)}</span>`;
+
+  return `<div class="${cls}">
+    <div class="event-header">
+      <span class="badge ${e.sender}">${e.sender.replace('_',' ')}</span>
+      <span class="msg-type">${esc(e.message_type)}</span>
+      <span class="event-ts">${formatTs(e.timestamp)}</span>
+    </div>
+    <div class="event-body">${body}</div>
+  </div>`;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Poll transcript ──────────────────────────────────────
+
+async function pollTranscript() {
+  try {
+    const r = await fetch(`${BASE}/transcript?last=100`);
+    const data = await r.json();
+    const events = data.events || [];
+
+    if (events.length !== lastEventCount) {
+      lastEventCount = events.length;
+      const box = document.getElementById('transcript');
+
+      if (events.length === 0) {
+        box.innerHTML = '<div id="empty-state">等待事件…</div>';
+      } else {
+        box.innerHTML = events.map(renderEvent).join('');
+        box.scrollTop = box.scrollHeight;
+        // 記錄最新 task_id
+        const last = events[events.length - 1];
+        if (last.task_id) latestTaskId = last.task_id;
+      }
+
+      document.getElementById('event-count').textContent = `${events.length} events`;
+    }
+  } catch(e) {
+    // offline handled by status poll
+  }
+}
+
+// ── Poll status ──────────────────────────────────────────
+
+async function pollStatus() {
+  const dot = document.getElementById('status-dot');
+  try {
+    const r = await fetch(`${BASE}/status`);
+    const d = await r.json();
+
+    dot.classList.remove('offline');
+    document.getElementById('uptime').textContent = formatUptime(d.uptime_s);
+    document.getElementById('stat-uptime').textContent = formatUptime(d.uptime_s);
+    document.getElementById('stat-events').textContent = d.transcript_events;
+    document.getElementById('stat-cc').textContent    = d.events_by_sender?.claude_code ?? 0;
+    document.getElementById('stat-gs').textContent    = d.events_by_sender?.genspark ?? 0;
+    document.getElementById('stat-ryan').textContent  = d.events_by_sender?.ryan ?? 0;
+    document.getElementById('stat-tasks').textContent = (d.active_tasks || []).join(', ') || '—';
+
+    const alert = document.getElementById('pending-interrupt-alert');
+    alert.classList.toggle('visible', !!d.pending_interrupt);
+
+    // 自動填 task_id
+    if (d.active_tasks?.length && !document.getElementById('task-id-input').value) {
+      const latest = d.active_tasks[d.active_tasks.length - 1];
+      document.getElementById('task-id-input').placeholder = `task_id（留空 = ${latest}）`;
+      latestTaskId = latest;
+    }
+
+  } catch(e) {
+    dot.classList.add('offline');
+    document.getElementById('stat-relay').textContent = 'offline';
+    document.getElementById('stat-relay').className = 'stat-value red';
+  }
+}
+
+// ── Send interrupt ───────────────────────────────────────
+
+async function sendInterrupt(action) {
+  const taskId = document.getElementById('task-id-input').value.trim() || latestTaskId || 'unknown';
+  const instruction = document.getElementById('instruction-input').value.trim();
+  const fb = document.getElementById('send-feedback');
+
+  const payload = { action, priority: 'high' };
+  if (instruction) payload.instruction = instruction;
+
+  try {
+    const r = await fetch(`${BASE}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: 'ryan',
+        message_type: 'human.interrupt',
+        task_id: taskId,
+        turn_id: `turn_${Date.now()}`,
+        payload
+      })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      fb.textContent = `✓ ${action.toUpperCase()} 已送出`;
+      fb.style.color = '#3fb950';
+      if (action !== 'revise') document.getElementById('instruction-input').value = '';
+    } else {
+      throw new Error('failed');
+    }
+  } catch(e) {
+    fb.textContent = '✕ 送出失敗，relay 是否在線？';
+    fb.style.color = '#f85149';
+  }
+
+  setTimeout(() => { fb.textContent = ''; }, 3000);
+}
+
+// ── Start ────────────────────────────────────────────────
+
+pollStatus();
+pollTranscript();
+setInterval(pollStatus, 3000);
+setInterval(pollTranscript, 2000);
+</script>
+</body>
+</html>

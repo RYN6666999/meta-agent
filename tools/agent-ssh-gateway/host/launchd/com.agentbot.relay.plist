@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.agentbot.relay.plist — Genspark ↔ Claude Code Relay Server
+
+  部署：
+    cp host/bin/agent-relay.sh /usr/local/bin/agent-relay.sh
+    chmod 755 /usr/local/bin/agent-relay.sh
+    cp host/launchd/com.agentbot.relay.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.agentbot.relay.plist
+
+  管理：
+    launchctl stop  com.agentbot.relay
+    launchctl start com.agentbot.relay
+    launchctl unload ~/Library/LaunchAgents/com.agentbot.relay.plist
+
+  狀態：
+    curl http://localhost:9300/status
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.agentbot.relay</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/agent-relay.sh</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway/logs/relay.stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway/logs/relay.stderr.log</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway/runner</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENT_SSH_GATEWAY_DIR</key>
+    <string>/Users/ryan/meta-agent/tools/agent-ssh-gateway</string>
+    <key>PATH</key>
+    <string>/Users/ryan/.nvm/versions/node/v20.18.3/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
