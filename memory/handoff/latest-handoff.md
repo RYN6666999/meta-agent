@@ -1,64 +1,86 @@
 ---
-date: 2026-03-28
-session: meta-agent — Session 5
-status: 建設中
-generated: 2026-03-28 23:50
+date: 2026-03-29
+session: meta-agent — Session 6 (agent-ssh-gateway P7 Lite)
+status: 完結
+generated: 2026-03-29 13:10
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-03-28 23:50 自動生成）
+## 系統狀態（2026-03-29 13:10）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
+| agent-ssh-gateway | ✅ P7 Lite 運行中 |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(61848) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：150
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+
+---
+
+## 本 Session 完成項目
+
+### agent-ssh-gateway P7 Lite 瘦身（全部完結）
+
+**commit**: `9925b9e` feat(ssh-gateway): P7 Lite — 固定2層治理, enabled.flag移至ryan可寫路徑
+
+**改動摘要**：
+| 檔案 | 變更 |
+|------|------|
+| `host/bin/gateway-policy.sh` | 移除 OBSERVELIST + GATEWAY_MODE，只留 HARD_DENY + ALLOWLIST（34命令） |
+| `host/bin/agent-gateway.sh` | 移除4模式邏輯，固定 HARD_DENY → ALLOWLIST → deny |
+| `host/bin/agent-switch` | 移除 mode 子命令，enabled.flag 改用 `/usr/local/var/agentbot/`（免sudo） |
+| `host/bin/agent-status` | 新增，最小狀態腳本 |
+| `scripts/agent-run` | 新增，主要入口 thin wrapper |
+| `README.md` | 改寫為個人 Lite 版 |
+
+**驗收通過**：
+- ✅ SSH job 執行（echo / pwd / date）
+- ✅ 白名單外命令被拒（exit 3）
+- ✅ `agent-switch off` 立即阻斷
+- ✅ `agent-status` 輸出正確
+- ✅ `agent-switch on/off/status` 全免 sudo
+
+**基礎建設（一次性，已完成）**：
+- `/usr/local/var/agentbot/` 建立（ryan 擁有，agentbot 可讀）
+- `/Users/agentbot/.ssh/authorized_keys` 已部署
+- sshd ForceCommand 設定正常
+- `~/.ssh/known_hosts` localhost 已加入
+
+---
+
+## 日常使用（P7 Lite）
+
+```bash
+agent-switch on                          # 開
+./scripts/agent-run <job.json>           # 執行 job（唯一入口）
+agent-status                             # 狀態
+agent-switch off                         # 緊急關
+```
 
 ---
 
 ## 未完成項目
 
+- [ ] LightRAG 服務離線（非本 session 工作項目）
+- [ ] n8n 服務離線（非本 session 工作項目）
+- [ ] pending-decisions.md 有大量 auto-git-score pending（舊積壓，可擇期清理）
 
-## 下一步（立刻執行）
-1. Gap-1｜Bug Closeout 一致性（P0）
-2. Gap-2｜重大變更 guard 命中率（P0）
-3. Gap-3｜KG 維護節律（P1）
+---
+
+## 下一步建議（前 3 優先）
+
+1. **Gap-1｜Bug Closeout 一致性（P0）** — 確認 bug-closeout-autopipeline 每次修復後有確實執行
+2. **Gap-2｜LightRAG / n8n 服務恢復（P1）** — 兩個服務均離線，影響 KG 維護與自動化
+3. **Gap-3｜pending-decisions.md 積壓清理（P2）** — 50+ pending 條目，擇期 bulk approve 或 dismiss
 
 ---
 
 ## 最近 Git 提交
-- `6e93d82 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
-- `183af9a auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
-- `09a58fa auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
-- `2fbd45f auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
-- `a664adb auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
-- `e8715f6 auto: [error_fix+misc] score=65 超過閾值 50 自動備份`
 
-## 最近 Error Log
-- 2026-03-28-mobile-bridge-api-down.md
-- 2026-03-28-mobile-bridge-tunnel-down.md
-- 2026-03-28-health-check.md
-- 2026-03-27-mobile-bridge-tunnel-down.md
-- 2026-03-27-mobile-bridge-api-down.md
-
-## 最近驗證
-- E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
-
-## 最近 Code Intelligence
-- 2026-03-28 08:00:06 | trigger=health_check_failure | unavailable | provider unavailable
-
----
-
-## 關鍵路徑
-| 項目 | 路徑/URL |
-|------|---------|
-| 工作目錄 | `/Users/ryan/meta-agent/` |
-| 法典 | `/Users/ryan/meta-agent/law.json` |
-| 完整計劃 | `/Users/ryan/meta-agent/memory/master-plan.md` |
-| LightRAG | http://localhost:9621 |
-| n8n | http://localhost:5678 |
-| memory webhook | http://localhost:5678/webhook/9ABqAtFoJWHmhkEa/webhook/memory-extract |
-| extract-session | `bash /Users/ryan/meta-agent/scripts/extract-session.sh '對話內容'` |
+- `9925b9e feat(ssh-gateway): P7 Lite — 固定2層治理, enabled.flag移至ryan可寫路徑`
+- `885ae70 auto: [error_fix+misc] score=100 超過閾值 50 自動備份`
+- `0fbdaf5 auto: [error_fix+misc] score=80 超過閾值 50 自動備份`
+- `087b7fe docs: Phase 1 MVP complete — update tracking board`
+- `374aacb feat(crm-memory): Batch B+C+D complete — full Phase 1 MVP`
