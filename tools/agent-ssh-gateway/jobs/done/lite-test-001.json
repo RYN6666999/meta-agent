@@ -1,0 +1,18 @@
+{
+  "job_id": "lite-test-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "echo hello-from-gateway"
+    },
+    {
+      "kind": "ssh",
+      "command": "pwd"
+    },
+    {
+      "kind": "ssh",
+      "command": "date"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ set -uo pipefail
 # ── 設定 ─────────────────────────────────────────────────────────────
 
 AGENT_HOME="/Users/agentbot"
-ENABLED_FLAG="${AGENT_HOME}/.ssh/enabled.flag"
+ENABLED_FLAG="/usr/local/var/agentbot/enabled.flag"
 WORKSPACE="${AGENT_HOME}/workspace"
 LOG_DIR="${AGENT_HOME}/logs"
 LOG_FILE="${LOG_DIR}/agent-ssh.log"

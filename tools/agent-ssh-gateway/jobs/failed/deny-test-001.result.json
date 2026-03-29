@@ -1,0 +1,19 @@
+{
+  "job_id": "deny-test-001",
+  "status": "failed",
+  "started_at": "2026-03-29T05:04:54.516Z",
+  "finished_at": "2026-03-29T05:04:54.708Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "error",
+      "output": {
+        "stdout": "",
+        "stderr": "[gateway] 拒絕: 命令不在白名單（python）\n",
+        "exitCode": 1
+      },
+      "error": "exit code 1"
+    }
+  ],
+  "error": "exit code 1"
+}

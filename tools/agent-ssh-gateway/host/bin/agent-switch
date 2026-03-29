@@ -2,12 +2,17 @@
 # agent-switch — AI Agent SSH 存取開關（P7 Lite）
 #
 # 部署位置：/usr/local/bin/agent-switch（目標主機）
-# 需以 agentbot 身份執行（或同群組有讀取權限的帳號）
+# 可以 ryan 身份執行（sudo 管 agentbot 目錄）
 #
 # 日常用法：
 #   agent-switch on       # 啟用 agent SSH 存取
 #   agent-switch off      # 停用 agent SSH 存取（立即生效）
 #   agent-switch status   # 查看目前狀態
+#
+# P7 Lite 設計：
+#   - on/off 只管 enabled.flag（gateway 的唯一開關）
+#   - authorized_keys 永久部署，不再搬動
+#   - enabled.flag 在 /Users/agentbot/.ssh/，需 sudo 操作
 #
 # Exit codes：
 #   0 = 操作成功
@@ -15,64 +20,30 @@
 
 set -uo pipefail
 
-# ── 設定 ─────────────────────────────────────────────────────────────
-
 AGENT_HOME="/Users/agentbot"
-SSH_DIR="${AGENT_HOME}/.ssh"
-ENABLED_FLAG="${SSH_DIR}/enabled.flag"
-AUTH_KEYS="${SSH_DIR}/authorized_keys"
-AUTH_KEYS_DISABLED="${SSH_DIR}/authorized_keys.disabled"
-
-# ── 輔助函式 ──────────────────────────────────────────────────────────
+ENABLED_FLAG="/usr/local/var/agentbot/enabled.flag"
+AUTH_KEYS="${AGENT_HOME}/.ssh/authorized_keys"
 
 err() {
   echo "[agent-switch] ERROR: $*" >&2
   exit 1
 }
 
-check_ssh_dir() {
-  if [[ ! -d "${SSH_DIR}" ]]; then
-    err "${SSH_DIR} 不存在，請先建立 agentbot 帳號與 .ssh 目錄"
-  fi
-}
-
-# ── 主邏輯 ───────────────────────────────────────────────────────────
-
 CMD="${1:-}"
 
 case "${CMD}" in
 
   on)
-    check_ssh_dir
-    if [[ ! -f "${AUTH_KEYS}" && -f "${AUTH_KEYS_DISABLED}" ]]; then
-      mv "${AUTH_KEYS_DISABLED}" "${AUTH_KEYS}" \
-        || err "無法還原 authorized_keys"
-      chmod 600 "${AUTH_KEYS}"
-      echo "[agent-switch] authorized_keys 已還原"
-    elif [[ -f "${AUTH_KEYS}" ]]; then
-      echo "[agent-switch] authorized_keys 已存在，略過"
-    else
-      err "找不到 authorized_keys 或 authorized_keys.disabled，請先部署公鑰"
-    fi
-    touch "${ENABLED_FLAG}" || err "無法建立 enabled.flag"
-    chmod 600 "${ENABLED_FLAG}"
+    touch "${ENABLED_FLAG}" || err "無法建立 enabled.flag（請先執行一次性初始化）"
     echo "[agent-switch] ON — agent SSH 存取已啟用"
     ;;
 
   off)
-    check_ssh_dir
     if [[ -f "${ENABLED_FLAG}" ]]; then
       rm -f "${ENABLED_FLAG}" || err "無法刪除 enabled.flag"
       echo "[agent-switch] enabled.flag 已刪除"
     else
       echo "[agent-switch] enabled.flag 不存在，略過"
-    fi
-    if [[ -f "${AUTH_KEYS}" ]]; then
-      mv "${AUTH_KEYS}" "${AUTH_KEYS_DISABLED}" \
-        || err "無法停用 authorized_keys"
-      echo "[agent-switch] authorized_keys 已停用"
-    else
-      echo "[agent-switch] authorized_keys 不存在，略過"
     fi
     echo "[agent-switch] OFF — agent SSH 存取已停用"
     ;;
@@ -84,22 +55,11 @@ case "${CMD}" in
     else
       echo "  Gateway : OFF (enabled.flag 不存在)"
     fi
-    if [[ -f "${AUTH_KEYS}" ]]; then
-      key_count=$(wc -l < "${AUTH_KEYS}" 2>/dev/null || echo "?")
-      echo "  authorized_keys : 存在 (${key_count} 行)"
-    else
-      echo "  authorized_keys : 不存在"
-    fi
-    if [[ -f "${AUTH_KEYS_DISABLED}" ]]; then
-      echo "  authorized_keys.disabled : 存在（SSH 已停用）"
-    fi
     echo ""
-    if [[ -f "${ENABLED_FLAG}" && -f "${AUTH_KEYS}" ]]; then
+    if [[ -f "${ENABLED_FLAG}" ]]; then
       echo "  => READY（可接受 agent 連線）"
-    elif [[ ! -f "${ENABLED_FLAG}" ]]; then
-      echo "  => OFF（gateway 拒絕所有命令）"
     else
-      echo "  => PARTIAL（flag 存在但 authorized_keys 遺失）"
+      echo "  => OFF（gateway 拒絕所有命令）"
     fi
     ;;
 

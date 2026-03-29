@@ -1,0 +1,10 @@
+{
+  "job_id": "deny-test-001",
+  "type": "ssh",
+  "steps": [
+    {
+      "kind": "ssh",
+      "command": "python /tmp/evil.py"
+    }
+  ]
+}

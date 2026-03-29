@@ -1,0 +1,32 @@
+{
+  "job_id": "lite-test-001",
+  "status": "done",
+  "started_at": "2026-03-29T05:04:49.167Z",
+  "finished_at": "2026-03-29T05:04:49.811Z",
+  "steps": [
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "hello-from-gateway\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "/Users/agentbot/workspace\n",
+        "stderr": ""
+      }
+    },
+    {
+      "kind": "ssh",
+      "status": "ok",
+      "output": {
+        "stdout": "Sun Mar 29 13:04:49 CST 2026\n",
+        "stderr": ""
+      }
+    }
+  ]
+}

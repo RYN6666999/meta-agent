@@ -16,7 +16,7 @@
 set -uo pipefail
 
 AGENT_HOME="/Users/agentbot"
-ENABLED_FLAG="${AGENT_HOME}/.ssh/enabled.flag"
+ENABLED_FLAG="/usr/local/var/agentbot/enabled.flag"
 LOG_FILE="${AGENT_HOME}/logs/agent-ssh.log"
 
 # runner log 預設路徑（可被環境變數覆寫，否則用 hardcoded 專案路徑）
