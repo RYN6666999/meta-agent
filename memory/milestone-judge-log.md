@@ -1639,3 +1639,37 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-29 09:40 | auto-git-score | 分數 260 | 📥 達到閾值（260/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=250），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-28-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-28-mobile-bridge-tunnel-down.md +10
+  error-log 新增根因 error-log/2026-03-29-health-check.md +50
+  error-log 新增根因 error-log/2026-03-29-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-29-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/health-check.log +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/persona-tech-radar-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/truth-xval.log +10
+
+---
+
+## 2026-03-29 13:06 | agent-ssh-gateway-p7-lite | 分數 40 | ⏳ 未達閾值（40/60）→ 不建分支
+
+**描述：** P7 Lite 瘦身：scripts/agent-run 新增主入口 wrapper、gateway 固定2層治理、enabled.flag 移至 /usr/local/var/agentbot/、移除4模式/OBSERVELIST/mode切換、驗收全通過 @ 2026-03-29 13:06:11
+
+**評分明細：**
+  其他變更 error-log/2026-03-29-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+
+---
