@@ -26,6 +26,9 @@
 {
   "focal_character": "角色名",
   "secondary_characters": ["角色A", "角色B"],
+  "is_negotiation_scene": false,
+  "negotiation_pattern_tags": [],
+  "scene_labels": [],
   "situation": {
     "external_situation": "描述外部局勢",
     "power_dynamics": "誰強誰弱的分析",
@@ -42,6 +45,7 @@
     "trigger_event": "觸發轉變的事件或對話（變：導致變化的關鍵節點）",
     "after_mindset": "場景結束後的新心態（變：轉化結果）",
     "shift_type": "emotion",
+    "shift_intensity": 3,
     "shift_description": "從X到Y的轉變描述，是否帶來成長（抗脆弱）或退縮",
     "is_reversible": true,
     "evidence_quotes": [
@@ -71,5 +75,19 @@
 }
 
 注意：shift_type 只能是 emotion / values / strategy / identity / stance / none 之一。
+注意：shift_intensity 是強度 1-5，與 shift_type 完全分離，不能混為一個欄位。
 注意：match_level 只能是 full / partial / weak / none 之一。
 注意：mind_shift 欄位同時承載「心」（before_mindset）與「變」（trigger_event + after_mindset + shift_type）兩個維度。
+注意：is_negotiation_scene=true 的條件必須同時滿足：
+  (1) focal_character 是談判或博弈的主動方或共同參與方（不能只是旁觀者或被動接受方）
+  (2) focal_character 本人有明確的條件交換、試探、借勢、施壓、讓步等行為或對話
+  若 focal_character 只是在旁觀別人談判，或只是說了一句話、被試探，則 is_negotiation_scene=false。
+negotiation_pattern_tags 只填 focal_character 本人的行為模式，不填對手對他做了什麼。
+可選標籤：low_posture_control / borrowed_pressure / let_opponent_speak_first / exchange_probe / condition_redefinition / risk_transfer / fake_concession / weakness_to_initiative / information_for_space / rule_rewrite / bluff_detection / tempo_control
+
+注意：scene_labels 是場景分類，可多選，填入 JSON 陣列：
+  "negotiation" — 寧凡主動與他人進行條件交換、價格博弈、施壓談判（必須有來回互動）
+  "decision"    — 寧凡面臨重要的行動抉擇，展現策略思考（可獨自決策，不需對手）
+  "confrontation" — 直接衝突對抗（肢體或言語）
+  "revelation"  — 關鍵資訊揭露或認知轉變的節點
+場景無特殊標記則填 []。negotiation 和 decision 可同時存在。

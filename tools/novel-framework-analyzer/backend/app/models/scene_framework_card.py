@@ -65,6 +65,7 @@ class MindShiftAnalysis(BaseModel):
     trigger_event: str
     after_mindset: str
     shift_type: MindShiftType
+    shift_intensity: int = Field(default=3, ge=1, le=5)  # 強度 1-5，與類型分離
     shift_description: str
     is_reversible: bool
     evidence_quotes: List[EvidenceQuote] = Field(..., min_length=1)
@@ -97,6 +98,9 @@ class SceneFrameworkCardSchema(BaseModel):
     scene_number: int
     focal_character: str
     secondary_characters: List[str] = Field(default_factory=list)
+    is_negotiation_scene: bool = False
+    negotiation_pattern_tags: List[str] = Field(default_factory=list)
+    scene_labels: List[str] = Field(default_factory=list)  # decision / negotiation / confrontation / revelation
     situation: SituationAnalysis
     desire: DesireAnalysis
     mind_shift: MindShiftAnalysis
@@ -130,6 +134,9 @@ class SceneFrameworkCard(Base):
 
     focal_character: Mapped[str]       = mapped_column(String(100), nullable=False, index=True)
     secondary_characters: Mapped[list] = mapped_column(JSON, default=list)
+    is_negotiation_scene: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    negotiation_pattern_tags: Mapped[list] = mapped_column(JSON, default=list)
+    scene_labels: Mapped[list] = mapped_column(JSON, default=list)
 
     situation:  Mapped[dict] = mapped_column(JSON, nullable=False)
     desire:     Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -139,6 +146,7 @@ class SceneFrameworkCard(Base):
     match_level:      Mapped[str]   = mapped_column(String(20), nullable=False, index=True)
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False, index=True)
     mind_shift_type:  Mapped[str]   = mapped_column(String(30), nullable=False, index=True)
+    mind_shift_intensity: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
 
     model_used:       Mapped[str]  = mapped_column(String(100), nullable=False)
     prompt_version:   Mapped[str]  = mapped_column(String(20), nullable=False)
@@ -161,6 +169,9 @@ class SceneFrameworkCard(Base):
             scene_text=scene_text,
             focal_character=card.focal_character,
             secondary_characters=card.secondary_characters,
+            is_negotiation_scene=card.is_negotiation_scene,
+            negotiation_pattern_tags=card.negotiation_pattern_tags,
+            scene_labels=card.scene_labels,
             situation=card.situation.model_dump(),
             desire=card.desire.model_dump(),
             mind_shift=card.mind_shift.model_dump(),
@@ -168,6 +179,7 @@ class SceneFrameworkCard(Base):
             match_level=enum_val(card.judgment.match_level),
             confidence_score=card.judgment.confidence_score,
             mind_shift_type=enum_val(card.mind_shift.shift_type),
+            mind_shift_intensity=card.mind_shift.shift_intensity,
             model_used=card.model_used,
             prompt_version=card.prompt_version,
             analysis_version=card.analysis_version,

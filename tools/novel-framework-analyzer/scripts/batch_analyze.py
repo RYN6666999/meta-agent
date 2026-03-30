@@ -38,48 +38,136 @@ BOOK_ID    = "shangchengzhixia-001"
 # LLM 工廠
 # ---------------------------------------------------------------------------
 
-def build_llm(model_choice: str, env_path: str):
-    """依設定選擇 LLM：ollama > openrouter > mock"""
-    api_key = None
-    if os.path.exists(env_path):
-        for line in open(env_path):
-            if line.startswith("OPENROUTER_API_KEY="):
-                api_key = line.strip().split("=", 1)[1]
+FREE_MODELS = {
+    # OpenRouter 免費模型（rate limit 存在，但無費用）
+    # 中文友好排序：GLM > Llama70B > Qwen3 > Gemma27B
+    "free-glm":    "z-ai/glm-4.5-air:free",               # 中文專屬，最推薦
+    "free-llama":  "meta-llama/llama-3.3-70b-instruct:free",  # 70B，中文可用
+    "free-qwen":   "qwen/qwen3-coder:free",               # Qwen3，中文強
+    "free-gemma":  "google/gemma-3-27b-it:free",          # 27B Gemma
+    "free-gpt":    "openai/gpt-oss-120b:free",            # 120B GPT OSS
+}
 
-    if model_choice == "mock":
-        print("[LLM] Mock 模式")
-        return MockLLMClient()
 
-    # 嘗試 Ollama
+def _load_api_key(env_path: str) -> Optional[str]:
+    if not os.path.exists(env_path):
+        return None
+    for line in open(env_path):
+        if line.startswith("OPENROUTER_API_KEY="):
+            return line.strip().split("=", 1)[1]
+    return None
+
+
+def _ollama_available() -> bool:
     import httpx
     try:
         resp = httpx.get("http://localhost:11434/api/tags", timeout=3)
         if resp.status_code == 200:
             models = [m["name"] for m in resp.json().get("models", [])]
-            target = "qwen2.5:7b"
-            if model_choice == "sonnet":
-                target = None  # 強制走 OpenRouter
-            if target and any(target in m for m in models):
-                from services.llm.ollama_adapter import OllamaClient
-                print(f"[LLM] Ollama {target}（本地免費）")
-                return OllamaClient(model=target)
+            return any("qwen2.5:7b" in m for m in models)
     except Exception:
         pass
+    return False
 
-    # Fallback: OpenRouter
+
+def build_llm(model_choice: str, env_path: str):
+    """依設定選擇 LLM（單一分析器模式）"""
+    api_key = _load_api_key(env_path)
+
+    if model_choice == "mock":
+        print("[LLM] Mock 模式")
+        return MockLLMClient()
+
+    if model_choice == "local":
+        if _ollama_available():
+            from services.llm.ollama_adapter import OllamaClient
+            print("[LLM] Ollama qwen2.5:7b（本地，慢但免費）")
+            return OllamaClient(model="qwen2.5:7b")
+        print("[LLM] Ollama 不可用，fallback → Haiku")
+        model_choice = "haiku"
+
     if not api_key:
         print("[LLM] 找不到 API key，使用 Mock")
         return MockLLMClient()
 
     from services.llm.openrouter_adapter import OpenRouterClient
+
+    # 免費模型
+    if model_choice in FREE_MODELS:
+        m = FREE_MODELS[model_choice]
+        print(f"[LLM] OpenRouter 免費模型：{m}")
+        return OpenRouterClient(api_key=api_key, model=m)
+
     model_map = {
         "haiku":  "anthropic/claude-haiku-4-5",
         "sonnet": "anthropic/claude-sonnet-4-5",
         "gemini": "google/gemini-flash-1.5",
+        "auto":   "anthropic/claude-haiku-4-5",
     }
     or_model = model_map.get(model_choice, "anthropic/claude-haiku-4-5")
     print(f"[LLM] OpenRouter {or_model}")
     return OpenRouterClient(api_key=api_key, model=or_model)
+
+
+def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str):
+    """
+    依 --mode 建立分析器：
+
+      haiku    : OpenRouter Haiku 完整分析（最穩，~0.001 USD/場景）
+      free     : OpenRouter 免費模型（無費用，速度快，中文品質略差）
+      hybrid   : 本地 Stage1 篩選 → Haiku 完整分析（節省 15-25% API 費用）
+      local    : 全本地 Ollama（免費但極慢，8GB RAM 不建議）
+      msa      : OpenRouter Haiku + MSA 節省模式（省 45% tokens）
+      mock     : 測試用
+    """
+    from services.llm.openrouter_adapter import OpenRouterClient
+    api_key = _load_api_key(env_path)
+
+    if mode == "mock":
+        print("[模式] Mock（測試）")
+        return FrameworkAnalyzer(llm_client=MockLLMClient(), prompt_dir=prompt_dir)
+
+    if mode == "hybrid":
+        # 本地 Stage1 篩選 + 雲端分析
+        if not _ollama_available():
+            print("[模式] Hybrid 但 Ollama 不可用 → 改用 haiku 完整模式")
+            mode = "haiku"
+        else:
+            from services.llm.ollama_adapter import OllamaClient
+            from services.llm.hybrid_router import HybridAnalyzer
+            local = OllamaClient(model="qwen2.5:7b")
+            cloud = OpenRouterClient(api_key=api_key, model="anthropic/claude-haiku-4-5")
+            print("[模式] Hybrid — 本地 Stage1 篩選 → Haiku Stage2+3")
+            print("        預估節省 15-25%% API 費用，每場景 3-8 秒（篩除場景 ~45 秒）")
+            return HybridAnalyzer(local_client=local, cloud_client=cloud, prompt_dir=prompt_dir)
+
+    if mode == "free":
+        free_model = FREE_MODELS.get(model_choice, FREE_MODELS["free-qwen"])
+        print(f"[模式] Free — OpenRouter 免費模型 {free_model}")
+        print("        無費用，速度快，中文品質比 Haiku 稍差")
+        llm = OpenRouterClient(api_key=api_key, model=free_model)
+        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir)
+
+    if mode == "msa":
+        from backend.app.services.msa_analyzer import MSAAnalyzer
+        llm = OpenRouterClient(api_key=api_key, model="anthropic/claude-haiku-4-5")
+        print("[模式] MSA + Haiku — 省 ~45%% tokens，品質略低於完整版")
+        return MSAAnalyzer(llm_client=llm)
+
+    if mode == "local":
+        if not _ollama_available():
+            print("[模式] Local 但 Ollama 不可用 → 改 haiku")
+            mode = "haiku"
+        else:
+            from services.llm.ollama_adapter import OllamaClient
+            from backend.app.services.msa_analyzer import MSAAnalyzer
+            print("[模式] Local Ollama（免費，MSA 省 tokens，但慢）")
+            return MSAAnalyzer(llm_client=OllamaClient(model="qwen2.5:7b"))
+
+    # 預設：haiku 完整分析
+    llm = OpenRouterClient(api_key=api_key, model="anthropic/claude-haiku-4-5")
+    print("[模式] Haiku 完整分析（最穩定，~3-8 秒/場景）")
+    return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -128,11 +216,11 @@ class RunStats:
 async def run(
     chapter_start: int,
     chapter_end: int,
+    mode: str,
     model_choice: str,
     skip_existing: bool,
     dry_run: bool,
     concurrency: int,
-    use_msa: bool = False,
 ):
     # 初始化 DB
     init_db()
@@ -144,18 +232,10 @@ async def run(
     with open(NOVEL_PATH, encoding="utf-8") as f:
         text = f.read()
 
-    # 建 LLM + 分析器
+    # 建分析器
     env_path = os.path.join(ROOT, ".env")
-    llm = build_llm(model_choice, env_path)
-    if use_msa:
-        from backend.app.services.msa_analyzer import MSAAnalyzer
-        analyzer = MSAAnalyzer(llm_client=llm)
-        print("[模式] Multi-Stage Analysis（省 ~45% tokens）")
-    else:
-        analyzer = FrameworkAnalyzer(
-            llm_client=llm,
-            prompt_dir=os.path.join(ROOT, "prompts"),
-        )
+    prompt_dir = os.path.join(ROOT, "prompts")
+    analyzer = build_analyzer(mode, model_choice, env_path, prompt_dir)
 
     # 取已存在的 scene_id（用於 skip）
     existing_scene_ids: set[str] = set()
@@ -243,20 +323,32 @@ async def run(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="批次分析《上城之下》")
+    parser = argparse.ArgumentParser(
+        description="批次分析《上城之下》",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument("--chapters", default="1-5",
                         help="章節範圍，如 1-5 或 10-20")
-    parser.add_argument("--model",    default="auto",
-                        choices=["auto", "mock", "haiku", "sonnet", "gemini"],
-                        help="LLM 選擇（auto=優先Ollama）")
+    parser.add_argument("--mode", default="haiku",
+                        choices=["haiku", "free", "hybrid", "msa", "local", "mock"],
+                        help=(
+                            "分析模式：\n"
+                            "  haiku  : OpenRouter Haiku（最穩，~$0.001/場景）  ← 推薦\n"
+                            "  free   : OpenRouter 免費模型（無費用，速度快）    ← 省錢\n"
+                            "  hybrid : 本地Stage1篩選 → Haiku分析（省15-25%%費用）\n"
+                            "  msa    : Haiku + 多階段省token（省45%% tokens）\n"
+                            "  local  : 全本地Ollama（免費但極慢，不建議8GB RAM）\n"
+                            "  mock   : 測試用"
+                        ))
+    parser.add_argument("--free-model", default="free-llama",
+                        choices=list(FREE_MODELS.keys()),
+                        help="--mode free 時使用哪個免費模型（預設 Llama-3.3-70B，最穩定）")
     parser.add_argument("--skip-existing", action="store_true",
                         help="跳過 DB 中已存在的場景")
     parser.add_argument("--dry-run", action="store_true",
                         help="只切場景 + 角色偵測，不呼叫 LLM")
-    parser.add_argument("--concurrency", type=int, default=2,
-                        help="同時分析的場景數（Ollama 建議1-2，OpenRouter可3-5）")
-    parser.add_argument("--msa", action="store_true",
-                        help="使用多階段分析，省約45%% tokens")
+    parser.add_argument("--concurrency", type=int, default=3,
+                        help="同時分析場景數（haiku/free 建議3-5，hybrid/local 建議1-2）")
     args = parser.parse_args()
 
     parts = args.chapters.split("-")
@@ -266,11 +358,11 @@ def main():
     asyncio.run(run(
         chapter_start=start,
         chapter_end=end,
-        model_choice=args.model,
+        mode=args.mode,
+        model_choice=args.free_model if args.mode == "free" else args.mode,
         skip_existing=args.skip_existing,
         dry_run=args.dry_run,
         concurrency=args.concurrency,
-        use_msa=args.msa,
     ))
 
 

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>局心欲變 · 分析系統</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --card: #22263a;
+    --border: #2e3250; --accent: #7c6ff7; --accent2: #e86f3a;
+    --green: #4ade80; --yellow: #facc15; --red: #f87171;
+    --text: #e2e8f0; --muted: #64748b; --tag-bg: #2d3561;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'PingFang TC', sans-serif; font-size: 14px; }
+
+  /* Layout */
+  .app { display: grid; grid-template-columns: 220px 1fr; grid-template-rows: 56px 1fr; height: 100vh; }
+  .topbar { grid-column: 1/-1; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; }
+  .topbar h1 { font-size: 16px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .topbar .stats { display: flex; gap: 20px; margin-left: auto; }
+  .stat { text-align: center; }
+  .stat .n { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .stat .l { font-size: 11px; color: var(--muted); }
+
+  /* Sidebar */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+  .nav-item { padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); transition: all .15s; }
+  .nav-item:hover { background: var(--card); color: var(--text); }
+  .nav-item.active { background: var(--accent); color: #fff; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 12px 12px 4px; }
+
+  /* Main */
+  .main { overflow-y: auto; padding: 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-full { background: #14532d; color: var(--green); }
+  .badge-partial { background: #4a3000; color: var(--yellow); }
+  .badge-weak { background: #4a1818; color: var(--red); }
+  .badge-none { background: #1e1e2e; color: var(--muted); }
+  .badge-nego { background: var(--accent); color: #fff; }
+
+  /* Grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .scene-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all .15s; }
+  .scene-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .scene-card.nego { border-left: 3px solid var(--accent); }
+  .scene-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tag { background: var(--tag-bg); color: #a0aec0; padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+  .conf-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; }
+  .conf-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  /* Detail modal */
+  .modal-overlay { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: min(860px, 95vw); max-height: 90vh; overflow-y: auto; padding: 28px; position: relative; }
+  .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; }
+  .dim-block { background: var(--card); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+  .dim-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 6px; }
+  .dim-text { color: var(--text); line-height: 1.7; font-size: 13px; }
+  .quotes { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .quote { background: var(--bg); border-left: 2px solid var(--accent); padding: 6px 10px; font-size: 12px; color: var(--muted); border-radius: 0 4px 4px 0; }
+  .nego-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .nego-tag { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 11px; }
+
+  /* Upload */
+  .upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 48px; text-align: center; cursor: pointer; transition: all .2s; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: #7c6ff711; }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-info { margin-top: 20px; background: var(--card); border-radius: 8px; padding: 14px; text-align: left; display: none; }
+  .progress-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 12px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+  input[type=file] { display: none; }
+  select, input[type=number] { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+  .btn { padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .form-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .form-label { font-size: 12px; color: var(--muted); }
+  .log-box { background: #000; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #4ade80; max-height: 160px; overflow-y: auto; margin-top: 10px; display: none; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-chip { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; font-size: 12px; transition: all .15s; }
+  .filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .search-input { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 20px; padding: 5px 14px; font-size: 13px; outline: none; width: 180px; }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* Arc chart */
+  .arc-controls { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  .chart-wrap { background: var(--card); border-radius: 12px; padding: 20px; }
+  .arc-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .empty { text-align: center; padding: 48px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Topbar -->
+  <header class="topbar">
+    <h1>局心欲變</h1>
+    <div style="width:1px;height:24px;background:var(--border)"></div>
+    <span style="color:var(--muted);font-size:13px">上城之下 · 分析系統</span>
+    <div class="stats" id="statsBar">
+      <div class="stat"><div class="n" id="s-total">—</div><div class="l">場景</div></div>
+      <div class="stat"><div class="n" id="s-ch">—</div><div class="l">章節</div></div>
+      <div class="stat"><div class="n" id="s-decision">—</div><div class="l">行動決策</div></div>
+      <div class="stat"><div class="n" id="s-nego">—</div><div class="l">談判</div></div>
+      <div class="stat"><div class="n" id="s-conf">—</div><div class="l">平均信心</div></div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section">主功能</div>
+    <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <span class="icon">📊</span> 總覽
+    </div>
+    <div class="nav-item" onclick="showPage('scenes')" id="nav-scenes">
+      <span class="icon">📋</span> 場景列表
+    </div>
+    <div class="nav-item" onclick="showPage('decisions')" id="nav-decisions">
+      <span class="icon">⚡</span> 行動決策
+    </div>
+    <div class="nav-item" onclick="showPage('negotiation')" id="nav-negotiation">
+      <span class="icon">🎯</span> 談判場景
+    </div>
+    <div class="nav-item" onclick="showPage('arc')" id="nav-arc">
+      <span class="icon">📈</span> 角色弧線
+    </div>
+    <div class="nav-section">工具</div>
+    <div class="nav-item" onclick="showPage('upload')" id="nav-upload">
+      <span class="icon">📁</span> 上傳 / 分析
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <h2>總覽</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="card">
+          <h3>心態轉變分布</h3>
+          <canvas id="shiftChart" height="180"></canvas>
+        </div>
+        <div class="card">
+          <h3>角色出場次數</h3>
+          <canvas id="charChart" height="180"></canvas>
+        </div>
+      </div>
+      <div class="card" id="recentNego">
+        <h3>🎯 最新談判場景</h3>
+        <div id="negoPreview">載入中...</div>
+      </div>
+    </div>
+
+    <!-- Scenes -->
+    <div class="page" id="page-scenes">
+      <h2>場景列表</h2>
+      <div class="filter-bar">
+        <input class="search-input" id="sceneSearch" placeholder="角色名搜尋..." oninput="filterScenes()">
+        <div class="filter-chip active" onclick="setFilter('match','all',this)">全部</div>
+        <div class="filter-chip" onclick="setFilter('match','full',this)">Full</div>
+        <div class="filter-chip" onclick="setFilter('match','partial',this)">Partial</div>
+        <div class="filter-chip" onclick="setFilter('match','weak',this)">Weak</div>
+        <div class="filter-chip" style="border-color:var(--accent);color:var(--accent)" onclick="setFilter('nego',true,this)">🎯 談判</div>
+      </div>
+      <div class="grid" id="scenesGrid">載入中...</div>
+    </div>
+
+    <!-- Decisions -->
+    <div class="page" id="page-decisions">
+      <h2>⚡ 行動決策場景</h2>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">寧凡面臨關鍵抉擇、展現策略思考的場景（不限是否有談判對手）</p>
+      <div id="decisionList">載入中...</div>
+    </div>
+
+    <!-- Negotiation -->
+    <div class="page" id="page-negotiation">
+      <h2>🎯 談判場景</h2>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">focal_character 主動參與的談判 / 博弈場景</p>
+      <div id="negoList">載入中...</div>
+    </div>
+
+    <!-- Arc -->
+    <div class="page" id="page-arc">
+      <h2>角色弧線</h2>
+      <div class="arc-controls">
+        <select id="arcChar" onchange="loadArc()">
+          <option value="寧凡">寧凡</option>
+          <option value="輝子">輝子</option>
+          <option value="林川">林川</option>
+          <option value="喬菲">喬菲</option>
+        </select>
+        <span style="color:var(--muted);font-size:12px">選擇角色查看心態弧線</span>
+      </div>
+      <div class="arc-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>emotion</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>stance</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#facc15"></div>strategy</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>values</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>identity</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f43f5e"></div>談判場景</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="arcChart" height="260"></canvas>
+      </div>
+      <div id="arcTable" style="margin-top:16px"></div>
+    </div>
+
+    <!-- Upload -->
+    <div class="page" id="page-upload">
+      <h2>上傳 / 分析</h2>
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📄</div>
+        <div style="font-size:15px;font-weight:600">拖曳或點擊上傳小說 .txt</div>
+        <div style="color:var(--muted);margin-top:6px;font-size:12px">支援 UTF-8 / GBK 編碼</div>
+        <input type="file" id="fileInput" accept=".txt" onchange="handleUpload(this)">
+      </div>
+
+      <div class="upload-info" id="uploadInfo">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📖</span>
+          <div>
+            <div id="uploadName" style="font-weight:600"></div>
+            <div id="uploadMeta" style="color:var(--muted);font-size:12px;margin-top:2px"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <span class="form-label">章節範圍</span>
+          <input type="number" id="chStart" value="1" min="1" style="width:70px">
+          <span class="form-label">—</span>
+          <input type="number" id="chEnd" value="10" min="1" style="width:70px">
+          <span class="form-label">模式</span>
+          <select id="analyzeMode">
+            <option value="haiku">Haiku（推薦）</option>
+            <option value="free">Free（免費）</option>
+            <option value="msa">MSA（省 token）</option>
+          </select>
+          <button class="btn btn-primary" onclick="startAnalysis()">▶ 開始分析</button>
+        </div>
+        <div class="progress-bar" id="progressBar" style="display:none">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalContent">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let _filters = { match: 'all', nego: false };
+let _uploadedPath = '';
+let _arcChart = null, _shiftChart = null, _charChart = null;
+let _jobPoller = null;
+
+// ── Navigation ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'scenes') loadScenes();
+  if (name === 'decisions') loadDecisions();
+  if (name === 'negotiation') loadNegotiation();
+  if (name === 'arc') loadArc();
+  if (name === 'dashboard') loadDashboard();
+}
+
+// ── Stats bar ──
+async function loadStats() {
+  try {
+    const d = await fetch(API + '/api/summary').then(r => r.json());
+    document.getElementById('s-total').textContent = d.total_scenes;
+    document.getElementById('s-ch').textContent = d.chapters_analyzed;
+    document.getElementById('s-decision').textContent = d.decision_scenes || 0;
+    document.getElementById('s-nego').textContent = d.negotiation_scenes;
+    document.getElementById('s-conf').textContent = (d.avg_confidence * 100).toFixed(0) + '%';
+    return d;
+  } catch(e) { console.error(e); }
+}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  const d = await loadStats();
+  if (!d) return;
+
+  // Shift chart
+  const shiftCtx = document.getElementById('shiftChart').getContext('2d');
+  if (_shiftChart) _shiftChart.destroy();
+  const colors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
+  _shiftChart = new Chart(shiftCtx, {
+    type: 'doughnut',
+    data: {
+      labels: d.shift_distribution.map(x => x.type),
+      datasets: [{ data: d.shift_distribution.map(x => x.count), backgroundColor: d.shift_distribution.map(x => colors[x.type] || '#475569'), borderWidth: 0 }]
+    },
+    options: { plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } } } }, cutout: '65%' }
+  });
+
+  // Char chart
+  const charCtx = document.getElementById('charChart').getContext('2d');
+  if (_charChart) _charChart.destroy();
+  _charChart = new Chart(charCtx, {
+    type: 'bar',
+    data: {
+      labels: d.top_characters.map(x => x.name),
+      datasets: [{ data: d.top_characters.map(x => x.count), backgroundColor: '#7c6ff7', borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { color: '#64748b' }, grid: { color: '#2e3250' } }, y: { ticks: { color: '#e2e8f0' }, grid: { display: false } } }
+    }
+  });
+
+  // Recent negotiation preview
+  const nego = await fetch(API + '/api/negotiation').then(r => r.json());
+  const container = document.getElementById('negoPreview');
+  if (!nego.length) {
+    container.innerHTML = '<div style="color:var(--muted);padding:8px">尚未偵測到談判場景</div>';
+    return;
+  }
+  container.innerHTML = nego.slice(0, 3).map(n => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openSceneModal(${n.chapter_number},${n.scene_number})">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="color:var(--accent);font-weight:700">ch${n.chapter_number}s${n.scene_number}</span>
+        <span>${n.focal_character}</span>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          ${(n.negotiation_pattern_tags||[]).slice(0,2).map(t=>`<span class="tag">${t}</span>`).join('')}
+        </div>
+      </div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">${n.scene_text_preview.slice(0,100)}...</div>
+    </div>
+  `).join('');
+}
+
+// ── Scenes ──
+async function loadScenes() {
+  const char = document.getElementById('sceneSearch').value.trim();
+  let url = API + '/api/scenes?limit=100&offset=0';
+  if (char) url += '&char=' + encodeURIComponent(char);
+  if (_filters.match !== 'all') url += '&match=' + _filters.match;
+  if (_filters.nego) url += '&negotiation=true';
+
+  const grid = document.getElementById('scenesGrid');
+  grid.innerHTML = '<div style="color:var(--muted);padding:20px">載入中...</div>';
+
+  const data = await fetch(url).then(r => r.json());
+  if (!data.items.length) {
+    grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>沒有符合的場景</div>';
+    return;
+  }
+
+  const shiftColors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
+  grid.innerHTML = data.items.map(s => `
+    <div class="scene-card ${s.is_negotiation_scene ? 'nego' : ''}" onclick="openSceneModal(${s.chapter_number},${s.scene_number})">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div>
+          <span style="font-weight:700;color:var(--accent)">ch${s.chapter_number}</span>
+          <span style="color:var(--muted)"> s${s.scene_number}</span>
+          ${s.is_negotiation_scene ? '<span class="badge badge-nego" style="margin-left:6px">🎯 談判</span>' : ''}
+        </div>
+        <span class="badge badge-${s.match_level}">${s.match_level}</span>
+      </div>
+      <div style="margin-top:8px;font-size:13px;font-weight:600">${s.focal_character}</div>
+      <div class="scene-meta">
+        <span class="tag" style="background:${shiftColors[s.mind_shift_type]||'#475569'}22;color:${shiftColors[s.mind_shift_type]||'#475569'}">${s.mind_shift_type}</span>
+        ${s.mind_shift_intensity ? `<span class="tag">強度 ${s.mind_shift_intensity}/5</span>` : ''}
+      </div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${(s.confidence_score||0)*100}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">${((s.confidence_score||0)*100).toFixed(0)}% 信心</div>
+    </div>
+  `).join('');
+}
+
+function filterScenes() { loadScenes(); }
+function setFilter(key, val, el) {
+  _filters[key] = val;
+  if (key === 'match') document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.toggle('active');
+  loadScenes();
+}
+
+// ── Decisions ──
+async function loadDecisions() {
+  const data = await fetch(API + '/api/decisions').then(r => r.json());
+  const list = document.getElementById('decisionList');
+  if (!data.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">⚡</div>尚未有行動決策場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
+    return;
+  }
+  const shiftColors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
+  list.innerHTML = data.map(n => {
+    const sit = n.situation || {};
+    const des = n.desire || {};
+    const ms = n.mind_shift || {};
+    const labels = n.scene_labels || [];
+    return `
+    <div class="card" style="cursor:pointer" onclick="openSceneModal(${n.chapter_number},${n.scene_number})">
+      <div class="card-header">
+        <span style="font-weight:700;color:var(--accent);font-size:15px">ch${n.chapter_number} s${n.scene_number}</span>
+        <span style="font-weight:600">${n.focal_character}</span>
+        <div style="display:flex;gap:4px;margin-left:6px">
+          ${labels.map(l => `<span class="tag" style="background:#e86f3a22;color:#e86f3a">${l}</span>`).join('')}
+        </div>
+        <span class="badge badge-${n.match_level||'none'}" style="margin-left:auto">${n.match_level||'—'}</span>
+        <span style="color:var(--muted);font-size:12px">${((n.confidence_score||0)*100).toFixed(0)}%</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">
+        <strong style="color:var(--text)">局：</strong>${sit.external_situation||'—'}<br>
+        <strong style="color:var(--text)">欲：</strong>${des.explicit_desire||'—'}<br>
+        <strong style="color:var(--text)">心→變：</strong>${ms.before_mindset||'—'} → ${ms.after_mindset||'—'}
+        <span class="tag" style="margin-left:8px;background:${shiftColors[n.mind_shift_type]||'#475569'}22;color:${shiftColors[n.mind_shift_type]||'#475569'}">${n.mind_shift_type||'—'} ${n.mind_shift_intensity ? '強度'+n.mind_shift_intensity : ''}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">
+        ${(n.scene_text_preview||'').slice(0,200)}...
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Negotiation ──
+async function loadNegotiation() {
+  const data = await fetch(API + '/api/negotiation').then(r => r.json());
+  const list = document.getElementById('negoList');
+  if (!data.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>尚未偵測到談判場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
+    return;
+  }
+  list.innerHTML = data.map(n => `
+    <div class="card" style="cursor:pointer" onclick="openSceneModal(${n.chapter_number},${n.scene_number})">
+      <div class="card-header">
+        <span style="font-weight:700;color:var(--accent);font-size:15px">ch${n.chapter_number} s${n.scene_number}</span>
+        <span style="font-weight:600">${n.focal_character}</span>
+        <span class="badge badge-${n.match_level}" style="margin-left:auto">${n.match_level}</span>
+        <span style="color:var(--muted);font-size:12px">${((n.confidence_score||0)*100).toFixed(0)}%</span>
+      </div>
+      <div class="nego-tags">
+        ${(n.negotiation_pattern_tags||[]).map(t => `<span class="nego-tag">${t}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:var(--muted)">
+        <strong style="color:var(--text)">局：</strong>${(n.situation||{}).external_situation||''}<br>
+        <strong style="color:var(--text)">欲：</strong>${(n.desire||{}).explicit_desire||''}<br>
+        <strong style="color:var(--text)">心→變：</strong>${(n.mind_shift||{}).before_mindset||''} → ${(n.mind_shift||{}).after_mindset||''}
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">
+        ${n.scene_text_preview.slice(0,200)}...
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Arc ──
+let _arcData = [];
+async function loadArc() {
+  const char = document.getElementById('arcChar').value;
+  const data = await fetch(API + '/api/arc/' + encodeURIComponent(char)).then(r => r.json());
+  _arcData = data;
+
+  const shiftColors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
+  const labels = data.map(d => `ch${d.chapter_number}s${d.scene_number}`);
+  const intensities = data.map(d => d.mind_shift_intensity || d.shift_score || 0);
+  const pointColors = data.map(d => d.is_negotiation_scene ? '#f43f5e' : (shiftColors[d.mind_shift_type] || '#475569'));
+
+  const ctx = document.getElementById('arcChart').getContext('2d');
+  if (_arcChart) _arcChart.destroy();
+  _arcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: intensities,
+        borderColor: '#7c6ff7',
+        backgroundColor: '#7c6ff722',
+        pointBackgroundColor: pointColors,
+        pointRadius: 7,
+        pointHoverRadius: 10,
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: {
+      onClick: (e, els) => { if (els.length) { const i = els[0].index; const d = _arcData[i]; openSceneModal(d.chapter_number, d.scene_number); } },
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: (ctx) => {
+          const d = _arcData[ctx.dataIndex];
+          return [`${d.mind_shift_type} 強度:${d.mind_shift_intensity||d.shift_score}`, (d.is_negotiation_scene ? '🎯 談判場景' : '')].filter(Boolean);
+        }}
+      }},
+      scales: {
+        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: '#2e3250' } },
+        y: { min: 0, max: 5, ticks: { color: '#64748b', stepSize: 1, callback: v => ['none','emotion','stance','strategy','values','identity'][v]||v }, grid: { color: '#2e3250' } }
+      }
+    }
+  });
+
+  // Table
+  const table = document.getElementById('arcTable');
+  table.innerHTML = `<div class="card">
+    <h3>${char} · 場景清單</h3>
+    ${data.map(d => `
+      <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;align-items:center" onclick="openSceneModal(${d.chapter_number},${d.scene_number})">
+        <span style="color:var(--accent);width:60px;flex-shrink:0">ch${d.chapter_number}s${d.scene_number}</span>
+        <span class="tag" style="background:${shiftColors[d.mind_shift_type]||'#475569'}22;color:${shiftColors[d.mind_shift_type]||'#475569'}">${d.mind_shift_type}</span>
+        ${d.is_negotiation_scene ? '<span class="badge badge-nego">🎯</span>' : ''}
+        <span style="color:var(--muted);font-size:12px;margin-left:auto">${((d.confidence_score||0)*100).toFixed(0)}%</span>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+// ── Scene Modal ──
+async function openSceneModal(ch, sc) {
+  const d = await fetch(API + `/api/scene/${ch}/${sc}`).then(r => r.json());
+  const sit = d.situation || {};
+  const des = d.desire || {};
+  const ms = d.mind_shift || {};
+  const jdg = d.judgment || {};
+  const tags = d.negotiation_pattern_tags || [];
+
+  const quoteHtml = (quotes) => (quotes||[]).slice(0,2).map(q =>
+    `<div class="quote">「${q.text||''}」<span style="color:#475569"> — ${q.relevance||''}</span></div>`
+  ).join('');
+
+  document.getElementById('modalBody').innerHTML = `
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+      <span style="font-size:18px;font-weight:700;color:var(--accent)">ch${ch} s${sc}</span>
+      <span style="font-weight:600;font-size:15px">${d.focal_character}</span>
+      <span class="badge badge-${d.match_level}">${d.match_level}</span>
+      ${d.is_negotiation_scene ? '<span class="badge badge-nego">🎯 談判</span>' : ''}
+      <span style="margin-left:auto;color:var(--muted);font-size:12px">${((d.confidence_score||0)*100).toFixed(0)}% 信心</span>
+    </div>
+    ${tags.length ? `<div class="nego-tags" style="margin-bottom:14px">${tags.map(t=>`<span class="nego-tag">${t}</span>`).join('')}</div>` : ''}
+
+    <div class="dim-block">
+      <div class="dim-label">局 Situation</div>
+      <div class="dim-text">${sit.external_situation||''}</div>
+      <div style="display:flex;gap:20px;margin-top:8px;font-size:12px;color:var(--muted)">
+        <span>▶ 主動：${sit.active_party||'—'}</span>
+        <span>◀ 被動：${sit.passive_party||'—'}</span>
+      </div>
+      <div class="quotes">${quoteHtml(sit.evidence_quotes)}</div>
+    </div>
+
+    <div class="dim-block">
+      <div class="dim-label">心 Mind · 變 Change</div>
+      <div class="dim-text" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><span style="color:var(--muted);font-size:11px">進入場景</span><br>${ms.before_mindset||''}</div>
+        <div><span style="color:var(--muted);font-size:11px">離開場景</span><br>${ms.after_mindset||''}</div>
+      </div>
+      <div style="margin-top:8px;padding:8px;background:var(--bg);border-radius:6px;font-size:12px">
+        <span style="color:var(--accent)">觸發：</span>${ms.trigger_event||'—'}
+      </div>
+      <div style="margin-top:6px;font-size:12px;color:var(--muted)">
+        類型：<strong style="color:var(--text)">${ms.shift_type||'—'}</strong> ·
+        強度：<strong style="color:var(--text)">${ms.shift_intensity||ms.mind_shift_intensity||'—'}/5</strong> ·
+        可逆：${ms.is_reversible ? '是' : '否'}
+      </div>
+      <div class="quotes">${quoteHtml(ms.evidence_quotes)}</div>
+    </div>
+
+    <div class="dim-block">
+      <div class="dim-label">欲 Desire</div>
+      <div class="dim-text"><span style="color:var(--muted)">顯：</span>${des.explicit_desire||''}</div>
+      <div class="dim-text" style="margin-top:6px"><span style="color:var(--muted)">隱：</span>${des.implicit_desire||''}</div>
+      <div class="quotes">${quoteHtml(des.evidence_quotes)}</div>
+    </div>
+
+    <div class="dim-block" style="border-color:${d.match_level==='full'?'#4ade80':d.match_level==='partial'?'#facc15':'#f87171'}40">
+      <div class="dim-label">框架判定</div>
+      <div class="dim-text">${jdg.reasoning||''}</div>
+    </div>
+
+    ${d.scene_text ? `
+    <div class="dim-block" style="margin-top:10px">
+      <div class="dim-label">原文片段</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.9;white-space:pre-wrap">${d.scene_text.slice(0,600).replace(/\u3000/g,'  ')}</div>
+    </div>` : ''}
+
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="toggleNegotiation(${ch},${sc},${d.is_negotiation_scene?'false':'true'})">
+        ${d.is_negotiation_scene ? '❌ 移除談判標記' : '✅ 標記為談判'}
+      </button>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+
+async function toggleNegotiation(ch, sc, setTo) {
+  await fetch(API + `/api/scene/${ch}/${sc}/negotiation`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_negotiation_scene: setTo, negotiation_pattern_tags: [] })
+  });
+  closeModal();
+  loadNegotiation();
+  if (document.getElementById('page-scenes').classList.contains('active')) loadScenes();
+}
+
+// ── Upload ──
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+
+function handleUpload(input) { if (input.files[0]) processFile(input.files[0]); }
+
+async function processFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  const info = document.getElementById('uploadInfo');
+  info.style.display = 'block';
+  document.getElementById('uploadName').textContent = '上傳中...';
+  try {
+    const res = await fetch(API + '/api/upload', { method: 'POST', body: fd }).then(r => r.json());
+    if (res.detail) throw new Error(res.detail);
+    _uploadedPath = res.path;
+    document.getElementById('uploadName').textContent = res.filename;
+    document.getElementById('uploadMeta').textContent = `${(res.size_chars/10000).toFixed(1)}萬字 · 偵測到 ${res.detected_chapters} 章`;
+    document.getElementById('chEnd').value = Math.min(res.detected_chapters, 10);
+  } catch(e) {
+    document.getElementById('uploadName').textContent = '上傳失敗：' + e.message;
+  }
+}
+
+async function startAnalysis() {
+  if (!_uploadedPath) { alert('請先上傳小說檔案'); return; }
+  const fd = new FormData();
+  fd.append('filepath', _uploadedPath);
+  fd.append('chapters_start', document.getElementById('chStart').value);
+  fd.append('chapters_end', document.getElementById('chEnd').value);
+  fd.append('mode', document.getElementById('analyzeMode').value);
+
+  const bar = document.getElementById('progressBar');
+  const fill = document.getElementById('progressFill');
+  const log = document.getElementById('logBox');
+  bar.style.display = 'block';
+  log.style.display = 'block';
+  fill.style.width = '2%';
+  log.textContent = '分析啟動中...';
+
+  try {
+    const res = await fetch(API + '/api/analyze', { method: 'POST', body: fd }).then(r => r.json());
+    const jobId = res.job_id;
+    if (_jobPoller) clearInterval(_jobPoller);
+    _jobPoller = setInterval(async () => {
+      const j = await fetch(API + `/api/job/${jobId}`).then(r => r.json());
+      if (j.total > 0) fill.style.width = Math.min(99, j.progress / j.total * 100) + '%';
+      log.textContent = j.last_lines.join('\n');
+      log.scrollTop = log.scrollHeight;
+      if (j.status === 'done') {
+        fill.style.width = '100%';
+        log.textContent += '\n\n✅ 分析完成！';
+        clearInterval(_jobPoller);
+        loadStats();
+      } else if (j.status === 'error') {
+        log.textContent += '\n\n❌ 分析失敗';
+        clearInterval(_jobPoller);
+      }
+    }, 2000);
+  } catch(e) {
+    log.textContent = '啟動失敗：' + e.message;
+  }
+}
+
+// ── Init ──
+loadStats();
+loadDashboard();
+</script>
+</body>
+</html>

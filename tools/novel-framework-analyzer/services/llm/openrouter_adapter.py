@@ -11,6 +11,7 @@ OpenRouter adapter — 相容 OpenAI chat completions API。
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Dict, Optional
 
@@ -58,18 +59,35 @@ class OpenRouterClient(AbstractLLMClient):
             "max_tokens": max_tokens,
         }
 
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{OPENROUTER_BASE}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://github.com/novel-framework-analyzer",
-                },
-                json=payload,
-            )
+        # 重試邏輯：429 rate limit / 503 overload 才重試，400/401 直接拋出
+        for attempt in range(4):
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.post(
+                    f"{OPENROUTER_BASE}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://github.com/novel-framework-analyzer",
+                    },
+                    json=payload,
+                )
+            if resp.status_code == 429:
+                wait = 10 * (attempt + 1)  # 10s, 20s, 30s, 40s
+                logger.warning(f"OpenRouter 429 rate limit，{wait}s 後重試（attempt {attempt+1}/4）")
+                await asyncio.sleep(wait)
+                continue
+            if resp.status_code == 503:
+                wait = 5 * (attempt + 1)
+                logger.warning(f"OpenRouter 503 overload，{wait}s 後重試")
+                await asyncio.sleep(wait)
+                continue
+            if resp.status_code == 400:
+                # 免費模型格式不相容時給出明確錯誤
+                detail = resp.json().get("error", {}).get("message", resp.text[:100])
+                raise ValueError(f"模型 {self._model} 回傳 400：{detail}\n提示：此模型可能不支援當前 prompt 格式，換用 free-llama 或 haiku")
             resp.raise_for_status()
-            data = resp.json()
+            break
+        data = resp.json()
 
         content = data["choices"][0]["message"]["content"]
         usage = data.get("usage", {})

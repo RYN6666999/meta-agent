@@ -227,6 +227,14 @@ def cmd_summary():
     print("\n  mind_shift_type 分布:")
     print_table(["mind_shift_type", "count"], [(r[0] or "NULL", r[1]) for r in mst_dist])
 
+    # Negotiation scene count (need a fresh connection since we already closed)
+    conn3 = get_conn()
+    cur3 = conn3.cursor()
+    cur3.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE is_negotiation_scene = 1")
+    nego_count = cur3.fetchone()[0]
+    conn3.close()
+    print(f"\n  談判場景數: {nego_count} / {total}  (--negotiation 查看詳情)")
+
 
 def cmd_search(keyword):
     """Search keyword in situation/desire/mind_shift JSON text fields."""
@@ -363,6 +371,39 @@ def cmd_show(ref):
     print(border)
 
 
+def cmd_negotiation():
+    """List all scenes marked as negotiation scenes."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT chapter_number, scene_number, scene_id, focal_character,
+               match_level, confidence_score, negotiation_pattern_tags
+        FROM scene_framework_cards
+        WHERE is_negotiation_scene = 1
+        ORDER BY chapter_number, scene_number
+    """)
+    rows = cur.fetchall()
+    conn.close()
+
+    headers = ["Ch", "Sc", "focal_char", "match", "conf", "negotiation_tags"]
+    table_rows = []
+    for r in rows:
+        ch, sc, sid, fc, match, conf, tags = r
+        conf_str = f"{conf:.2f}" if conf is not None else "N/A"
+        try:
+            tags_parsed = json.loads(tags) if tags else []
+            tags_str = ", ".join(tags_parsed[:3]) + ("..." if len(tags_parsed) > 3 else "")
+        except Exception:
+            tags_str = str(tags or "")
+        table_rows.append([ch, sc, fc or "", match or "", conf_str, tags_str])
+
+    print(f"\n[談判場景] 共 {len(table_rows)} 個\n")
+    if not table_rows:
+        print("  尚無談判場景（需重新分析並使用新版 prompt）")
+    else:
+        print_table(headers, table_rows)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -385,6 +426,8 @@ if __name__ == "__main__":
                         help="在 situation/desire/mind_shift 中搜尋關鍵字")
     parser.add_argument("--show", metavar="chNsM",
                         help="顯示第N章第M場景的完整分析卡 (例如 ch3s2)")
+    parser.add_argument("--negotiation", action="store_true",
+                        help="列出所有談判場景")
 
     args = parser.parse_args()
 
@@ -400,5 +443,7 @@ if __name__ == "__main__":
         cmd_search(args.search)
     elif args.show:
         cmd_show(args.show)
+    elif args.negotiation:
+        cmd_negotiation()
     else:
         parser.print_help()

@@ -191,14 +191,19 @@ async def main(chapter_num: int, n_scenes: int, models_str: str):
         print("沒有可用的 LLM，請確認 Ollama 已下載或 .env 有 OPENROUTER_API_KEY")
         return
 
-    # 建分析器
-    analyzers = {
-        name: FrameworkAnalyzer(
-            llm_client=client,
-            prompt_dir=os.path.join(ROOT, "prompts"),
-        )
-        for name, client in clients.items()
-    }
+    # 建分析器：Ollama 用 MSA（省 token，適合 8GB RAM）；OpenRouter 用完整版
+    from backend.app.services.msa_analyzer import MSAAnalyzer
+    analyzers = {}
+    for name, client in clients.items():
+        if "qwen" in name or "ollama" in name.lower():
+            analyzers[name] = MSAAnalyzer(llm_client=client)
+            print(f"  [{name}] → MSA 模式（省 token）")
+        else:
+            analyzers[name] = FrameworkAnalyzer(
+                llm_client=client,
+                prompt_dir=os.path.join(ROOT, "prompts"),
+            )
+            print(f"  [{name}] → 完整分析模式")
 
     # 讀小說，切場景
     with open(NOVEL_PATH, encoding="utf-8") as f:

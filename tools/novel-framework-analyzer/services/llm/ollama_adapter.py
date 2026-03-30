@@ -35,7 +35,7 @@ class OllamaClient(AbstractLLMClient):
         self,
         model: str = "qwen2.5:7b",
         base_url: str = "http://localhost:11434",
-        timeout: float = 120.0,  # 本地模型較慢，給寬裕時間
+        timeout: float = 600.0,  # qwen2.5:7b 在 8GB RAM 上推理極慢，給 10 分鐘
     ) -> None:
         self._model = model
         self._base_url = base_url
