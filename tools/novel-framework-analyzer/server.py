@@ -57,6 +57,121 @@ def json_safe(val):
 # API routes
 # ─────────────────────────────────────────────
 
+
+# ─────────────────────────────────────────────
+# 定價表（USD per 1M tokens）
+# ─────────────────────────────────────────────
+PRICING = {
+    "openrouter/anthropic/claude-haiku-4-5": {"input": 0.80, "output": 4.00, "label": "Haiku 4.5"},
+    "openrouter/anthropic/claude-3-haiku":   {"input": 0.25, "output": 1.25, "label": "Haiku 3"},
+    "openrouter/anthropic/claude-sonnet-4-5":{"input": 3.00, "output": 15.0, "label": "Sonnet 4.5"},
+    "openrouter/anthropic/claude-opus-4":    {"input": 15.0, "output": 75.0, "label": "Opus 4"},
+    # 對照組（如果以 Sonnet / Opus 跑，費用會是多少）
+    "_compare_sonnet": {"input": 3.00, "output": 15.0, "label": "Sonnet 4.5（對照）"},
+    "_compare_opus":   {"input": 15.0, "output": 75.0, "label": "Opus 4（對照）"},
+}
+PROMPT_OVERHEAD_TOKENS = 1_600  # 固定 system + user 模板 overhead
+
+def _estimate_tokens(scene_text_len: int, resp_len: int):
+    """
+    估算 token 數：
+    - input = prompt overhead + scene_text（中文 ~1.5 char/token）
+    - output = raw_llm_response（中文 JSON 混合 ~2.0 char/token）
+    """
+    input_tok  = PROMPT_OVERHEAD_TOKENS + int(scene_text_len / 1.5)
+    output_tok = int(resp_len / 2.0) if resp_len else 800  # 無回應時估 800 output
+    return input_tok, output_tok
+
+def _calc_cost(input_tok: int, output_tok: int, model: str) -> float:
+    p = PRICING.get(model, {"input": 0.80, "output": 4.00})
+    return (input_tok * p["input"] + output_tok * p["output"]) / 1_000_000
+
+
+@app.get("/api/costs")
+def api_costs():
+    """成本分析：依章節、日期、模型估算 token 與 USD 費用"""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT chapter_number, scene_number, model_used,
+               LENGTH(scene_text)        AS text_len,
+               LENGTH(raw_llm_response)  AS resp_len,
+               created_at
+        FROM scene_framework_cards
+        ORDER BY chapter_number, scene_number
+    """).fetchall()
+    conn.close()
+
+    scenes = []
+    by_chapter: dict[int, dict] = {}
+    by_model: dict[str, dict]   = {}
+    total_input = total_output  = 0
+    total_cost  = 0.0
+
+    for r in rows:
+        ch, sc, model, text_len, resp_len, created_at = r
+        inp, out = _estimate_tokens(text_len or 0, resp_len or 0)
+        cost = _calc_cost(inp, out, model)
+
+        total_input  += inp
+        total_output += out
+        total_cost   += cost
+
+        scenes.append({
+            "chapter_number": ch, "scene_number": sc,
+            "model": model,
+            "input_tokens": inp, "output_tokens": out,
+            "total_tokens": inp + out,
+            "cost_usd": round(cost, 6),
+        })
+
+        # 按章節彙總
+        if ch not in by_chapter:
+            by_chapter[ch] = {"chapter": ch, "scenes": 0, "tokens": 0, "cost_usd": 0.0}
+        by_chapter[ch]["scenes"] += 1
+        by_chapter[ch]["tokens"] += inp + out
+        by_chapter[ch]["cost_usd"] = round(by_chapter[ch]["cost_usd"] + cost, 6)
+
+        # 按模型彙總
+        if model not in by_model:
+            label = PRICING.get(model, {}).get("label", model)
+            by_model[model] = {"model": model, "label": label, "scenes": 0,
+                                "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0}
+        by_model[model]["scenes"]       += 1
+        by_model[model]["input_tokens"] += inp
+        by_model[model]["output_tokens"]+= out
+        by_model[model]["cost_usd"]      = round(by_model[model]["cost_usd"] + cost, 6)
+
+    # 對照試算（Smart 路由、Sonnet、Opus）
+    # Smart 路由：寧凡場景數 × Haiku 費率 + 其他角色 × 0
+    smart_haiku_scenes = conn2.execute(
+        "SELECT COUNT(*) FROM scene_framework_cards WHERE focal_character=?", ("寧凡",)
+    ).fetchone()[0] if (conn2 := get_db()) else 0
+    conn2.close()
+    smart_ratio = smart_haiku_scenes / len(scenes) if scenes else 0
+    smart_cost  = round(total_cost * smart_ratio, 4)
+
+    compare = [{"label": "Smart 路由（寧凡→Haiku，其他→Free）",
+                "cost_usd": smart_cost,
+                "savings_pct": round((1 - smart_cost / total_cost) * 100, 1) if total_cost else 0}]
+    for key in ("_compare_sonnet", "_compare_opus"):
+        p = PRICING[key]
+        c = (total_input * p["input"] + total_output * p["output"]) / 1_000_000
+        compare.append({"label": p["label"], "cost_usd": round(c, 4), "savings_pct": None})
+
+    return {
+        "total_scenes":        len(scenes),
+        "total_input_tokens":  total_input,
+        "total_output_tokens": total_output,
+        "total_tokens":        total_input + total_output,
+        "total_cost_usd":      round(total_cost, 4),
+        "avg_cost_per_scene":  round(total_cost / len(scenes), 6) if scenes else 0,
+        "by_chapter":          sorted(by_chapter.values(), key=lambda x: x["chapter"]),
+        "by_model":            list(by_model.values()),
+        "compare_models":      compare,
+        "scenes":              scenes,
+    }
+
+
 @app.get("/api/summary")
 def api_summary():
     conn = get_db()

@@ -313,7 +313,7 @@ class FrameworkAnalyzer:
                 response = await self.llm.complete(
                     messages,
                     temperature=0.1 + (attempt - 1) * 0.1,  # retry 時略提高 temperature
-                    max_tokens=4096,
+                    max_tokens=6000,  # 4096 不夠長場景的 JSON 輸出
                 )
                 total_tokens += response.input_tokens + response.output_tokens
 

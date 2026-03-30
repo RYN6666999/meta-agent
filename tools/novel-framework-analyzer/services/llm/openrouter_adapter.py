@@ -82,9 +82,17 @@ class OpenRouterClient(AbstractLLMClient):
                 await asyncio.sleep(wait)
                 continue
             if resp.status_code == 400:
-                # 免費模型格式不相容時給出明確錯誤
                 detail = resp.json().get("error", {}).get("message", resp.text[:100])
                 raise ValueError(f"模型 {self._model} 回傳 400：{detail}\n提示：此模型可能不支援當前 prompt 格式，換用 free-llama 或 haiku")
+            if resp.status_code == 402:
+                detail = resp.json().get("error", {}).get("message", "帳戶餘額不足")
+                raise ValueError(
+                    f"OpenRouter 402 Payment Required：{detail}\n"
+                    f"免費模型需要帳戶有最低餘額（通常 $1）才能使用。\n"
+                    f"解決方式：\n"
+                    f"  1. 至 https://openrouter.ai 儲值\n"
+                    f"  2. 改用 --mode haiku（直接用 Haiku，不走免費模型）"
+                )
             resp.raise_for_status()
             break
         data = resp.json()

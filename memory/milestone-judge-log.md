@@ -1874,3 +1874,33 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-30 17:03 | auto-git-score | 分數 220 | 📥 達到閾值（220/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=180），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/novel-framework-analyzer/CLAUDE.md +10
+  其他變更 tools/novel-framework-analyzer/backend/app/models/scene_framework_card.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/framework_analyzer.py +10
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_definition.md +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_user_template.txt +10
+  其他變更 tools/novel-framework-analyzer/prompts/negotiation_focus.md +10
+  其他變更 tools/novel-framework-analyzer/scripts/batch_analyze.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/quality_compare.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/query.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/review_negotiation.py +10
+  其他變更 tools/novel-framework-analyzer/server.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/hybrid_router.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/ollama_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/openrouter_adapter.py +10
+
+---

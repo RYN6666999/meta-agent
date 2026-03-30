@@ -58,6 +58,15 @@ def _load_api_key(env_path: str) -> Optional[str]:
     return None
 
 
+def _load_gemini_key(env_path: str) -> Optional[str]:
+    if not os.path.exists(env_path):
+        return None
+    for line in open(env_path):
+        if line.startswith("GEMINI_API_KEY="):
+            return line.strip().split("=", 1)[1]
+    return None
+
+
 def _ollama_available() -> bool:
     import httpx
     try:
@@ -109,13 +118,15 @@ def build_llm(model_choice: str, env_path: str):
     return OpenRouterClient(api_key=api_key, model=or_model)
 
 
-def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str):
+def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
+                   priority_chars: list[str] | None = None):
     """
     依 --mode 建立分析器：
 
-      haiku    : OpenRouter Haiku 完整分析（最穩，~0.001 USD/場景）
-      free     : OpenRouter 免費模型（無費用，速度快，中文品質略差）
-      hybrid   : 本地 Stage1 篩選 → Haiku 完整分析（節省 15-25% API 費用）
+      haiku    : OpenRouter Haiku 完整分析（最穩，~0.011 USD/場景）
+      free     : OpenRouter 免費模型（無費用，中文品質略差）
+      smart    : 智慧路由 — priority 角色(寧凡)用 Haiku，其他用免費模型（省 30-35%）
+      hybrid   : 本地 Stage1 篩選 → Haiku 完整分析（需 Ollama，省 15-25%）
       local    : 全本地 Ollama（免費但極慢，8GB RAM 不建議）
       msa      : OpenRouter Haiku + MSA 節省模式（省 45% tokens）
       mock     : 測試用
@@ -126,6 +137,38 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str)
     if mode == "mock":
         print("[模式] Mock（測試）")
         return FrameworkAnalyzer(llm_client=MockLLMClient(), prompt_dir=prompt_dir)
+
+    if mode == "smart":
+        from services.llm.smart_router import SmartRouter
+        haiku_llm = OpenRouterClient(api_key=api_key, model="anthropic/claude-haiku-4-5")
+        haiku_az  = FrameworkAnalyzer(llm_client=haiku_llm, prompt_dir=prompt_dir)
+        chars = priority_chars or ["寧凡"]
+
+        # 優先用 Gemini 免費（若有 key），否則退回 OpenRouter 免費
+        gemini_key = _load_gemini_key(env_path)
+        if gemini_key:
+            from services.llm.gemini_adapter import GeminiClient
+            free_llm = GeminiClient(api_key=gemini_key, model="gemini-2.5-flash")
+            free_label = "Gemini 2.5 Flash（免費）"
+        else:
+            free_model = FREE_MODELS.get(model_choice, FREE_MODELS["free-llama"])
+            free_llm   = OpenRouterClient(api_key=api_key, model=free_model)
+            free_label = f"OpenRouter {free_model}"
+
+        free_az = FrameworkAnalyzer(llm_client=free_llm, prompt_dir=prompt_dir)
+        print(f"[模式] Smart 路由 — {chars} → Haiku，其他角色 → {free_label}")
+        print(f"        預估省 30-35%% API 費用")
+        return SmartRouter(haiku_analyzer=haiku_az, free_analyzer=free_az, priority_chars=chars)
+
+    if mode == "gemini-free":
+        gemini_key = _load_gemini_key(env_path)
+        if not gemini_key:
+            raise ValueError("找不到 GEMINI_API_KEY，請在 .env 加入：GEMINI_API_KEY=your_key")
+        from services.llm.gemini_adapter import GeminiClient, GEMINI_FREE_MODELS
+        g_model = GEMINI_FREE_MODELS.get(model_choice, "gemini-1.5-flash")
+        print(f"[模式] Gemini Free — {g_model}（免費額度，1500 req/day）")
+        llm = GeminiClient(api_key=gemini_key, model=g_model)
+        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir)
 
     if mode == "hybrid":
         # 本地 Stage1 篩選 + 雲端分析
@@ -142,7 +185,7 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str)
             return HybridAnalyzer(local_client=local, cloud_client=cloud, prompt_dir=prompt_dir)
 
     if mode == "free":
-        free_model = FREE_MODELS.get(model_choice, FREE_MODELS["free-qwen"])
+        free_model = FREE_MODELS.get(model_choice, FREE_MODELS["free-llama"])
         print(f"[模式] Free — OpenRouter 免費模型 {free_model}")
         print("        無費用，速度快，中文品質比 Haiku 稍差")
         llm = OpenRouterClient(api_key=api_key, model=free_model)
@@ -221,6 +264,7 @@ async def run(
     skip_existing: bool,
     dry_run: bool,
     concurrency: int,
+    priority_chars: list[str] | None = None,
 ):
     # 初始化 DB
     init_db()
@@ -235,14 +279,16 @@ async def run(
     # 建分析器
     env_path = os.path.join(ROOT, ".env")
     prompt_dir = os.path.join(ROOT, "prompts")
-    analyzer = build_analyzer(mode, model_choice, env_path, prompt_dir)
+    analyzer = build_analyzer(mode, model_choice, env_path, prompt_dir,
+                              priority_chars=priority_chars)
 
-    # 取已存在的 scene_id（用於 skip）
-    existing_scene_ids: set[str] = set()
+    # 取已存在的 (chapter, scene) 組合（用於 skip）
+    # 注意：scene_id 是每次執行重新生成的 uuid，不能用於去重
+    existing_ch_sc: set[tuple] = set()
     if skip_existing:
-        rows = db.query(SceneFrameworkCard.scene_id).all()
-        existing_scene_ids = {r[0] for r in rows}
-        print(f"DB 中已有 {len(existing_scene_ids)} 個場景卡，跳過重複分析")
+        rows = db.query(SceneFrameworkCard.chapter_number, SceneFrameworkCard.scene_number).all()
+        existing_ch_sc = {(r[0], r[1]) for r in rows}
+        print(f"DB 中已有 {len(existing_ch_sc)} 個場景卡，跳過重複分析")
 
     # 切章節
     chapters = [
@@ -257,7 +303,7 @@ async def run(
 
     async def analyze_one(chapter, scene) -> Optional[SceneFrameworkCard]:
         async with sem:
-            if scene.scene_id in existing_scene_ids:
+            if (chapter.chapter_number, scene.scene_number) in existing_ch_sc:
                 stats.scenes_skipped += 1
                 return None
 
@@ -321,6 +367,14 @@ async def run(
     stats.elapsed = time.time() - t0
     stats.print_summary()
 
+    # Smart 模式額外印路由統計
+    from services.llm.smart_router import SmartRouter
+    if isinstance(analyzer, SmartRouter):
+        s = analyzer.stats
+        print(f"\n[Smart 路由統計]")
+        print(f"  Haiku  場景：{s['haiku_scenes']} ({s['haiku_pct']}%)")
+        print(f"  Free   場景：{s['free_scenes']} ({100-s['haiku_pct']:.1f}%)")
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -330,16 +384,20 @@ def main():
     parser.add_argument("--chapters", default="1-5",
                         help="章節範圍，如 1-5 或 10-20")
     parser.add_argument("--mode", default="haiku",
-                        choices=["haiku", "free", "hybrid", "msa", "local", "mock"],
+                        choices=["haiku", "free", "smart", "gemini-free", "hybrid", "msa", "local", "mock"],
                         help=(
                             "分析模式：\n"
-                            "  haiku  : OpenRouter Haiku（最穩，~$0.001/場景）  ← 推薦\n"
-                            "  free   : OpenRouter 免費模型（無費用，速度快）    ← 省錢\n"
-                            "  hybrid : 本地Stage1篩選 → Haiku分析（省15-25%%費用）\n"
-                            "  msa    : Haiku + 多階段省token（省45%% tokens）\n"
-                            "  local  : 全本地Ollama（免費但極慢，不建議8GB RAM）\n"
-                            "  mock   : 測試用"
+                            "  haiku       : OpenRouter Haiku（最穩，~$0.011/場景）  ← 品質優先\n"
+                            "  smart       : 寧凡→Haiku，其他→Gemini免費（省30-35%%）← 推薦\n"
+                            "  gemini-free : 全程 Gemini 免費（需 GEMINI_API_KEY，$0）\n"
+                            "  free        : OpenRouter 免費模型（需帳戶餘額才能啟用）\n"
+                            "  hybrid      : 本地Stage1篩選 → Haiku分析（省15-25%%費用）\n"
+                            "  msa         : Haiku + 多階段省token（省45%% tokens）\n"
+                            "  local       : 全本地Ollama（免費但極慢，不建議8GB RAM）\n"
+                            "  mock        : 測試用"
                         ))
+    parser.add_argument("--priority-chars", default="寧凡",
+                        help="--mode smart 時哪些角色用 Haiku（逗號分隔，預設：寧凡）")
     parser.add_argument("--free-model", default="free-llama",
                         choices=list(FREE_MODELS.keys()),
                         help="--mode free 時使用哪個免費模型（預設 Llama-3.3-70B，最穩定）")
@@ -355,14 +413,17 @@ def main():
     start = int(parts[0])
     end   = int(parts[1]) if len(parts) > 1 else start
 
+    priority_chars = [c.strip() for c in args.priority_chars.split(",") if c.strip()]
+
     asyncio.run(run(
         chapter_start=start,
         chapter_end=end,
         mode=args.mode,
-        model_choice=args.free_model if args.mode == "free" else args.mode,
+        model_choice=args.free_model if args.mode in ("free", "smart") else args.mode,
         skip_existing=args.skip_existing,
         dry_run=args.dry_run,
         concurrency=args.concurrency,
+        priority_chars=priority_chars,
     ))
 
 

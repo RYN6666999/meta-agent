@@ -142,6 +142,9 @@
       <span class="icon">📈</span> 角色弧線
     </div>
     <div class="nav-section">工具</div>
+    <div class="nav-item" onclick="showPage('costs')" id="nav-costs">
+      <span class="icon">💰</span> 成本分析
+    </div>
     <div class="nav-item" onclick="showPage('upload')" id="nav-upload">
       <span class="icon">📁</span> 上傳 / 分析
     </div>
@@ -223,6 +226,49 @@
       <div id="arcTable" style="margin-top:16px"></div>
     </div>
 
+    <!-- Costs -->
+    <div class="page" id="page-costs">
+      <h2>💰 成本分析</h2>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:20px">Token 估算方式：input = prompt overhead(1,600) + scene_text÷1.5；output = raw_response÷2。定價依 OpenRouter 報價。</p>
+
+      <!-- KPI 卡片 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="costKpis"></div>
+
+      <!-- 對照卡片 -->
+      <div class="card" style="margin-bottom:20px" id="costCompare">
+        <h3>📊 模型費用對照（同等分析量）</h3>
+        <div id="compareGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px"></div>
+      </div>
+
+      <!-- 圖表：按章節費用 -->
+      <div class="card" style="margin-bottom:20px">
+        <h3>章節費用分布（USD）</h3>
+        <canvas id="costChart" height="200"></canvas>
+      </div>
+
+      <!-- 按模型彙總 -->
+      <div class="card" style="margin-bottom:20px" id="costByModel"></div>
+
+      <!-- 場景明細 -->
+      <div class="card">
+        <h3>場景明細</h3>
+        <div style="overflow-x:auto">
+          <table id="costTable" style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="color:var(--muted);border-bottom:1px solid var(--border)">
+                <th style="text-align:left;padding:6px 8px">場景</th>
+                <th style="text-align:right;padding:6px 8px">Input tok</th>
+                <th style="text-align:right;padding:6px 8px">Output tok</th>
+                <th style="text-align:right;padding:6px 8px">Total tok</th>
+                <th style="text-align:right;padding:6px 8px">費用 USD</th>
+              </tr>
+            </thead>
+            <tbody id="costTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Upload -->
     <div class="page" id="page-upload">
       <h2>上傳 / 分析</h2>
@@ -248,8 +294,10 @@
           <input type="number" id="chEnd" value="10" min="1" style="width:70px">
           <span class="form-label">模式</span>
           <select id="analyzeMode">
-            <option value="haiku">Haiku（推薦）</option>
-            <option value="free">Free（免費）</option>
+            <option value="smart">Smart（寧凡→Haiku，其他→Gemini 免費，省 30%）</option>
+            <option value="gemini-free">Gemini Free（全程免費，$0）</option>
+            <option value="haiku">Haiku（全程高品質）</option>
+            <option value="free">Free（OpenRouter 免費）</option>
             <option value="msa">MSA（省 token）</option>
           </select>
           <button class="btn btn-primary" onclick="startAnalysis()">▶ 開始分析</button>
@@ -289,6 +337,7 @@ function showPage(name) {
   if (name === 'decisions') loadDecisions();
   if (name === 'negotiation') loadNegotiation();
   if (name === 'arc') loadArc();
+  if (name === 'costs') loadCosts();
   if (name === 'dashboard') loadDashboard();
 }
 
@@ -626,6 +675,115 @@ async function toggleNegotiation(ch, sc, setTo) {
   closeModal();
   loadNegotiation();
   if (document.getElementById('page-scenes').classList.contains('active')) loadScenes();
+}
+
+// ── Costs ──
+let _costChart = null;
+async function loadCosts() {
+  const d = await fetch(API + '/api/costs').then(r => r.json());
+
+  const usdTwd = 32.5;  // 匯率參考
+  const totalUsd = d.total_cost_usd;
+  const totalTok = d.total_tokens;
+
+  // KPI 卡片
+  document.getElementById('costKpis').innerHTML = `
+    <div class="card" style="text-align:center">
+      <div style="font-size:24px;font-weight:700;color:#4ade80">$${totalUsd.toFixed(4)}</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">總費用 USD</div>
+      <div style="color:var(--muted);font-size:11px">≈ NT$ ${(totalUsd*usdTwd).toFixed(1)}</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:24px;font-weight:700;color:var(--accent)">${(totalTok/1000).toFixed(1)}K</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">總 Token 用量</div>
+      <div style="color:var(--muted);font-size:11px">in ${(d.total_input_tokens/1000).toFixed(1)}K / out ${(d.total_output_tokens/1000).toFixed(1)}K</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:24px;font-weight:700;color:var(--yellow)">$${(d.avg_cost_per_scene*1000).toFixed(3)}</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">平均每場景（mUSD）</div>
+      <div style="color:var(--muted);font-size:11px">${d.total_scenes} 場景</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:24px;font-weight:700;color:var(--accent2)">$${((totalUsd/d.total_scenes)*1264).toFixed(2)}</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">全書估算（1264章）</div>
+      <div style="color:var(--muted);font-size:11px">≈ NT$ ${((totalUsd/d.total_scenes)*1264*usdTwd).toFixed(0)}</div>
+    </div>
+  `;
+
+  // 對照卡片
+  const currentModel = d.by_model[0];
+  const compareHtml = [
+    { label: currentModel?.label || 'Haiku 4.5', cost: totalUsd, current: true, note: '目前使用' },
+    ...d.compare_models.map(m => ({
+      label: m.label, cost: m.cost_usd,
+      savings: m.savings_pct != null ? `省 ${m.savings_pct}%` : null,
+      more: m.savings_pct == null ? `×${(m.cost_usd/totalUsd).toFixed(1)} 倍` : null,
+    }))
+  ].map(m => `
+    <div class="card" style="text-align:center;${m.current ? 'border-color:var(--accent)' : m.savings ? 'border-color:#4ade8066' : ''}">
+      ${m.current ? '<div style="font-size:10px;color:var(--accent);margin-bottom:4px">✅ 目前使用</div>' : ''}
+      ${m.savings ? `<div style="font-size:10px;color:#4ade80;margin-bottom:4px">💡 ${m.savings}</div>` : ''}
+      <div style="font-size:18px;font-weight:700;color:${m.current ? '#4ade80' : m.savings ? '#4ade80' : 'var(--muted)'}">$${(m.cost||0).toFixed(4)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">${m.label}</div>
+      ${m.more ? `<div style="font-size:11px;color:var(--red);margin-top:2px">${m.more}</div>` : ''}
+    </div>
+  `).join('');
+  document.getElementById('compareGrid').innerHTML = compareHtml;
+  // 4 欄
+  document.getElementById('compareGrid').style.gridTemplateColumns = 'repeat(4,1fr)';
+
+  // 章節費用圖表
+  const chLabels = d.by_chapter.map(c => `ch${c.chapter}`);
+  const chCosts  = d.by_chapter.map(c => +(c.cost_usd * 1000).toFixed(3));  // mUSD
+  const chToks   = d.by_chapter.map(c => c.tokens);
+  const ctx = document.getElementById('costChart').getContext('2d');
+  if (_costChart) _costChart.destroy();
+  _costChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: chLabels,
+      datasets: [
+        { label: '費用 (mUSD)', data: chCosts, backgroundColor: '#7c6ff7aa', borderRadius: 3, yAxisID: 'y' },
+        { label: 'Token 數', data: chToks, type: 'line', borderColor: '#e86f3a', backgroundColor: 'transparent',
+          pointRadius: 3, tension: 0.35, yAxisID: 'y2' },
+      ]
+    },
+    options: {
+      plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: '#2e3250' } },
+        y: { ticks: { color: '#64748b', callback: v => v + 'm' }, grid: { color: '#2e3250' }, title: { display: true, text: 'mUSD', color: '#64748b' } },
+        y2: { position: 'right', ticks: { color: '#e86f3a', callback: v => (v/1000).toFixed(0)+'K' }, grid: { display: false } },
+      }
+    }
+  });
+
+  // 按模型彙總
+  document.getElementById('costByModel').innerHTML = `
+    <h3>模型彙總</h3>
+    ${d.by_model.map(m => `
+      <div style="display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:13px">${m.label || m.model}</span>
+        <span class="tag">${m.scenes} 場景</span>
+        <span class="tag">in ${(m.input_tokens/1000).toFixed(1)}K</span>
+        <span class="tag">out ${(m.output_tokens/1000).toFixed(1)}K</span>
+        <span style="font-weight:700;color:#4ade80;min-width:70px;text-align:right">$${m.cost_usd.toFixed(4)}</span>
+      </div>
+    `).join('')}
+  `;
+
+  // 場景明細
+  let running = 0;
+  document.getElementById('costTableBody').innerHTML = d.scenes.map(s => {
+    running += s.cost_usd;
+    return `<tr style="border-bottom:1px solid var(--border)22;cursor:pointer" onclick="openSceneModal(${s.chapter_number},${s.scene_number})">
+      <td style="padding:5px 8px;color:var(--accent)">ch${s.chapter_number}s${s.scene_number}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${s.input_tokens.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${s.output_tokens.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right">${s.total_tokens.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;color:#4ade80">$${(s.cost_usd*1000).toFixed(3)}m</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── Upload ──
