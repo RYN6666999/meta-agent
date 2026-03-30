@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://novel-analyzer/schemas/framework_card.json",
   "title": "SceneFrameworkCard",
-  "description": "局欲心變場景分析卡的完整 JSON Schema",
+  "description": "局心欲變場景分析卡的完整 JSON Schema",
   "type": "object",
   "required": [
     "scene_id",

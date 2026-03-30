@@ -1761,3 +1761,29 @@
   其他變更 memory/turn-count.txt +10
 
 ---
+
+## 2026-03-30 11:25 | auto-git-score | 分數 180 | 📥 達到閾值（180/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=65），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/novel-framework-analyzer/backend/app/models/scene_framework_card.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/framework_analyzer.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/retrieval_router.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/scene_splitter.py +10
+  其他變更 tools/novel-framework-analyzer/docs/architecture.md +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_analysis_prompt.txt +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_few_shot.txt +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_user_template.txt +10
+  其他變更 tools/novel-framework-analyzer/schemas/framework_card.json +10
+  其他變更 tools/novel-framework-analyzer/scripts/demo_pipeline.py +10
+  其他變更 tools/novel-framework-analyzer/services/vector_store/base.py +10
+  其他變更 tools/novel-framework-analyzer/services/vector_store/ragflow_adapter.py +10
+  其他變更 "tools/novel-framework-analyzer/\344\270\212\345\237\216\344\271\213\344\270\213.txt" +10
+
+---

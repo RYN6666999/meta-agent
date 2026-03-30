@@ -1,107 +1,75 @@
-# version: 1.2.0
-# ============================================================
-# 局欲心變框架分析 — User Prompt Template
-# ============================================================
-# 使用方式：將 {變數} 替換為實際值後送給 LLM
-# ============================================================
+# version: 1.4.0
+請分析以下中文小說場景，按照「局心欲變」框架輸出 JSON 分析卡。
 
-## 輸入資料
-
-**書名**：{book_title}
-**章節**：第 {chapter_number} 章（{chapter_title}）
-**場景序號**：{scene_number}
-**場景位置**：{scene_position_hint}（如「章節前段」、「高潮部分」）
-**核心分析角色**：{focal_character}
-**場景中出現的角色**：{known_characters}
-
----
+## 場景資訊
+- 書名：{book_title}
+- 章節：第 {chapter_number} 章
+- 場景序號：{scene_number}
+- 核心分析角色：{focal_character}
+- 其他出現角色：{known_characters}
 
 ## 場景原文
-
 {scene_text}
 
----
-
-## 前情提要（可選，若為空請忽略）
-
+## 前情提要
 {preceding_context}
 
----
+## 輸出規則
+1. 只輸出 JSON，不加任何說明文字或 markdown
+2. evidence_quotes 中的 text 必須直接複製原文，不得改寫
+3. 每個維度的 evidence_quotes 至少一條
+4. confidence_score 介於 0.0 到 1.0
+5. 分析順序遵循：局 → 心 → 欲 → 變
 
-## 輸出 JSON Schema
+請輸出以下結構的 JSON：
 
-請嚴格按照以下 schema 輸出，所有欄位必填（insufficient_context 為 true 時除外）：
-
-```
 {
-  "scene_id": "{scene_id}",
-  "scene_summary": "<100字內的場景摘要，概括核心衝突與走向>",
-  "main_characters": [
-    {
-      "name": "<角色名>",
-      "role": "<在此場景的角色定位，如「主動方」「被迫應對者」「見證者」>",
-      "stance": "<此場景中的立場或態度>"
-    }
-  ],
+  "focal_character": "角色名",
+  "secondary_characters": ["角色A", "角色B"],
   "situation": {
-    "external_situation": "<外部局勢描述>",
-    "power_dynamics": "<誰強誰弱，依據為何>",
-    "risks_and_constraints": "<風險、限制、不可跨越的邊界>",
-    "active_party": "<主動方角色名>",
-    "passive_party": "<被動方角色名>",
-    "resource_holders": "<掌握關鍵資源者及其資源類型>",
-    "insufficient_context": false,
-    "evidence": [
-      {
-        "text": "<原文引用句>",
-        "relevance": "<此引用如何支持局勢分析>"
-      }
-    ]
-  },
-  "desire": {
-    "explicit_desire": "<顯性欲望：角色公開表達或行動展現的訴求>",
-    "implicit_desire": "<隱性欲望：未說出口或本人未意識到的真實渴望>",
-    "true_objective": "<若顯性與隱性有差距，推斷最深層的驅動力>",
-    "desire_conflicts": "<自我衝突或與他人欲望的碰撞>",
-    "obstacles": "<阻止欲望實現的障礙>",
-    "insufficient_context": false,
-    "evidence": [
-      {
-        "text": "<原文引用句>",
-        "relevance": "<此引用如何揭示欲望>"
-      }
+    "external_situation": "描述外部局勢",
+    "power_dynamics": "誰強誰弱的分析",
+    "risks_and_constraints": "風險與限制",
+    "active_party": "主動方角色名",
+    "passive_party": "被動方角色名",
+    "resource_holders": "資源持有者與其資源",
+    "evidence_quotes": [
+      {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
     ]
   },
   "mind_shift": {
-    "before_mindset": "<場景開始時的心態：信念、情緒或策略>",
-    "trigger_event": "<觸發轉變的具體事件或對話>",
-    "after_mindset": "<場景結束時的新心態>",
-    "shift_type": "<emotion|values|strategy|identity|stance|none>",
-    "shift_description": "<從 X 到 Y 的轉變描述，包含轉變幅度評估>",
+    "before_mindset": "場景開始前的心態（心：認知框架、情緒底色、信念前提）",
+    "trigger_event": "觸發轉變的事件或對話（變：導致變化的關鍵節點）",
+    "after_mindset": "場景結束後的新心態（變：轉化結果）",
+    "shift_type": "emotion",
+    "shift_description": "從X到Y的轉變描述，是否帶來成長（抗脆弱）或退縮",
     "is_reversible": true,
-    "insufficient_context": false,
-    "evidence": [
-      {
-        "text": "<原文引用句，最好是觸發心變的關鍵對話或動作>",
-        "relevance": "<此引用如何展現心態轉變>"
-      }
+    "evidence_quotes": [
+      {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
     ]
   },
-  "framework_match": {
-    "match_level": "<full|partial|weak|none>",
-    "reasoning": "<判定理由：哪些維度強，哪些薄弱，為什麼給這個等級>",
-    "missing_dimensions": ["<缺失或薄弱的維度名稱，如空陣列表示齊備>"],
-    "insufficient_context": false
-  },
-  "evidence": {
-    "strongest_quotes": [
-      {
-        "text": "<最能支持整體框架判定的原文引用>",
-        "supports": "<支持哪個維度的哪個判斷>"
-      }
+  "desire": {
+    "explicit_desire": "顯性欲望",
+    "implicit_desire": "隱性欲望",
+    "true_objective": "真正目標",
+    "desire_conflicts": "欲望衝突",
+    "obstacles": "阻礙",
+    "evidence_quotes": [
+      {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
     ]
   },
-  "confidence": 0.85,
-  "analysis_notes": "<分析者注記：特殊情況、不確定點、建議人工複查的原因>"
+  "judgment": {
+    "match_level": "full",
+    "matches_framework": true,
+    "reasoning": "判定理由（局心欲變四維是否齊備）",
+    "confidence_score": 0.85,
+    "missing_dimensions": [],
+    "key_evidence_quotes": [
+      {"text": "最關鍵原文引用", "chapter_hint": "位置提示", "relevance": "支持判定的理由"}
+    ]
+  }
 }
-```
+
+注意：shift_type 只能是 emotion / values / strategy / identity / stance / none 之一。
+注意：match_level 只能是 full / partial / weak / none 之一。
+注意：mind_shift 欄位同時承載「心」（before_mindset）與「變」（trigger_event + after_mindset + shift_type）兩個維度。

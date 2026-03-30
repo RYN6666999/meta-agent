@@ -1,7 +1,7 @@
 """
 framework_analyzer.py
 ======================
-「局欲心變」框架分析器核心服務。
+「局心欲變」框架分析器核心服務。
 
 架構：
   AbstractLLMClient  ← 可替換 OpenAI / Anthropic / 本地模型
@@ -119,29 +119,51 @@ class PromptConfig:
         """從 prompts/ 目錄載入，便於版本控制 prompt"""
         import os
 
+        # system prompt：框架定義 + 輸出規則
         system_path = os.path.join(prompt_dir, "framework_analysis_prompt.txt")
+        # user template：含 {scene_text} 佔位符
+        user_path = os.path.join(prompt_dir, "framework_user_template.txt")
+
         try:
             with open(system_path, encoding="utf-8") as f:
-                raw = f.read()
+                system_raw = f.read()
         except FileNotFoundError:
-            logger.warning("找不到 prompt 檔案，使用內建預設 prompt")
-            raw = _DEFAULT_ANALYSIS_PROMPT
+            system_raw = ""
 
-        # 慣例：檔案首行為 # version: x.y.z
+        try:
+            with open(user_path, encoding="utf-8") as f:
+                user_raw = f.read()
+        except FileNotFoundError:
+            logger.warning("找不到 user template，使用內建預設")
+            user_raw = _DEFAULT_ANALYSIS_PROMPT
+
+        # 從 system prompt 取版本號
         version = "1.0.0"
-        if raw.startswith("# version:"):
-            version = raw.splitlines()[0].split(":", 1)[1].strip()
-            raw = "\n".join(raw.splitlines()[1:]).strip()
+        if system_raw.startswith("# version:"):
+            version = system_raw.splitlines()[0].split(":", 1)[1].strip()
+            system_raw = "\n".join(system_raw.splitlines()[1:]).strip()
+
+        # 從 user template 移除版本行與說明區塊，只保留實際 template 內容
+        if user_raw.startswith("# version:"):
+            lines = user_raw.splitlines()
+            # 跳過所有 # 開頭的說明行
+            start = next((i for i, l in enumerate(lines) if not l.startswith("#")), 0)
+            user_raw = "\n".join(lines[start:]).strip()
+
+        # 合併：system prompt 作為 system_prompt，user template 作為 analysis_template
+        combined_system = _SYSTEM_PREAMBLE
+        if system_raw:
+            combined_system = system_raw + "\n\n" + _SYSTEM_PREAMBLE
 
         return cls(
             version=version,
-            system_prompt=_SYSTEM_PREAMBLE,
-            analysis_template=raw,
+            system_prompt=combined_system,
+            analysis_template=user_raw,
         )
 
 
 _SYSTEM_PREAMBLE = """你是一位專精中文小說敘事分析的文學評論 AI。
-你的任務是對給定的小說場景進行「局欲心變」框架分析。
+你的任務是對給定的小說場景進行「局心欲變」框架分析。
 你必須：
 1. 嚴格以 JSON 格式輸出，不得添加 markdown code fence 或任何額外文字
 2. 每個分析維度都必須包含 evidence_quotes，引用原文中的實際語句
@@ -150,7 +172,7 @@ _SYSTEM_PREAMBLE = """你是一位專精中文小說敘事分析的文學評論 
 5. confidence_score 必須誠實反映分析的確定程度"""
 
 _DEFAULT_ANALYSIS_PROMPT = """# version: 1.0.0
-請分析以下小說場景，輸出符合「局欲心變」框架的 JSON 分析卡。
+請分析以下小說場景，輸出符合「局心欲變」框架的 JSON 分析卡。
 
 ## 場景文字
 {scene_text}
@@ -238,7 +260,7 @@ class AnalysisResult:
 
 class FrameworkAnalyzer:
     """
-    「局欲心變」框架分析器。
+    「局心欲變」框架分析器。
 
     典型使用方式：
         analyzer = FrameworkAnalyzer(llm_client=OpenAIAdapter(...))
@@ -269,7 +291,7 @@ class FrameworkAnalyzer:
 
     async def analyze(self, ctx: AnalysisContext) -> AnalysisResult:
         """
-        對單一場景執行「局欲心變」分析。
+        對單一場景執行「局心欲變」分析。
 
         Returns:
             AnalysisResult：包含完整 SceneFrameworkCardSchema
@@ -365,12 +387,21 @@ class FrameworkAnalyzer:
         self, ctx: AnalysisContext, attempt: int
     ) -> list[LLMMessage]:
         """組裝 LLM messages"""
-        user_content = self.prompt.analysis_template.format(
-            scene_text=ctx.scene_text,
-            focal_character=ctx.focal_character,
-            chapter_number=ctx.chapter_number,
-            scene_number=ctx.scene_number,
-        )
+        replacements = {
+            "{scene_text}": ctx.scene_text,
+            "{focal_character}": ctx.focal_character,
+            "{chapter_number}": str(ctx.chapter_number),
+            "{scene_number}": str(ctx.scene_number),
+            "{scene_id}": ctx.scene_id,
+            "{book_title}": "上城之下",
+            "{chapter_title}": f"第 {ctx.chapter_number} 章",
+            "{scene_position_hint}": "",
+            "{known_characters}": "、".join(ctx.known_characters) if ctx.known_characters else "待提取",
+            "{preceding_context}": ctx.preceding_scene_summary or "（無）",
+        }
+        user_content = self.prompt.analysis_template
+        for key, val in replacements.items():
+            user_content = user_content.replace(key, val)
 
         # retry 時加強提示
         if attempt > 1:

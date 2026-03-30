@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>角色心態弧線 — 寧凡 vs 輝子</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 24px;
+}
+h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #0f172a;
+}
+.subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 24px;
+}
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #475569;
+}
+.dot { cursor: pointer; transition: r 0.15s; }
+.dot:hover { r: 10; }
+.tooltip {
+    position: fixed;
+    background: #1e293b;
+    color: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    max-width: 340px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 999;
+    line-height: 1.6;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.tooltip.visible { opacity: 1; }
+.tooltip strong { color: #93c5fd; }
+.tip-row { margin-top: 6px; }
+.tip-label { color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+tr:hover td { background: #f8fafc; }
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
+}
+svg text { user-select: none; }
+</style>
+</head>
+<body>
+
+<h1>角色心態弧線 — 寧凡 vs 輝子</h1>
+<p class="subtitle">資料來源：/Users/ryan/meta-agent/tools/novel-framework-analyzer/novel_analyzer.db &nbsp;|&nbsp; 生成時間：<span id="ts"></span></p>
+
+<div class="card">
+    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">心態強度時間軸</h2>
+    <svg width="800" height="360" viewBox="0 0 800 360"
+         style="max-width:100%;height:auto;display:block;">
+        <line x1="80" y1="300.0" x2="760" y2="300.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="304.0" text-anchor="end" font-size="11" fill="#64748b">none(0)</text>
+<line x1="80" y1="246.0" x2="760" y2="246.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="250.0" text-anchor="end" font-size="11" fill="#64748b">emotion(1)</text>
+<line x1="80" y1="192.0" x2="760" y2="192.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="196.0" text-anchor="end" font-size="11" fill="#64748b">stance(2)</text>
+<line x1="80" y1="138.0" x2="760" y2="138.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="142.0" text-anchor="end" font-size="11" fill="#64748b">strategy(3)</text>
+<line x1="80" y1="84.0" x2="760" y2="84.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="88.0" text-anchor="end" font-size="11" fill="#64748b">values(4)</text>
+<line x1="80" y1="30.0" x2="760" y2="30.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="34.0" text-anchor="end" font-size="11" fill="#64748b">identity(5)</text>
+<line x1="80.0" y1="30" x2="80.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="80.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第1章</text>
+<line x1="250.0" y1="30" x2="250.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="250.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第2章</text>
+<line x1="420.0" y1="30" x2="420.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="420.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第3章</text>
+<line x1="590.0" y1="30" x2="590.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="590.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第4章</text>
+<line x1="760.0" y1="30" x2="760.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="760.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第5章</text>
+<line x1="80" y1="30" x2="80" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+<line x1="80" y1="300" x2="760" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+<polyline points="80.0,30.0 250.0,30.0 420.0,84.0 590.0,138.0 760.0,30.0" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+<circle cx="80.0" cy="30.0" r="7" fill="#e879f9" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="1" data-sc="3" data-type="identity" data-before="寧凡進入場景時的心態是習慣性的接納與麻木。他知道自己沒有上城血統，對被淘汰已有心理預期。他的認知框架是：「我沒有上城血統，所以被淘汰是合理的」。這是一種被動的、自我確認的心態——他已經內化了社會階級制度的合理性。" data-trigger="發現血統檢測報告，尤其是背面的手寫補充：「也不屬於下城血統」與紅筆劃出的大問號。" data-after="寧凡的認知框架被徹底動搖。他從「我沒有上城血統」的單一確定性，陷入「我既不是上城也不是下城」的身份懸置狀態。他的自我認知從「被淘汰者」轉變為「身份不明者」，從有明確社會位置轉變為無所歸屬。這帶來深層的存在性困惑。" data-desc="從確定的身份認知（被淘汰的下城人）轉變為身份懸置與存在性困惑（既非上城也非下城）。這不是成長，而是脆弱化——寧凡失去了對自我的確定性，陷入更深的不確定性與焦慮。他的心理防線（對被淘汰的接納）被摧毀，取而代之的是根本性的身份危機。" data-intensity="5" />
+<circle cx="250.0" cy="30.0" r="7" fill="#e879f9" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="2" data-sc="3" data-type="identity" data-before="寧凡進入場景時自信滿滿，認為九項考核滿分足以證明自己的能力。他對林川的質疑採取理性回應（「那跟啥有關係？」「你怎麼知道我是小白兔？」），試圖用邏輯辯駁，顯示出對自己成績的執著與對實戰經驗的低估。" data-trigger="林川提出五天內傷到輝子的測試條件後，寧凡沒有猶豫，立即拔劍砍向輝子。但輝子瞬間拔出匕首擋住了黑劍，發出金屬碰撞聲。" data-after="寧凡的眼神微變，意識到自己的認知存在盲區。他自認為出手很快、很果決、出其不意，且劍術滿分，但輝子的防禦反應更快、更精準。這一刻，寧凡開始懷疑紙面成績與實戰能力之間的巨大鴻溝。" data-desc="從「成績優異的天才」到「發現自己可能是&#39;小白兔&#39;」的身份認知轉變。寧凡原本將自己定位為精英，但在輝子的一次防禦中，這個自我認知被動搖。這是一次脆弱化的轉變——寧凡的自信遭到打擊，但同時也是成長的起點，因為他開始正視實戰與紙面成績的差異。" data-intensity="5" />
+<circle cx="420.0" cy="84.0" r="7" fill="#f97316" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="3" data-sc="1" data-type="values" data-before="寧凡進入場景時認為這只是一場考核，目標是讓輝子出血以通過測試。他從未把輝子視為敵人，更未想過要殺害對方。心態相對天真，認知框架侷限於「考試」的邏輯——完成任務即可。" data-trigger="輝子的一系列行動與對話觸發了寧凡的認知轉變：(1)輝子踹寧凡一腳，造成腹部劇痛；(2)輝子反問『那你也可以殺我，為什麼不殺？』；(3)輝子的眼神與最後的宣言『我不殺你，絕對不是因為仁慈』——這個眼神『讓寧凡不禁感到寒冷』，寧凡意識到『輝子是真的動過殺心』。" data-after="寧凡離開現場後進入深度思考狀態。他開始意識到這不僅是一場考核，而是一場生死博弈。他需要在五天內理解『輝子為什麼不殺他』這個深層問題。他的認知框架從『考試邏輯』轉變為『生存邏輯』——需要理解對手的真實意圖與殺心的根源。" data-desc="寧凡的價值觀與認知框架發生根本轉變。從將對戰視為『考核任務』（工具理性）轉變為認識到這是『生死考驗』（生存理性）。這是一次價值觀的升級與心智的成熟，帶來了抗脆弱效應——寧凡從被動應對轉向主動思考，從天真的任務完成者轉變為需要理解對手心理的戰略思考者。" data-intensity="4" />
+<circle cx="590.0" cy="138.0" r="7" fill="#fbbf24" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="4" data-sc="2" data-type="strategy" data-before="輝子進入場景時的心態：困惑與崩潰。他被寧凡『耍弄了好幾天』，現在又遭到最敬重的隊長林川砍傷，完全『想不通，現在是什麼情況』。輝子的認知框架被打破——他無法理解事件的因果邏輯。" data-trigger="寧凡的完整解釋與揭露：（1）解答輝子前幾天的疑問——為何當時沒被殺；（2）揭示自己的策略——去斬風團買兇砍傷輝子；（3）解釋林川出手的原因——與寧凡的協議。這一系列信息的披露使輝子的認知框架從『混亂』逐步轉向『恍然大悟』。" data-after="輝子場景結束時的新心態：從困惑轉向警覺與敬畏。他意識到自己『差點被【斬風團】給惦記上了』，認識到寧凡的智謀遠超預期。輝子的認知從『武力對抗』升級到『全局博弈』——他開始理解寧凡不是直接對手，而是戰略對手。" data-desc="輝子從『武力優越感下的盲目自信』轉變為『認識到智謀與資源調度的威力』。這是一次認知升級，帶來了對寧凡的重新評估。輝子經歷了被動挨打但最終獲得信息透明的過程，這種『被迫學習』具有抗脆弱特徵——他的認知框架被擴展，對風險的感知能力提升。" data-intensity="3" />
+<circle cx="760.0" cy="30.0" r="7" fill="#e879f9" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="5" data-sc="1" data-type="identity" data-before="寧凡進入場景前的心態：冷靜、目標明確、充滿計算性。他已經完成了學院的滿分考核，展現出聰慧與毅力。他知道自己需要什麼（錢、行者身份、實戰經驗），並願意為此付出代價。他對林川的稱呼從無到「隊長」，表明他已經認可了這個組織的層級制度。" data-trigger="林川的深度觀察與評價：『這小子……心思縝密，膽子夠大，魄力十足！為了達到目的，可以付出全部！』以及林川邀請寧凡坐下，進行一對一的深入對話。林川問出『活著不好嗎？為啥非得當行者啊？』這個靈魂拷問。" data-after="寧凡在場景結束時的心態：更加確信自己的選擇。他坦誠回答『為了錢』，表明他不自欺欺人，也不為自己的動機辯護。他與林川建立了某種理解與信任的基礎——林川看到了他的本質（心思縝密、膽子大、有魄力），而寧凡也展現了自己的誠實與決心。這是一次身份認可的時刻。" data-desc="寧凡從『新人求職者』轉變為『被資深行者認可的潛力新人』。林川的評價『這樣的人，或許真是一塊當行者的料。只是還需要雕琢』標誌著寧凡在行者圈子中身份的提升。同時，寧凡對自己動機的坦誠回答『為了錢』，也強化了他的自我認知——他不是被理想驅動，而是被現實需求驅動。這帶來了成長（抗脆弱）：他通過展現真實的自己，而非虛偽的理想主義，獲得了更深層的認可。" data-intensity="5" />
+<polyline points="250.0,138.0 590.0,246.0" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+<circle cx="250.0" cy="138.0" r="7" fill="#fbbf24" stroke="white" stroke-width="2" class="dot" data-char="輝子" data-ch="2" data-sc="4" data-type="strategy" data-before="輝子進入場景時的心態是警覺且戰鬥就緒的。他對寧凡的威脅有所預判，並準備在必要時刻迅速反擊。他的認知框架中，敵人就是敵人，不應有任何心軟。" data-trigger="寧凡的攻擊行為（朝著輝子砍去）觸發了輝子的防禦反應。輝子用匕首進行了反擊，將寧凡擊飛。" data-after="輝子在衝突後的心態更加堅定與嘲弄。他通過這次對抗確認了自己的戰鬥優勢，並對寧凡的「心軟」進行了嘲笑。他的認知得到強化：在敵對關係中，任何猶豫都是致命的弱點。" data-desc="輝子從被動應變轉變為主動教訓。他不僅擊敗了寧凡，更進一步通過言語與姿態來強化自己的戰鬥哲學——對敵人不能心軟。這反映了他從純粹的防禦反應升級為心理層面的優勢確立，帶來了戰鬥策略與心理優勢的雙重成長（抗脆弱）。" data-intensity="3" />
+<circle cx="590.0" cy="246.0" r="7" fill="#60a5fa" stroke="white" stroke-width="2" class="dot" data-char="輝子" data-ch="4" data-sc="1" data-type="emotion" data-before="輝子進入場景時處於憤怒、自信但逐漸被動搖的狀態。他認為自己作為副隊長應該輕易壓制寧凡，但三天的失眠與被耍已經讓他開始懷疑。他的認知框架是：&#39;我應該贏&#39;，但現實不斷挑戰這一信念。他存在&#39;盲區&#39;——沒有意識到林川可能介入，也沒有嚴謹理解對賭的細節條款。" data-trigger="林川突然出現在身後，打破了輝子對局勢的掌控感。更關鍵的是林川用黑劍刮破了輝子的小臂，使其流血——這完成了寧凡無法完成的任務，同時暗示輝子被隊長背叛或被設局。" data-after="輝子從自信的副隊長變成困惑、被動的局外人。他的新認知是：事情遠比表面複雜，林川的介入意味著這場對峙不是簡單的上下級較量，而是某種更深層的設局。他從&#39;我應該贏&#39;轉變為&#39;我被設局了&#39;，從主動者變成被動者。" data-desc="從憤怒自信（&#39;我是副隊長，應該輕易勝利&#39;）轉變為困惑與被背叛感（&#39;為什麼隊長對我出手？&#39;）。這是一種脆弱化的轉變——輝子的權力感與自我認知被瓦解，但同時也可能是成長的開始（認識到自己的盲區與判斷失誤）。" data-intensity="1" />
+    </svg>
+    <div class="legend">
+        <span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="#6366f1" stroke-width="2.5"/></svg><span>寧凡</span></span>
+<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="#f43f5e" stroke-width="2.5"/></svg><span>輝子</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#94a3b8"/></svg><span>無心變</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#60a5fa"/></svg><span>情緒</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#34d399"/></svg><span>立場</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#fbbf24"/></svg><span>策略</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#f97316"/></svg><span>價值觀</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#e879f9"/></svg><span>身份認同</span></span>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">場景詳細列表</h2>
+    <div style="overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>角色</th>
+                <th>章</th>
+                <th>場</th>
+                <th>心變類型</th>
+                <th>強度</th>
+                <th>Match</th>
+                <th>前心態</th>
+                <th>觸發事件</th>
+                <th>後心態</th>
+                <th>分析推理</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>寧凡</td><td>1</td><td>1</td><td><span class="badge" style="background:#f97316">價值觀</span></td><td>4</td><td>F</td><td>寧凡進入場景時充滿確定性與自信。一個月前的選拔考試中他九項考核都是滿分，這使他相信「今年能夠被選中去上城的人，除了他不會有別人」。他的心態基於對規則公正性的信念——成績最好就應該被選中。內心緊張（握拳）反映的是對結果的期待與渴望，而非懷疑。</td><td>顯示屏跳動出現孫文輝的名字，打破了寧凡的預期。隨後小眼鏡揭露孫文輝擁有上城血統，這個信息直接戳破了寧凡對選拔公正性的信念。</td><td>寧凡從確定性的自信轉變為對規則本質的清醒認知。他意識到成績並非決定因素，血統才是。他的笑容帶著「無奈」與「釋然」——無奈於不可改變的現實，釋然於終於理解了失敗的真實原因。他對小胖子說「畢竟咱跟上城的人沒血緣關係，爭不過人家，不冤」，表明他已接受這個不公正但無法改變的事實。</td><td style="font-size:12px;color:#64748b">該場景完整符合『局心欲變』框架的四個維度。局（Situation）：清晰的權力結構——上城掌握選拔權，下城人被動接受，血統成為隱性規則。心（Mind）：寧凡的心…</td></tr>
+<tr><td>寧凡</td><td>1</td><td>2</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>寧凡進入場景時仍抱有希望與理性。與朋友交談時，他接受了失敗的現實，但心態相對平靜。他的認知框架是：通過上城選拔→獲得特效藥→救母親。這是一個線性、依賴外部機制的心理預期。</td><td>母親昏迷的床邊場景。寧凡看到母親乾巴巴的手，意識到等待已經不是選項。他對母親說出真相：&#39;我沒選上&#39;、&#39;我要去當行者了&#39;。這一刻，他從被動接受失敗轉變為主動承擔風險。</td><td>寧凡的心態發生根本轉變。他不再期待上城的恩賜，而是決定通過最危險的方式（當行者）自救。他的認知從&#39;依賴系統&#39;轉變為&#39;賭命求生&#39;。他承認害怕與不甘，但選擇了行動。最後一句&#39;拿上母親在他小時候送給他的唯一的禮物&#39;暗示他已做好赴死的準備。</td><td style="font-size:12px;color:#64748b">該場景完全符合&#39;局心欲變&#39;框架的四個維度：(1)局：清晰的外部賽局——血統歧視制度、下城瘴毒環境、資源不對等；(2)心：明確的心態轉變——從平靜…</td></tr>
+<tr><td>寧凡</td><td>1</td><td>3</td><td><span class="badge" style="background:#e879f9">身份認同</span></td><td>5</td><td>F</td><td>寧凡進入場景時的心態是習慣性的接納與麻木。他知道自己沒有上城血統，對被淘汰已有心理預期。他的認知框架是：「我沒有上城血統，所以被淘汰是合理的」。這是一種被動的、自我確認的心態——他已經內化了社會階級制度的合理性。</td><td>發現血統檢測報告，尤其是背面的手寫補充：「也不屬於下城血統」與紅筆劃出的大問號。</td><td>寧凡的認知框架被徹底動搖。他從「我沒有上城血統」的單一確定性，陷入「我既不是上城也不是下城」的身份懸置狀態。他的自我認知從「被淘汰者」轉變為「身份不明者」，從有明確社會位置轉變為無所歸屬。這帶來深層的存在性困惑。</td><td style="font-size:12px;color:#64748b">場景完整呈現了「局心欲變」四個維度：(1) 局：清晰的權力結構（上城/下城制度、母親的沉默、寧凡的被動地位）；(2) 心：明確的心態轉變（從接納被淘汰到身份懸置…</td></tr>
+<tr><td>寧凡</td><td>2</td><td>1</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>F</td><td>寧凡進入場景時『心事重重』『懷揣著巨大的疑惑』，內心已有決定但情緒波動大。他試圖暫時擱置血統檢測報告的困擾，轉向對母親的責任感。心態底色：決心與恐懼並存，理性與感性交織。</td><td>胖子與小眼鏡的回應與承諾。特別是小眼鏡的話『我們照顧她不是天經地義的嗎？』與胖子的『就算是為了方姨，你也得活著回來』，以及胖子遞出精菜袋子的具體行動。這些觸發了寧凡從『不舍與歉疚』向『堅定與信任』的轉變。</td><td>場景結束時，寧凡『用力點頭』『認真的點了點頭』，情緒『漸漸平靜了一些』。他從內疚感與不舍中解脫，轉向對朋友信任的堅定，以及對使命的冷靜接納。恐懼依然存在（『他才十八歲，也會害怕』），但已被理性與決心所壓制。</td><td style="font-size:12px;color:#64748b">場景完整呈現了『局心欲變』四個維度：（1）局：清晰的外部賽局——下城與上城的階級結構、寧凡的主動決定與朋友的被動支持、資源控制的不對等；（2）心：明確的心態轉變…</td></tr>
+<tr><td>寧凡</td><td>2</td><td>2</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>寧凡進入場景時的心態是冷靜、有備而來的。他『淡淡道』『討飯』，表現出平靜的表面，但內在已做足功課——『無論做任何事情，寧凡都會提前做出準備』。他一個月前就開始研究F32區的行者團隊，收集了『野狗之家』所有人的基本信息，知道林川是老大。這反映出他的認知框架是：理性規劃、預案充分、對風險有清晰認識（『一旦落選，成為行者就是他最後的選擇』）。心態底色是沉著但略帶緊張——他需要通過這次面試。</td><td>林川看到寧凡遞出的考核成績後，眼神發生變化：『散漫的眼中，多了幾分精彩』，隨即驚呼『臥槽！高材生啊？』。這一刻，寧凡從『只要錢不要命的普通求職者』被重新認知為『高材生』。</td><td>場景結束時，寧凡的地位與被認知的方式發生了轉變。林川從懷疑轉向驚訝與重視，這意味著寧凡的冷靜準備與隱藏的身份證明（考核成績）成功改變了對方的第一印象。寧凡的心態從『被動應對評估』轉向『掌握主動權的有力候選人』。他的沉著冷靜得到了驗證與回報。</td><td style="font-size:12px;color:#64748b">該場景完整符合『局心欲變』框架的四個維度：(1)『局』充分呈現——外部環境混亂、權力結構明確（林川主動、寧凡被動）、資源分配清晰、風險與限制具體；(2)『心』充…</td></tr>
+<tr><td>寧凡</td><td>2</td><td>3</td><td><span class="badge" style="background:#e879f9">身份認同</span></td><td>5</td><td>F</td><td>寧凡進入場景時自信滿滿，認為九項考核滿分足以證明自己的能力。他對林川的質疑採取理性回應（「那跟啥有關係？」「你怎麼知道我是小白兔？」），試圖用邏輯辯駁，顯示出對自己成績的執著與對實戰經驗的低估。</td><td>林川提出五天內傷到輝子的測試條件後，寧凡沒有猶豫，立即拔劍砍向輝子。但輝子瞬間拔出匕首擋住了黑劍，發出金屬碰撞聲。</td><td>寧凡的眼神微變，意識到自己的認知存在盲區。他自認為出手很快、很果決、出其不意，且劍術滿分，但輝子的防禦反應更快、更精準。這一刻，寧凡開始懷疑紙面成績與實戰能力之間的巨大鴻溝。</td><td style="font-size:12px;color:#64748b">場景完整呈現了『局心欲變』四個維度：（1）局：明確的權力結構與資源分配，林川掌握隊伍資格，寧凡處於被動求職位置，五天測試的時間與成功條件清晰；（2）心：寧凡進場…</td></tr>
+<tr><td>寧凡</td><td>3</td><td>1</td><td><span class="badge" style="background:#f97316">價值觀</span></td><td>4</td><td>F</td><td>寧凡進入場景時認為這只是一場考核，目標是讓輝子出血以通過測試。他從未把輝子視為敵人，更未想過要殺害對方。心態相對天真，認知框架侷限於「考試」的邏輯——完成任務即可。</td><td>輝子的一系列行動與對話觸發了寧凡的認知轉變：(1)輝子踹寧凡一腳，造成腹部劇痛；(2)輝子反問『那你也可以殺我，為什麼不殺？』；(3)輝子的眼神與最後的宣言『我不殺你，絕對不是因為仁慈』——這個眼神『讓寧凡不禁感到寒冷』，寧凡意識到『輝子是真的動過殺心』。</td><td>寧凡離開現場後進入深度思考狀態。他開始意識到這不僅是一場考核，而是一場生死博弈。他需要在五天內理解『輝子為什麼不殺他』這個深層問題。他的認知框架從『考試邏輯』轉變為『生存邏輯』——需要理解對手的真實意圖與殺心的根源。</td><td style="font-size:12px;color:#64748b">該場景完整展現了『局心欲變』四個維度：(1)『局』維度充分——外部局勢清晰（考核對戰），權力動態明確（輝子優勢、林川掌權、寧凡被動），風險與限制具體（生死風險、…</td></tr>
+<tr><td>寧凡</td><td>3</td><td>2</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>F</td><td>輝子初始心態：自信而警惕。他掌控自己的地盤，對陌生人的出現有所察覺但並未過度緊張。他相信自己能應對突發狀況，心態相對穩定。</td><td>寧凡的持續凝視與沉默威脅。從日出到日落的不間斷盯視，以及寧凡吃著廉價食物、面無表情但目光灼灼的行為，逐漸瓦解輝子的心理防線。最終寧凡的一句『我知道你家在哪』成為壓倒性的威脅觸發點。</td><td>輝子陷入深度不安與無力感。他從『不在意』轉變為『瘮得慌』，再到『拳頭打在棉花上的感覺』。他意識到自己無法通過常規對抗手段應對寧凡的策略，陷入對未知威脅的恐懼中。</td><td style="font-size:12px;color:#64748b">該場景完整符合『局心欲變』框架的四個維度：(1) 局：清晰的權力結構與任務設定，寧凡主動、輝子被動；(2) 心：輝子的心態從自信到恐懼的明確轉變過程；(3) 欲…</td></tr>
+<tr><td>寧凡</td><td>3</td><td>3</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>F</td><td>輝子初始心態：自信但不安。作為副隊長，他擁有權力與身體優勢，但寧凡的威脅激發了他的恐懼——害怕在眾人面前『翻車』，損害面子。這種恐懼導致他一夜未眠，陷入被動防守的焦慮狀態。他的認知框架是『面子至上』，認為直接暴力制止寧凡反而會暴露自己的害怕。</td><td>寧凡的反覆承諾與食言形成的心理循環。第一天寧凡說『今晚我肯定去』，輝子整夜等待；第二天寧凡又說『昨晚你咋沒來呢』，輝子再次被欺騙。這個循環不斷強化輝子的不確定性與無力感。</td><td>輝子的心態從『自信的副隊長』逐步蛻變為『被寧凡完全掌控的被動者』。他不再能夠確定寧凡是否真的會來，因此無法有效防守。他的身體狀態極差（『整個人的狀態極差』），心理防線被瓦解。他從主動者變成了被動等待者，面子已經在心理層面被寧凡奪走。</td><td style="font-size:12px;color:#64748b">場景完整展現了『局心欲變』四個維度：（1）局：清晰的權力結構與心理對抗框架，輝子被動、寧凡主動；（2）心：輝子的心態從自信轉變為無力，情緒層面的深度轉變；（3）…</td></tr>
+<tr><td>寧凡</td><td>3</td><td>4</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>寧凡進入場景時的心態是歉疚與冷靜。他為睡過頭道歉，但內心已有清晰的策略認知：他明白自己需要在「有十足把握」的時刻才能出手，否則會給輝子反擊的理由。這反映出他具有風險評估能力與長期博弈思維。</td><td>輝子的質問與指責：「你還有心情睡覺？！」以及隨後的冷哼與自信宣言：「我們在野外，可以做到在不影響戰鬥力的情況下，連續六七天不睡覺！」這些言語激發了寧凡對對手能力的重新認知。</td><td>寧凡的心態從「歉疚但自信有策略」轉變為「認識到對手的超常能力，但仍保持冷靜與耐心」。他沒有被輝子的氣勢所動搖，反而通過「一副受教的樣子」來掩蓋自己的真實想法，顯示出更深層的心理韌性與適應能力。</td><td style="font-size:12px;color:#64748b">該場景完整符合『局心欲變』框架的四個維度：(1) 局——清晰的外部賽局結構，涉及時間限制、權力動態、資源分配；(2) 心——寧凡的初始心態（歉疚但理性）與其認知…</td></tr>
+<tr><td>寧凡</td><td>3</td><td>5</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>F</td><td>輝子進入場景時的心態：自信傲慢，相信自己實力絕對優勢，對寧凡的威脅不屑一顧。但經歷兩次被放鴿子後，輝子的心態發生微妙變化——他開始相信寧凡的承諾（「因為他覺得寧凡說的有道理」），進入了一種既警惕又期待的心理狀態。</td><td>觸發轉變的關鍵節點有二：(1)寧凡的禮貌回應與理性態度（「嗯，我知道了，謝謝提醒，我不會輕敵」）打破了輝子對對手的刻板印象；(2)寧凡在被放鴿子兩次後仍然堅持承諾（「今晚是我最後的機會了，我肯定去」），這種執著與邏輯說服力使輝子信服。</td><td>輝子在第三夜的等待中，心態已從傲慢轉變為認真對待。他頂著黑眼圈等待整夜，說明他已將寧凡視為真正的威脅。但當再次被放鴿子時，他的心態再次轉變——從期待與警惕轉為憤怒與被愚弄感（「曹尼瑪！小癟犢子！你昨晚為啥又沒來？！」）。</td><td style="font-size:12px;color:#64748b">該場景完整符合『局心欲變』框架的四個維度：(1)局——清晰的權力動態與主被動關係，寧凡主動、輝子被動；(2)心——輝子的心態從傲慢轉變為認真再到憤怒，心理轉變明…</td></tr>
+<tr><td>寧凡</td><td>4</td><td>2</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>輝子進入場景時的心態：困惑與崩潰。他被寧凡『耍弄了好幾天』，現在又遭到最敬重的隊長林川砍傷，完全『想不通，現在是什麼情況』。輝子的認知框架被打破——他無法理解事件的因果邏輯。</td><td>寧凡的完整解釋與揭露：（1）解答輝子前幾天的疑問——為何當時沒被殺；（2）揭示自己的策略——去斬風團買兇砍傷輝子；（3）解釋林川出手的原因——與寧凡的協議。這一系列信息的披露使輝子的認知框架從『混亂』逐步轉向『恍然大悟』。</td><td>輝子場景結束時的新心態：從困惑轉向警覺與敬畏。他意識到自己『差點被【斬風團】給惦記上了』，認識到寧凡的智謀遠超預期。輝子的認知從『武力對抗』升級到『全局博弈』——他開始理解寧凡不是直接對手，而是戰略對手。</td><td style="font-size:12px;color:#64748b">該場景完整展現了『局心欲變』四個維度：（1）局：清晰的權力結構、資源分配、時間限制與風險邊界；（2）心：輝子從困惑到警覺的認知轉變，寧凡的理性與戰略思維；（3）…</td></tr>
+<tr><td>寧凡</td><td>4</td><td>3</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>寧凡進入場景前的心態：被傷害的受害者，資金短缺導致無力感，但內心堅定要復仇。他相信通過籌資與策略可以扭轉局面。同時，他已經認識到輝子的強大（武力優勢），因此採取迂迴策略而非直接對抗。</td><td>寧凡向輝子坦白整個計劃的過程：從籌資、監視、心理戰術，到最終與林川達成協議。關鍵語句：&#39;我是在想，萬一你能露出破綻，讓我砍傷，我就可以省下八千塊的索拉了。&#39;以及&#39;我一想到我每天累死累活的，你卻能在家裡呼呼睡大覺，心裡就挺不爽的。你教我的，在我沒通過考驗之前，我們就還是敵人。&#39;</td><td>寧凡場景結束後的新心態：從被動受害者轉變為主動策略者。他不僅成功籌資並完成復仇，更重要的是通過心理戰術戰勝了武力更強的對手。他展現出成熟的戰略思維——利用資訊不對稱、心理壓力與人際關係網絡來實現目標。最終被林川認可並接納為&#39;自己人&#39;，身份從&#39;敵人&#39;轉變為&#39;同伴&#39;。</td><td style="font-size:12px;color:#64748b">該場景完全符合&#39;局心欲變&#39;框架的四個維度：(1)局——清晰的權力結構與資源分配，寧凡從被動轉為主動；(2)心——寧凡的心態從被害者轉變為策略家，…</td></tr>
+<tr><td>寧凡</td><td>5</td><td>1</td><td><span class="badge" style="background:#e879f9">身份認同</span></td><td>5</td><td>F</td><td>寧凡進入場景前的心態：冷靜、目標明確、充滿計算性。他已經完成了學院的滿分考核，展現出聰慧與毅力。他知道自己需要什麼（錢、行者身份、實戰經驗），並願意為此付出代價。他對林川的稱呼從無到「隊長」，表明他已經認可了這個組織的層級制度。</td><td>林川的深度觀察與評價：『這小子……心思縝密，膽子夠大，魄力十足！為了達到目的，可以付出全部！』以及林川邀請寧凡坐下，進行一對一的深入對話。林川問出『活著不好嗎？為啥非得當行者啊？』這個靈魂拷問。</td><td>寧凡在場景結束時的心態：更加確信自己的選擇。他坦誠回答『為了錢』，表明他不自欺欺人，也不為自己的動機辯護。他與林川建立了某種理解與信任的基礎——林川看到了他的本質（心思縝密、膽子大、有魄力），而寧凡也展現了自己的誠實與決心。這是一次身份認可的時刻。</td><td style="font-size:12px;color:#64748b">該場景完整地體現了『局心欲變』框架的四個維度：（1）局：清晰的權力結構與資源分配，寧凡作為主動方、林川作為執行方、輝子作為被動方；（2）心：寧凡進入場景時的冷靜…</td></tr>
+<tr><td>寧凡</td><td>5</td><td>3</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>F</td><td>寧凡在出發前已做好心理準備（「他在一個月前就準備好了」），但進入區外時仍感到「無比忐忑」。他對區外環境陌生，心態介於期待與恐懼之間，帶著新人的緊張感與對未知的想像。</td><td>寧凡剛適應區外黑暗環境，突然聽到斷肢男人的哭喊聲：「救救我！求求你們救救我！我出一千索拉！」並看到「一個手腳近乎全都斷掉，滿身是血的男人」蠕動靠近。隨後林川拍肩膀說：「小狗崽子，歡迎來到地獄。」</td><td>寧凡經歷了從理論準備到現實衝擊的落差。區外不是他想像的樣子，而是充滿暴力、絕望與死亡的「地獄」。他的心態從忐忑轉變為震撼與對現實殘酷性的直觀認知。</td><td style="font-size:12px;color:#64748b">該場景完整體現了「局心欲變」四個維度：(1) 局：清晰的外部賽局——出區任務、權力結構、資源分配、制度障礙（賄賂守衛）；(2) 心：明確的心態轉變——從一個月的…</td></tr>
+<tr><td>輝子</td><td>2</td><td>4</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>輝子進入場景時的心態是警覺且戰鬥就緒的。他對寧凡的威脅有所預判，並準備在必要時刻迅速反擊。他的認知框架中，敵人就是敵人，不應有任何心軟。</td><td>寧凡的攻擊行為（朝著輝子砍去）觸發了輝子的防禦反應。輝子用匕首進行了反擊，將寧凡擊飛。</td><td>輝子在衝突後的心態更加堅定與嘲弄。他通過這次對抗確認了自己的戰鬥優勢，並對寧凡的「心軟」進行了嘲笑。他的認知得到強化：在敵對關係中，任何猶豫都是致命的弱點。</td><td style="font-size:12px;color:#64748b">該場景完整符合『局心欲變』框架的四個維度。局（Situation）：清晰的權力結構與衝突環境，輝子主動、寧凡被動。心（Mind）：輝子的戰鬥心態與敵對認知明確。…</td></tr>
+<tr><td>輝子</td><td>4</td><td>1</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>F</td><td>輝子進入場景時處於憤怒、自信但逐漸被動搖的狀態。他認為自己作為副隊長應該輕易壓制寧凡，但三天的失眠與被耍已經讓他開始懷疑。他的認知框架是：&#39;我應該贏&#39;，但現實不斷挑戰這一信念。他存在&#39;盲區&#39;——沒有意識到林川可能介入，也沒有嚴謹理解對賭的細節條款。</td><td>林川突然出現在身後，打破了輝子對局勢的掌控感。更關鍵的是林川用黑劍刮破了輝子的小臂，使其流血——這完成了寧凡無法完成的任務，同時暗示輝子被隊長背叛或被設局。</td><td>輝子從自信的副隊長變成困惑、被動的局外人。他的新認知是：事情遠比表面複雜，林川的介入意味著這場對峙不是簡單的上下級較量，而是某種更深層的設局。他從&#39;我應該贏&#39;轉變為&#39;我被設局了&#39;，從主動者變成被動者。</td><td style="font-size:12px;color:#64748b">場景完整展現了『局心欲變』四個維度：(1)局——清晰的權力結構、資源分配與風險；(2)心——輝子從自信到困惑的心態轉變，存在明確的認知盲區；(3)欲——顯性欲望…</td></tr>
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+document.getElementById("ts").textContent = new Date().toLocaleString("zh-TW");
+
+const tooltip = document.getElementById("tooltip");
+
+document.querySelectorAll(".dot").forEach(dot => {
+    dot.addEventListener("mouseenter", e => {
+        const d = dot.dataset;
+        tooltip.innerHTML = `
+            <strong>${d.char} — 第${d.ch}章 第${d.sc}場</strong>
+            <div class="tip-row"><span class="tip-label">心變類型</span><br>${d.type}（強度 ${d.intensity}）</div>
+            <div class="tip-row"><span class="tip-label">前心態</span><br>${d.before}</div>
+            <div class="tip-row"><span class="tip-label">觸發事件</span><br>${d.trigger}</div>
+            <div class="tip-row"><span class="tip-label">後心態</span><br>${d.after}</div>
+            ${d.desc ? `<div class="tip-row"><span class="tip-label">轉變描述</span><br>${d.desc}</div>` : ""}
+        `;
+        tooltip.classList.add("visible");
+        moveTooltip(e);
+    });
+    dot.addEventListener("mousemove", moveTooltip);
+    dot.addEventListener("mouseleave", () => {
+        tooltip.classList.remove("visible");
+    });
+});
+
+function moveTooltip(e) {
+    const margin = 14;
+    const tw = tooltip.offsetWidth;
+    const th = tooltip.offsetHeight;
+    let left = e.clientX + margin;
+    let top = e.clientY + margin;
+    if (left + tw > window.innerWidth - 10) left = e.clientX - tw - margin;
+    if (top + th > window.innerHeight - 10) top = e.clientY - th - margin;
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+}
+</script>
+</body>
+</html>

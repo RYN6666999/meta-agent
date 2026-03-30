@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>角色心態弧線 — 寧凡 vs 林川</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 24px;
+}
+h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #0f172a;
+}
+.subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 24px;
+}
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #475569;
+}
+.dot { cursor: pointer; transition: r 0.15s; }
+.dot:hover { r: 10; }
+.tooltip {
+    position: fixed;
+    background: #1e293b;
+    color: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    max-width: 340px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 999;
+    line-height: 1.6;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.tooltip.visible { opacity: 1; }
+.tooltip strong { color: #93c5fd; }
+.tip-row { margin-top: 6px; }
+.tip-label { color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+tr:hover td { background: #f8fafc; }
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
+}
+svg text { user-select: none; }
+</style>
+</head>
+<body>
+
+<h1>角色心態弧線 — 寧凡 vs 林川</h1>
+<p class="subtitle">資料來源：/Users/ryan/meta-agent/tools/novel-framework-analyzer/novel_analyzer.db &nbsp;|&nbsp; 生成時間：<span id="ts"></span></p>
+
+<div class="card">
+    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">心態強度時間軸</h2>
+    <svg width="800" height="360" viewBox="0 0 800 360"
+         style="max-width:100%;height:auto;display:block;">
+        <line x1="80" y1="300.0" x2="760" y2="300.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="304.0" text-anchor="end" font-size="11" fill="#64748b">none(0)</text>
+<line x1="80" y1="246.0" x2="760" y2="246.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="250.0" text-anchor="end" font-size="11" fill="#64748b">emotion(1)</text>
+<line x1="80" y1="192.0" x2="760" y2="192.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="196.0" text-anchor="end" font-size="11" fill="#64748b">stance(2)</text>
+<line x1="80" y1="138.0" x2="760" y2="138.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="142.0" text-anchor="end" font-size="11" fill="#64748b">strategy(3)</text>
+<line x1="80" y1="84.0" x2="760" y2="84.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="88.0" text-anchor="end" font-size="11" fill="#64748b">values(4)</text>
+<line x1="80" y1="30.0" x2="760" y2="30.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="72" y="34.0" text-anchor="end" font-size="11" fill="#64748b">identity(5)</text>
+<line x1="80.0" y1="30" x2="80.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="80.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第1章</text>
+<line x1="306.7" y1="30" x2="306.7" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="306.7" y="320" text-anchor="middle" font-size="11" fill="#64748b">第2章</text>
+<line x1="533.3" y1="30" x2="533.3" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="533.3" y="320" text-anchor="middle" font-size="11" fill="#64748b">第3章</text>
+<line x1="760.0" y1="30" x2="760.0" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+<text x="760.0" y="320" text-anchor="middle" font-size="11" fill="#64748b">第4章</text>
+<line x1="80" y1="30" x2="80" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+<line x1="80" y1="300" x2="760" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+<polyline points="80.0,246.0 306.7,138.0 533.3,84.0 760.0,30.0" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+<circle cx="80.0" cy="246.0" r="7" fill="#60a5fa" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="1" data-sc="1" data-type="emotion" data-before="抗拒修煉" data-trigger="被師父揍" data-after="勉強接受" data-desc="從拒絕到被動接受" data-intensity="1" />
+<circle cx="306.7" cy="138.0" r="7" fill="#fbbf24" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="2" data-sc="1" data-type="strategy" data-before="被動應付" data-trigger="發現秘密法門" data-after="主動謀劃" data-desc="由被動轉主動策略" data-intensity="3" />
+<circle cx="533.3" cy="84.0" r="7" fill="#f97316" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="3" data-sc="2" data-type="values" data-before="個人利益優先" data-trigger="目睹百姓受苦" data-after="開始思考責任" data-desc="個人主義動搖" data-intensity="4" />
+<circle cx="760.0" cy="30.0" r="7" fill="#e879f9" stroke="white" stroke-width="2" class="dot" data-char="寧凡" data-ch="4" data-sc="1" data-type="identity" data-before="散修無根" data-trigger="認定傳承" data-after="接受宗門弟子身份" data-desc="身份認同重構" data-intensity="5" />
+<polyline points="306.7,192.0 533.3,138.0" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+<circle cx="306.7" cy="192.0" r="7" fill="#34d399" stroke="white" stroke-width="2" class="dot" data-char="林川" data-ch="2" data-sc="1" data-type="stance" data-before="信任家族" data-trigger="發現背叛" data-after="質疑一切" data-desc="立場動搖" data-intensity="2" />
+<circle cx="533.3" cy="138.0" r="7" fill="#fbbf24" stroke="white" stroke-width="2" class="dot" data-char="林川" data-ch="3" data-sc="1" data-type="strategy" data-before="正面對抗" data-trigger="實力差距" data-after="迂迴謀略" data-desc="由莽到謀" data-intensity="3" />
+    </svg>
+    <div class="legend">
+        <span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="#6366f1" stroke-width="2.5"/></svg><span>寧凡</span></span>
+<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="#f43f5e" stroke-width="2.5"/></svg><span>林川</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#94a3b8"/></svg><span>無心變</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#60a5fa"/></svg><span>情緒</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#34d399"/></svg><span>立場</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#fbbf24"/></svg><span>策略</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#f97316"/></svg><span>價值觀</span></span>
+<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#e879f9"/></svg><span>身份認同</span></span>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">場景詳細列表</h2>
+    <div style="overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>角色</th>
+                <th>章</th>
+                <th>場</th>
+                <th>心變類型</th>
+                <th>強度</th>
+                <th>Match</th>
+                <th>前心態</th>
+                <th>觸發事件</th>
+                <th>後心態</th>
+                <th>分析推理</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>寧凡</td><td>1</td><td>1</td><td><span class="badge" style="background:#60a5fa">情緒</span></td><td>1</td><td>P</td><td>抗拒修煉</td><td>被師父揍</td><td>勉強接受</td><td style="font-size:12px;color:#64748b">師父威壓下的被動轉變</td></tr>
+<tr><td>寧凡</td><td>2</td><td>1</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>F</td><td>被動應付</td><td>發現秘密法門</td><td>主動謀劃</td><td style="font-size:12px;color:#64748b">利益驅動的策略轉換</td></tr>
+<tr><td>寧凡</td><td>3</td><td>2</td><td><span class="badge" style="background:#f97316">價值觀</span></td><td>4</td><td>F</td><td>個人利益優先</td><td>目睹百姓受苦</td><td>開始思考責任</td><td style="font-size:12px;color:#64748b">情感衝擊引發價值觀動搖</td></tr>
+<tr><td>寧凡</td><td>4</td><td>1</td><td><span class="badge" style="background:#e879f9">身份認同</span></td><td>5</td><td>F</td><td>散修無根</td><td>認定傳承</td><td>接受宗門弟子身份</td><td style="font-size:12px;color:#64748b">歸屬感觸發身份認同轉變</td></tr>
+<tr><td>林川</td><td>2</td><td>1</td><td><span class="badge" style="background:#34d399">立場</span></td><td>2</td><td>F</td><td>信任家族</td><td>發現背叛</td><td>質疑一切</td><td style="font-size:12px;color:#64748b">背叛衝擊引發立場轉換</td></tr>
+<tr><td>林川</td><td>3</td><td>1</td><td><span class="badge" style="background:#fbbf24">策略</span></td><td>3</td><td>P</td><td>正面對抗</td><td>實力差距</td><td>迂迴謀略</td><td style="font-size:12px;color:#64748b">現實考量下的策略調整</td></tr>
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+document.getElementById("ts").textContent = new Date().toLocaleString("zh-TW");
+
+const tooltip = document.getElementById("tooltip");
+
+document.querySelectorAll(".dot").forEach(dot => {
+    dot.addEventListener("mouseenter", e => {
+        const d = dot.dataset;
+        tooltip.innerHTML = `
+            <strong>${d.char} — 第${d.ch}章 第${d.sc}場</strong>
+            <div class="tip-row"><span class="tip-label">心變類型</span><br>${d.type}（強度 ${d.intensity}）</div>
+            <div class="tip-row"><span class="tip-label">前心態</span><br>${d.before}</div>
+            <div class="tip-row"><span class="tip-label">觸發事件</span><br>${d.trigger}</div>
+            <div class="tip-row"><span class="tip-label">後心態</span><br>${d.after}</div>
+            ${d.desc ? `<div class="tip-row"><span class="tip-label">轉變描述</span><br>${d.desc}</div>` : ""}
+        `;
+        tooltip.classList.add("visible");
+        moveTooltip(e);
+    });
+    dot.addEventListener("mousemove", moveTooltip);
+    dot.addEventListener("mouseleave", () => {
+        tooltip.classList.remove("visible");
+    });
+});
+
+function moveTooltip(e) {
+    const margin = 14;
+    const tw = tooltip.offsetWidth;
+    const th = tooltip.offsetHeight;
+    let left = e.clientX + margin;
+    let top = e.clientY + margin;
+    if (left + tw > window.innerWidth - 10) left = e.clientX - tw - margin;
+    if (top + th > window.innerHeight - 10) top = e.clientY - th - margin;
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+}
+</script>
+</body>
+</html>
