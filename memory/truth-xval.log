@@ -199,3 +199,19 @@
    OK    | 2026-03-24-CRM-status-pill-click-無法切換.md | git:➖ lightrag:✅
 
 💾 狀態已寫入 memory/system-status.json[truth_xval]
+🔍 三真理源交叉驗證器
+====================================================
+✅ LightRAG 連線正常
+
+📊 驗證結果（共 6 筆決策）
+   ✅ 三源一致：6 筆
+   ⚠️  警告（LightRAG 查無或不可用）：0 筆
+   ❌ 錯誤（git 分支不存在）：0 筆
+   OK    | 2026-03-16-auto-git-score.md | git:✅ lightrag:✅
+   OK    | 2026-03-16-bug-fixes-and-automation-loop.md | git:✅ lightrag:✅
+   OK    | 2026-03-16-health-title-restored.md | git:✅ lightrag:✅
+   OK    | 2026-03-16-pdca-causal-chain.md | git:✅ lightrag:✅
+   OK    | 2026-03-17-jsonld-fallback-implementation.md | git:➖ lightrag:✅
+   OK    | 2026-03-24-CRM-status-pill-click-無法切換.md | git:➖ lightrag:✅
+
+💾 狀態已寫入 memory/system-status.json[truth_xval]

@@ -1717,3 +1717,22 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-03-29 17:21 | auto-git-score | 分數 110 | 📥 達到閾值（110/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=85），含重要變更
+
+**評分明細：**
+  其他變更 .claude/settings.json +10
+  其他變更 .claude/skills/genspark-collab/SKILL.md +10
+  其他變更 error-log/2026-03-29-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-29-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/agent-ssh-gateway/host/bin/agent-relay.sh +10
+  其他變更 tools/agent-ssh-gateway/host/launchd/com.agentbot.relay.plist +10
+  其他變更 tools/agent-ssh-gateway/relay/index.html +10
+  其他變更 tools/agent-ssh-gateway/runner/package.json +10
+  其他變更 tools/agent-ssh-gateway/runner/src/relay.ts +10
+
+---

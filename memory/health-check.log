@@ -50,3 +50,7 @@
 [health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
 [health_check] ✅ Groq API: HTTP 200
 [health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-03-29-health-check.md
+[health_check] ✅ LightRAG: HTTP 200 (timeout=5s)
+[health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
+[health_check] ❌ Groq API: HTTP 000: {"id":"chatcmpl-549c36bb-8f74-4f13-98e2-26fe0b5f689c","object":"chat.completion","created":1774742402,"model":"llama-3.1-8b-instant","choices":[{"index":0,"mess
+[health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-03-30-health-check.md
