@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-03-30 18:21:21",
+  "tool": "douyin",
+  "ready": false,
+  "files": {
+    "sender": true,
+    "cookie_refresh": true
+  },
+  "ports": {
+    "n8n_5678": false,
+    "douyin_api_8000": false
+  },
+  "python_modules": {
+    "browser_cookie3": true,
+    "tkinter": true
+  }
+}

@@ -1904,3 +1904,28 @@
   其他變更 tools/novel-framework-analyzer/services/llm/openrouter_adapter.py +10
 
 ---
+
+## 2026-03-30 18:03 | auto-git-score | 分數 260 | 📥 達到閾值（260/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=125），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  核心腳本變更 scripts/crm/src/App.css +40
+  核心腳本變更 scripts/crm/src/App.tsx +40
+  核心腳本變更 scripts/crm/src/index.css +40
+  其他變更 tools/novel-framework-analyzer/backend/app/services/framework_analyzer.py +10
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/scripts/batch_analyze.py +10
+  其他變更 tools/novel-framework-analyzer/server.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/gemini_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/openrouter_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/smart_router.py +10
+
+---

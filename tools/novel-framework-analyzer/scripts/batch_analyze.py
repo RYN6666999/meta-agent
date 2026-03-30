@@ -30,8 +30,8 @@ from backend.app.services.framework_analyzer import (
     FrameworkAnalyzer, AnalysisContext, AnalysisError, MockLLMClient
 )
 
-NOVEL_PATH = os.path.join(ROOT, "上城之下.txt")
-BOOK_ID    = "shangchengzhixia-001"
+DEFAULT_NOVEL_PATH = os.path.join(ROOT, "上城之下.txt")
+DEFAULT_BOOK_ID    = "shangchengzhixia-001"
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +266,9 @@ async def run(
     concurrency: int,
     priority_chars: list[str] | None = None,
 ):
+    novel_path = os.environ.get("NOVEL_PATH_OVERRIDE", DEFAULT_NOVEL_PATH)
+    book_id = os.environ.get("BOOK_ID_OVERRIDE", DEFAULT_BOOK_ID)
+
     # 初始化 DB
     init_db()
     db = SessionLocal()
@@ -273,7 +276,7 @@ async def run(
     t0 = time.time()
 
     # 讀小說
-    with open(NOVEL_PATH, encoding="utf-8") as f:
+    with open(novel_path, encoding="utf-8") as f:
         text = f.read()
 
     # 建分析器
@@ -286,13 +289,17 @@ async def run(
     # 注意：scene_id 是每次執行重新生成的 uuid，不能用於去重
     existing_ch_sc: set[tuple] = set()
     if skip_existing:
-        rows = db.query(SceneFrameworkCard.chapter_number, SceneFrameworkCard.scene_number).all()
+        rows = (
+            db.query(SceneFrameworkCard.chapter_number, SceneFrameworkCard.scene_number)
+            .filter(SceneFrameworkCard.book_id == book_id)
+            .all()
+        )
         existing_ch_sc = {(r[0], r[1]) for r in rows}
-        print(f"DB 中已有 {len(existing_ch_sc)} 個場景卡，跳過重複分析")
+        print(f"DB 中書籍 {book_id} 已有 {len(existing_ch_sc)} 個場景卡，跳過重複分析")
 
     # 切章節
     chapters = [
-        c for c in split_chapters(text, BOOK_ID)
+        c for c in split_chapters(text, book_id)
         if chapter_start <= c.chapter_number <= chapter_end
     ]
     stats.chapters = len(chapters)
@@ -318,7 +325,7 @@ async def run(
 
             ctx = AnalysisContext(
                 scene_id=scene.scene_id,
-                book_id=BOOK_ID,
+                book_id=book_id,
                 scene_text=scene.raw_text,
                 chapter_number=chapter.chapter_number,
                 scene_number=scene.scene_number,

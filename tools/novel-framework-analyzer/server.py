@@ -6,11 +6,13 @@ server.py — 局心欲變分析系統 Web 介面
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import sqlite3
 import sys
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +28,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 DB_PATH      = ROOT / "novel_analyzer.db"
 UPLOAD_DIR   = ROOT / "uploads"
+BOOK_REGISTRY_PATH = ROOT / "book_registry.json"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 # 進度暫存（記憶體，重啟清空）
@@ -51,6 +54,70 @@ def json_safe(val):
         except Exception:
             return val
     return val
+
+
+def load_book_registry() -> dict:
+    if not BOOK_REGISTRY_PATH.exists():
+        return {}
+    try:
+        data = json.loads(BOOK_REGISTRY_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_book_registry(registry: dict):
+    BOOK_REGISTRY_PATH.write_text(
+        json.dumps(registry, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def create_analysis_job(filepath: str, chapters_start: int, chapters_end: int, mode: str, book_id: str):
+    job_id = uuid.uuid4().hex[:10]
+    _jobs[job_id] = {
+        "status": "running",
+        "progress": 0,
+        "total": 0,
+        "log": [],
+        "book_id": book_id,
+        "chapters_start": chapters_start,
+        "chapters_end": chapters_end,
+    }
+
+    async def run_job():
+        cmd = [
+            sys.executable, str(ROOT / "scripts" / "batch_analyze.py"),
+            "--chapters", f"{chapters_start}-{chapters_end}",
+            "--mode", mode,
+            "--skip-existing",
+        ]
+        env = os.environ.copy()
+        env["NOVEL_PATH_OVERRIDE"] = filepath
+        env["BOOK_ID_OVERRIDE"] = book_id
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            cwd=str(ROOT),
+            env=env,
+        )
+        async for line in proc.stdout:
+            text = line.decode("utf-8", errors="replace").rstrip()
+            _jobs[job_id]["log"].append(text)
+            if "✅" in text or "🟢" in text:
+                _jobs[job_id]["progress"] += 1
+            if "場景：" in text and "個" in text:
+                import re
+                m = re.search(r"場景：(\d+)", text)
+                if m:
+                    _jobs[job_id]["total"] = int(m.group(1))
+        await proc.wait()
+        _jobs[job_id]["status"] = "done" if proc.returncode == 0 else "error"
+
+    asyncio.create_task(run_job())
+    return job_id
 
 
 # ─────────────────────────────────────────────
@@ -88,18 +155,24 @@ def _calc_cost(input_tok: int, output_tok: int, model: str) -> float:
 
 
 @app.get("/api/costs")
-def api_costs():
+def api_costs(book_id: Optional[str] = None):
     """成本分析：依章節、日期、模型估算 token 與 USD 費用"""
     conn = get_db()
-    rows = conn.execute("""
+    params = []
+    where_sql = ""
+    if book_id:
+        where_sql = "WHERE book_id = ?"
+        params.append(book_id)
+
+    rows = conn.execute(f"""
         SELECT chapter_number, scene_number, model_used,
                LENGTH(scene_text)        AS text_len,
                LENGTH(raw_llm_response)  AS resp_len,
                created_at
         FROM scene_framework_cards
+        {where_sql}
         ORDER BY chapter_number, scene_number
-    """).fetchall()
-    conn.close()
+    """, params).fetchall()
 
     scenes = []
     by_chapter: dict[int, dict] = {}
@@ -108,7 +181,7 @@ def api_costs():
     total_cost  = 0.0
 
     for r in rows:
-        ch, sc, model, text_len, resp_len, created_at = r
+        ch, sc, model, text_len, resp_len, _created_at = r
         inp, out = _estimate_tokens(text_len or 0, resp_len or 0)
         cost = _calc_cost(inp, out, model)
 
@@ -143,10 +216,16 @@ def api_costs():
 
     # 對照試算（Smart 路由、Sonnet、Opus）
     # Smart 路由：寧凡場景數 × Haiku 費率 + 其他角色 × 0
-    smart_haiku_scenes = conn2.execute(
-        "SELECT COUNT(*) FROM scene_framework_cards WHERE focal_character=?", ("寧凡",)
-    ).fetchone()[0] if (conn2 := get_db()) else 0
-    conn2.close()
+    if book_id:
+        smart_haiku_scenes = conn.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE focal_character=? AND book_id=?",
+            ("寧凡", book_id),
+        ).fetchone()[0]
+    else:
+        smart_haiku_scenes = conn.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE focal_character=?",
+            ("寧凡",),
+        ).fetchone()[0]
     smart_ratio = smart_haiku_scenes / len(scenes) if scenes else 0
     smart_cost  = round(total_cost * smart_ratio, 4)
 
@@ -157,6 +236,8 @@ def api_costs():
         p = PRICING[key]
         c = (total_input * p["input"] + total_output * p["output"]) / 1_000_000
         compare.append({"label": p["label"], "cost_usd": round(c, 4), "savings_pct": None})
+
+    conn.close()
 
     return {
         "total_scenes":        len(scenes),
@@ -173,22 +254,46 @@ def api_costs():
 
 
 @app.get("/api/summary")
-def api_summary():
+def api_summary(book_id: Optional[str] = None):
     conn = get_db()
     cur = conn.cursor()
-    total    = cur.execute("SELECT COUNT(*) FROM scene_framework_cards").fetchone()[0]
-    nego     = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE is_negotiation_scene=1").fetchone()[0]
-    decisions = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE scene_labels LIKE '%decision%'").fetchone()[0]
-    max_ch   = cur.execute("SELECT MAX(chapter_number) FROM scene_framework_cards").fetchone()[0] or 0
-    avg_conf = cur.execute("SELECT AVG(confidence_score) FROM scene_framework_cards").fetchone()[0] or 0
-    chars    = cur.execute("""
-        SELECT focal_character, COUNT(*) n FROM scene_framework_cards
-        GROUP BY focal_character ORDER BY n DESC LIMIT 6
-    """).fetchall()
-    shifts   = cur.execute("""
-        SELECT mind_shift_type, COUNT(*) n FROM scene_framework_cards
-        GROUP BY mind_shift_type ORDER BY n DESC
-    """).fetchall()
+    if book_id:
+        total = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE book_id=?", (book_id,)).fetchone()[0]
+        nego = cur.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE is_negotiation_scene=1 AND book_id=?",
+            (book_id,),
+        ).fetchone()[0]
+        decisions = cur.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE scene_labels LIKE '%decision%' AND book_id=?",
+            (book_id,),
+        ).fetchone()[0]
+        max_ch = cur.execute("SELECT MAX(chapter_number) FROM scene_framework_cards WHERE book_id=?", (book_id,)).fetchone()[0] or 0
+        avg_conf = cur.execute("SELECT AVG(confidence_score) FROM scene_framework_cards WHERE book_id=?", (book_id,)).fetchone()[0] or 0
+        chars = cur.execute("""
+            SELECT focal_character, COUNT(*) n FROM scene_framework_cards
+            WHERE book_id=?
+            GROUP BY focal_character ORDER BY n DESC LIMIT 6
+        """, (book_id,)).fetchall()
+        shifts = cur.execute("""
+            SELECT mind_shift_type, COUNT(*) n FROM scene_framework_cards
+            WHERE book_id=?
+            GROUP BY mind_shift_type ORDER BY n DESC
+        """, (book_id,)).fetchall()
+    else:
+        total = cur.execute("SELECT COUNT(*) FROM scene_framework_cards").fetchone()[0]
+        nego = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE is_negotiation_scene=1").fetchone()[0]
+        decisions = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE scene_labels LIKE '%decision%'").fetchone()[0]
+        max_ch = cur.execute("SELECT MAX(chapter_number) FROM scene_framework_cards").fetchone()[0] or 0
+        avg_conf = cur.execute("SELECT AVG(confidence_score) FROM scene_framework_cards").fetchone()[0] or 0
+        chars = cur.execute("""
+            SELECT focal_character, COUNT(*) n FROM scene_framework_cards
+            GROUP BY focal_character ORDER BY n DESC LIMIT 6
+        """).fetchall()
+        shifts = cur.execute("""
+            SELECT mind_shift_type, COUNT(*) n FROM scene_framework_cards
+            GROUP BY mind_shift_type ORDER BY n DESC
+        """).fetchall()
+
     conn.close()
     return {
         "total_scenes": total,
@@ -201,6 +306,64 @@ def api_summary():
     }
 
 
+@app.get("/api/books")
+def api_books():
+    registry = load_book_registry()
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT book_id,
+               COUNT(*) AS scene_count,
+               MAX(chapter_number) AS max_chapter,
+               MAX(created_at) AS last_analyzed_at
+        FROM scene_framework_cards
+        GROUP BY book_id
+        ORDER BY last_analyzed_at DESC
+    """).fetchall()
+    conn.close()
+
+    items = []
+    known = set()
+    for r in rows:
+        row_book_id = r["book_id"]
+        meta = registry.get(row_book_id, {})
+        detected = int(meta.get("detected_chapters") or 0)
+        max_ch = int(r["max_chapter"] or 0)
+        items.append({
+            "book_id": row_book_id,
+            "display_name": meta.get("display_name") or row_book_id,
+            "filename": meta.get("filename"),
+            "path": meta.get("path"),
+            "detected_chapters": detected,
+            "analyzed_scenes": int(r["scene_count"] or 0),
+            "max_analyzed_chapter": max_ch,
+            "next_chapter": max_ch + 1,
+            "is_completed": bool(detected and max_ch >= detected),
+            "uploaded_at": meta.get("uploaded_at"),
+            "last_analyzed_at": r["last_analyzed_at"],
+        })
+        known.add(row_book_id)
+
+    for row_book_id, meta in registry.items():
+        if row_book_id in known:
+            continue
+        detected = int(meta.get("detected_chapters") or 0)
+        items.append({
+            "book_id": row_book_id,
+            "display_name": meta.get("display_name") or row_book_id,
+            "filename": meta.get("filename"),
+            "path": meta.get("path"),
+            "detected_chapters": detected,
+            "analyzed_scenes": 0,
+            "max_analyzed_chapter": 0,
+            "next_chapter": 1,
+            "is_completed": False,
+            "uploaded_at": meta.get("uploaded_at"),
+            "last_analyzed_at": None,
+        })
+
+    return {"items": items}
+
+
 @app.get("/api/scenes")
 def api_scenes(
     chapter: Optional[int] = None,
@@ -209,6 +372,7 @@ def api_scenes(
     negotiation: Optional[bool] = None,
     limit: int = 50,
     offset: int = 0,
+    book_id: Optional[str] = None,
 ):
     conn = get_db()
     cur = conn.cursor()
@@ -221,13 +385,18 @@ def api_scenes(
         where.append("match_level=?"); params.append(match)
     if negotiation is not None:
         where.append("is_negotiation_scene=?"); params.append(1 if negotiation else 0)
-    sql = "SELECT chapter_number, scene_number, focal_character, secondary_characters, match_level, confidence_score, mind_shift_type, mind_shift_intensity, is_negotiation_scene, negotiation_pattern_tags, created_at FROM scene_framework_cards"
+    if book_id:
+        where.append("book_id=?"); params.append(book_id)
+    sql = "SELECT chapter_number, scene_number, focal_character, secondary_characters, match_level, confidence_score, mind_shift_type, mind_shift_intensity, is_negotiation_scene, negotiation_pattern_tags, created_at, book_id FROM scene_framework_cards"
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY chapter_number, scene_number LIMIT ? OFFSET ?"
     params += [limit, offset]
-    rows = cur.fetchall() if False else cur.execute(sql, params).fetchall()
-    total = cur.execute("SELECT COUNT(*) FROM scene_framework_cards" + (" WHERE " + " AND ".join(where) if where else ""), params[:-2]).fetchone()[0]
+    rows = cur.execute(sql, params).fetchall()
+    total = cur.execute(
+        "SELECT COUNT(*) FROM scene_framework_cards" + (" WHERE " + " AND ".join(where) if where else ""),
+        params[:-2],
+    ).fetchone()[0]
     conn.close()
     return {
         "total": total,
@@ -236,13 +405,19 @@ def api_scenes(
 
 
 @app.get("/api/scene/{chapter}/{scene}")
-def api_scene_detail(chapter: int, scene: int):
+def api_scene_detail(chapter: int, scene: int, book_id: Optional[str] = None):
     conn = get_db()
     cur = conn.cursor()
-    row = cur.execute("""
-        SELECT * FROM scene_framework_cards
-        WHERE chapter_number=? AND scene_number=? LIMIT 1
-    """, (chapter, scene)).fetchone()
+    if book_id:
+        row = cur.execute("""
+            SELECT * FROM scene_framework_cards
+            WHERE chapter_number=? AND scene_number=? AND book_id=? LIMIT 1
+        """, (chapter, scene, book_id)).fetchone()
+    else:
+        row = cur.execute("""
+            SELECT * FROM scene_framework_cards
+            WHERE chapter_number=? AND scene_number=? LIMIT 1
+        """, (chapter, scene)).fetchone()
     conn.close()
     if not row:
         raise HTTPException(404, "場景不存在")
@@ -253,17 +428,27 @@ def api_scene_detail(chapter: int, scene: int):
 
 
 @app.get("/api/decisions")
-def api_decisions():
+def api_decisions(book_id: Optional[str] = None):
     """行動決策場景：scene_labels 含 'decision'"""
     conn = get_db()
-    rows = conn.execute("""
-        SELECT chapter_number, scene_number, focal_character,
-               confidence_score, match_level, mind_shift_type, mind_shift_intensity,
-               scene_labels, situation, desire, mind_shift, scene_text
-        FROM scene_framework_cards
-        WHERE scene_labels LIKE '%decision%'
-        ORDER BY chapter_number, scene_number
-    """).fetchall()
+    if book_id:
+        rows = conn.execute("""
+            SELECT chapter_number, scene_number, focal_character,
+                   confidence_score, match_level, mind_shift_type, mind_shift_intensity,
+                   scene_labels, situation, desire, mind_shift, scene_text, book_id
+            FROM scene_framework_cards
+            WHERE scene_labels LIKE '%decision%' AND book_id=?
+            ORDER BY chapter_number, scene_number
+        """, (book_id,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT chapter_number, scene_number, focal_character,
+                   confidence_score, match_level, mind_shift_type, mind_shift_intensity,
+                   scene_labels, situation, desire, mind_shift, scene_text, book_id
+            FROM scene_framework_cards
+            WHERE scene_labels LIKE '%decision%'
+            ORDER BY chapter_number, scene_number
+        """).fetchall()
     conn.close()
     result = []
     for r in rows:
@@ -277,16 +462,26 @@ def api_decisions():
 
 
 @app.get("/api/negotiation")
-def api_negotiation():
+def api_negotiation(book_id: Optional[str] = None):
     conn = get_db()
-    rows = conn.execute("""
-        SELECT chapter_number, scene_number, focal_character,
-               confidence_score, mind_shift_type, negotiation_pattern_tags,
-               situation, desire, mind_shift, scene_text
-        FROM scene_framework_cards
-        WHERE is_negotiation_scene=1
-        ORDER BY chapter_number, scene_number
-    """).fetchall()
+    if book_id:
+        rows = conn.execute("""
+            SELECT chapter_number, scene_number, focal_character,
+                   confidence_score, mind_shift_type, negotiation_pattern_tags,
+                   situation, desire, mind_shift, scene_text, book_id
+            FROM scene_framework_cards
+            WHERE is_negotiation_scene=1 AND book_id=?
+            ORDER BY chapter_number, scene_number
+        """, (book_id,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT chapter_number, scene_number, focal_character,
+                   confidence_score, mind_shift_type, negotiation_pattern_tags,
+                   situation, desire, mind_shift, scene_text, book_id
+            FROM scene_framework_cards
+            WHERE is_negotiation_scene=1
+            ORDER BY chapter_number, scene_number
+        """).fetchall()
     conn.close()
     result = []
     for r in rows:
@@ -300,17 +495,26 @@ def api_negotiation():
 
 
 @app.get("/api/arc/{character}")
-def api_arc(character: str):
+def api_arc(character: str, book_id: Optional[str] = None):
     conn = get_db()
-    rows = conn.execute("""
-        SELECT chapter_number, scene_number, mind_shift_type, mind_shift_intensity,
-               match_level, confidence_score, mind_shift, is_negotiation_scene
-        FROM scene_framework_cards
-        WHERE focal_character=?
-        ORDER BY chapter_number, scene_number
-    """, (character,)).fetchall()
+    if book_id:
+        rows = conn.execute("""
+            SELECT chapter_number, scene_number, mind_shift_type, mind_shift_intensity,
+                   match_level, confidence_score, mind_shift, is_negotiation_scene, book_id
+            FROM scene_framework_cards
+            WHERE focal_character=? AND book_id=?
+            ORDER BY chapter_number, scene_number
+        """, (character, book_id)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT chapter_number, scene_number, mind_shift_type, mind_shift_intensity,
+                   match_level, confidence_score, mind_shift, is_negotiation_scene, book_id
+            FROM scene_framework_cards
+            WHERE focal_character=?
+            ORDER BY chapter_number, scene_number
+        """, (character,)).fetchall()
     conn.close()
-    type_score = {"none":0,"emotion":1,"stance":2,"strategy":3,"values":4,"identity":5}
+    type_score = {"none": 0, "emotion": 1, "stance": 2, "strategy": 3, "values": 4, "identity": 5}
     result = []
     for r in rows:
         d = dict(r)
@@ -336,6 +540,9 @@ async def api_upload(file: UploadFile = File(...)):
     if not text:
         raise HTTPException(400, "無法解碼檔案，請確認編碼（UTF-8 / GBK）")
 
+    digest = hashlib.sha1(content).hexdigest()[:12]
+    book_id = f"book-{digest}"
+
     save_name = f"{uuid.uuid4().hex[:8]}_{file.filename}"
     save_path = UPLOAD_DIR / save_name
     save_path.write_text(text, encoding="utf-8")
@@ -343,11 +550,32 @@ async def api_upload(file: UploadFile = File(...)):
     # 偵測章節數
     import re
     chapters = re.findall(r"第[零一二三四五六七八九十百千\d]+章", text)
+
+    registry = load_book_registry()
+    registry[book_id] = {
+        "book_id": book_id,
+        "display_name": Path(file.filename).stem,
+        "filename": save_name,
+        "path": str(save_path),
+        "detected_chapters": len(chapters),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    save_book_registry(registry)
+
+    conn = get_db()
+    analyzed = conn.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE book_id=?", (book_id,)).fetchone()[0]
+    max_ch = conn.execute("SELECT MAX(chapter_number) FROM scene_framework_cards WHERE book_id=?", (book_id,)).fetchone()[0] or 0
+    conn.close()
+
     return {
+        "book_id": book_id,
+        "display_name": Path(file.filename).stem,
         "filename": save_name,
         "path": str(save_path),
         "size_chars": len(text),
         "detected_chapters": len(chapters),
+        "analyzed_scenes": analyzed,
+        "max_analyzed_chapter": max_ch,
         "preview": text[:200],
     }
 
@@ -355,6 +583,7 @@ async def api_upload(file: UploadFile = File(...)):
 @app.post("/api/analyze")
 async def api_analyze(
     filepath: str = Form(...),
+    book_id: str = Form(...),
     chapters_start: int = Form(1),
     chapters_end: int = Form(5),
     mode: str = Form("haiku"),
@@ -362,42 +591,73 @@ async def api_analyze(
     """觸發批次分析，返回 job_id，前端用 /api/job/{id} 輪詢進度"""
     if not os.path.exists(filepath):
         raise HTTPException(404, "檔案不存在")
-    job_id = uuid.uuid4().hex[:10]
-    _jobs[job_id] = {"status": "running", "progress": 0, "total": 0, "log": []}
-
-    async def run_job():
-        import subprocess
-        cmd = [
-            sys.executable, str(ROOT / "scripts" / "batch_analyze.py"),
-            "--chapters", f"{chapters_start}-{chapters_end}",
-            "--mode", mode,
-            "--skip-existing",
-        ]
-        env = os.environ.copy()
-        env["NOVEL_PATH_OVERRIDE"] = filepath
-
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            cwd=str(ROOT),
-            env=env,
-        )
-        async for line in proc.stdout:
-            text = line.decode("utf-8", errors="replace").rstrip()
-            _jobs[job_id]["log"].append(text)
-            if "✅" in text or "🟢" in text:
-                _jobs[job_id]["progress"] += 1
-            if "場景：" in text and "個" in text:
-                import re
-                m = re.search(r"場景：(\d+)", text)
-                if m:
-                    _jobs[job_id]["total"] = int(m.group(1))
-        await proc.wait()
-        _jobs[job_id]["status"] = "done" if proc.returncode == 0 else "error"
-
-    asyncio.create_task(run_job())
+    job_id = create_analysis_job(
+        filepath=filepath,
+        chapters_start=chapters_start,
+        chapters_end=chapters_end,
+        mode=mode,
+        book_id=book_id,
+    )
     return {"job_id": job_id}
+
+
+@app.post("/api/analyze/continue")
+async def api_analyze_continue(
+    book_id: str = Form(...),
+    chapters_end: Optional[int] = Form(None),
+    mode: str = Form("haiku"),
+):
+    registry = load_book_registry()
+    book = registry.get(book_id)
+    if not book:
+        raise HTTPException(404, "找不到書籍資料，請先上傳此書")
+
+    filepath = book.get("path")
+    if not filepath or not os.path.exists(filepath):
+        raise HTTPException(404, "書籍檔案不存在，請重新上傳")
+
+    conn = get_db()
+    max_ch = conn.execute(
+        "SELECT MAX(chapter_number) FROM scene_framework_cards WHERE book_id=?",
+        (book_id,),
+    ).fetchone()[0] or 0
+    conn.close()
+
+    next_start = int(max_ch) + 1
+    detected_chapters = int(book.get("detected_chapters") or 0)
+
+    if detected_chapters and next_start > detected_chapters:
+        return {
+            "done": True,
+            "message": "本書已分析到最後一章",
+            "next_chapter": next_start,
+            "detected_chapters": detected_chapters,
+        }
+
+    if chapters_end is None:
+        if detected_chapters:
+            target_end = min(next_start + 9, detected_chapters)
+        else:
+            target_end = next_start + 9
+    else:
+        target_end = max(next_start, int(chapters_end))
+        if detected_chapters:
+            target_end = min(target_end, detected_chapters)
+
+    job_id = create_analysis_job(
+        filepath=filepath,
+        chapters_start=next_start,
+        chapters_end=target_end,
+        mode=mode,
+        book_id=book_id,
+    )
+    return {
+        "done": False,
+        "job_id": job_id,
+        "chapters_start": next_start,
+        "chapters_end": target_end,
+        "detected_chapters": detected_chapters,
+    }
 
 
 @app.get("/api/job/{job_id}")
@@ -409,6 +669,9 @@ def api_job_status(job_id: str):
         "status": j["status"],
         "progress": j["progress"],
         "total": j["total"],
+        "book_id": j.get("book_id"),
+        "chapters_start": j.get("chapters_start"),
+        "chapters_end": j.get("chapters_end"),
         "last_lines": j["log"][-10:],
     }
 
@@ -418,12 +681,20 @@ def api_update_negotiation(chapter: int, scene: int, body: dict):
     """手動修正談判標籤"""
     is_nego = bool(body.get("is_negotiation_scene", False))
     tags = body.get("negotiation_pattern_tags", [])
+    book_id = body.get("book_id")
     conn = get_db()
-    conn.execute("""
-        UPDATE scene_framework_cards
-        SET is_negotiation_scene=?, negotiation_pattern_tags=?
-        WHERE chapter_number=? AND scene_number=?
-    """, (1 if is_nego else 0, json.dumps(tags, ensure_ascii=False), chapter, scene))
+    if book_id:
+        conn.execute("""
+            UPDATE scene_framework_cards
+            SET is_negotiation_scene=?, negotiation_pattern_tags=?
+            WHERE chapter_number=? AND scene_number=? AND book_id=?
+        """, (1 if is_nego else 0, json.dumps(tags, ensure_ascii=False), chapter, scene, book_id))
+    else:
+        conn.execute("""
+            UPDATE scene_framework_cards
+            SET is_negotiation_scene=?, negotiation_pattern_tags=?
+            WHERE chapter_number=? AND scene_number=?
+        """, (1 if is_nego else 0, json.dumps(tags, ensure_ascii=False), chapter, scene))
     conn.commit()
     conn.close()
     return {"ok": True}
@@ -442,6 +713,13 @@ def frontend():
 
 
 if __name__ == "__main__":
+    import threading
     import uvicorn
+    import webbrowser
+
+    if os.environ.get("NOVEL_NO_BROWSER", "0") != "1":
+        # Delay opening slightly so the server is ready when browser connects.
+        threading.Timer(0.8, lambda: webbrowser.open("http://localhost:8765/#upload")).start()
+
     print("🚀 啟動中：http://localhost:8765")
     uvicorn.run(app, host="0.0.0.0", port=8765, reload=False)

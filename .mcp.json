@@ -7,6 +7,12 @@
         "@modelcontextprotocol/server-filesystem",
         "/Users/ryan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fun"
       ]
+    },
+    "toolbox": {
+      "command": "python3",
+      "args": [
+        "/Users/ryan/meta-agent/tools/toolbox-mcp/server.py"
+      ]
     }
   }
 }

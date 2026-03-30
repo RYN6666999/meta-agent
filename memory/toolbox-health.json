@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-03-30 18:21:21",
+  "files": {
+    "crm_package_json": true,
+    "decision_engine": true,
+    "truth_xval": true,
+    "novel_server": true,
+    "memory_mcp_server": true,
+    "douyin_sender": true,
+    "douyin_cookie_refresh": true
+  },
+  "ports": {
+    "crm_ui_5188": true,
+    "n8n_5678": false,
+    "douyin_api_8000": false,
+    "novel_ui_8765": true
+  }
+}

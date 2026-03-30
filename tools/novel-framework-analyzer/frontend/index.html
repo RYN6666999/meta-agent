@@ -113,7 +113,7 @@
   <header class="topbar">
     <h1>局心欲變</h1>
     <div style="width:1px;height:24px;background:var(--border)"></div>
-    <span style="color:var(--muted);font-size:13px">上城之下 · 分析系統</span>
+    <span style="color:var(--muted);font-size:13px" id="currentBookLabel">未選擇書籍 · 分析系統</span>
     <div class="stats" id="statsBar">
       <div class="stat"><div class="n" id="s-total">—</div><div class="l">場景</div></div>
       <div class="stat"><div class="n" id="s-ch">—</div><div class="l">章節</div></div>
@@ -272,6 +272,17 @@
     <!-- Upload -->
     <div class="page" id="page-upload">
       <h2>上傳 / 分析</h2>
+      <div class="card" style="margin-bottom:12px">
+        <h3>書籍工作區</h3>
+        <div class="form-row">
+          <span class="form-label">目前書籍</span>
+          <select id="bookSelect" onchange="selectBookFromList()" style="min-width:280px"></select>
+          <button class="btn btn-secondary" onclick="loadBooks(true)">重新整理</button>
+          <button class="btn btn-secondary" onclick="continueAnalysis()">↻ 接續下一段</button>
+        </div>
+        <div id="bookProgressMeta" style="margin-top:8px;color:var(--muted);font-size:12px">尚未選擇</div>
+      </div>
+
       <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <div class="upload-icon">📄</div>
         <div style="font-size:15px;font-weight:600">拖曳或點擊上傳小說 .txt</div>
@@ -324,15 +335,77 @@
 const API = '';
 let _filters = { match: 'all', nego: false };
 let _uploadedPath = '';
+let _currentBookId = '';
+let _books = [];
 let _arcChart = null, _shiftChart = null, _charChart = null;
 let _jobPoller = null;
 
+function apiUrl(path, includeBook = true) {
+  if (!includeBook || !_currentBookId) return API + path;
+  const sep = path.includes('?') ? '&' : '?';
+  return API + path + sep + 'book_id=' + encodeURIComponent(_currentBookId);
+}
+
+function setCurrentBook(bookId) {
+  _currentBookId = bookId || '';
+  const current = _books.find(b => b.book_id === _currentBookId);
+  _uploadedPath = current?.path || '';
+  document.getElementById('currentBookLabel').textContent =
+    current ? `${current.display_name || current.book_id} · 分析系統` : '未選擇書籍 · 分析系統';
+  updateBookMeta();
+}
+
+function updateBookMeta() {
+  const current = _books.find(b => b.book_id === _currentBookId);
+  const el = document.getElementById('bookProgressMeta');
+  if (!current) {
+    el.textContent = '尚未選擇';
+    return;
+  }
+  const done = current.max_analyzed_chapter || 0;
+  const total = current.detected_chapters || 0;
+  const next = current.next_chapter || (done + 1);
+  el.textContent = `已分析到第 ${done} 章${total ? ` / 共 ${total} 章` : ''}，下一段從第 ${next} 章開始`;
+}
+
+async function loadBooks(keepSelection = false) {
+  const d = await fetch(API + '/api/books').then(r => r.json());
+  _books = d.items || [];
+  const sel = document.getElementById('bookSelect');
+  const prev = _currentBookId;
+  sel.innerHTML = _books.length
+    ? _books.map(b => `<option value="${b.book_id}">${b.display_name || b.book_id}｜已到第${b.max_analyzed_chapter || 0}章</option>`).join('')
+    : '<option value="">（尚無書籍）</option>';
+
+  if (!_books.length) {
+    setCurrentBook('');
+    return;
+  }
+
+  if (keepSelection && prev && _books.some(b => b.book_id === prev)) {
+    sel.value = prev;
+    setCurrentBook(prev);
+  } else {
+    sel.value = _books[0].book_id;
+    setCurrentBook(_books[0].book_id);
+  }
+}
+
+function selectBookFromList() {
+  const sel = document.getElementById('bookSelect');
+  setCurrentBook(sel.value);
+  loadStats();
+  const activePage = (window.location.hash || '').replace('#', '').trim() || 'dashboard';
+  showPage(activePage, false);
+}
+
 // ── Navigation ──
-function showPage(name) {
+function showPage(name, pushHash = true) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
+  if (pushHash) window.location.hash = name;
   if (name === 'scenes') loadScenes();
   if (name === 'decisions') loadDecisions();
   if (name === 'negotiation') loadNegotiation();
@@ -344,7 +417,7 @@ function showPage(name) {
 // ── Stats bar ──
 async function loadStats() {
   try {
-    const d = await fetch(API + '/api/summary').then(r => r.json());
+    const d = await fetch(apiUrl('/api/summary')).then(r => r.json());
     document.getElementById('s-total').textContent = d.total_scenes;
     document.getElementById('s-ch').textContent = d.chapters_analyzed;
     document.getElementById('s-decision').textContent = d.decision_scenes || 0;
@@ -389,7 +462,7 @@ async function loadDashboard() {
   });
 
   // Recent negotiation preview
-  const nego = await fetch(API + '/api/negotiation').then(r => r.json());
+  const nego = await fetch(apiUrl('/api/negotiation')).then(r => r.json());
   const container = document.getElementById('negoPreview');
   if (!nego.length) {
     container.innerHTML = '<div style="color:var(--muted);padding:8px">尚未偵測到談判場景</div>';
@@ -412,15 +485,15 @@ async function loadDashboard() {
 // ── Scenes ──
 async function loadScenes() {
   const char = document.getElementById('sceneSearch').value.trim();
-  let url = API + '/api/scenes?limit=100&offset=0';
-  if (char) url += '&char=' + encodeURIComponent(char);
-  if (_filters.match !== 'all') url += '&match=' + _filters.match;
-  if (_filters.nego) url += '&negotiation=true';
+  let path = '/api/scenes?limit=100&offset=0';
+  if (char) path += '&char=' + encodeURIComponent(char);
+  if (_filters.match !== 'all') path += '&match=' + _filters.match;
+  if (_filters.nego) path += '&negotiation=true';
 
   const grid = document.getElementById('scenesGrid');
   grid.innerHTML = '<div style="color:var(--muted);padding:20px">載入中...</div>';
 
-  const data = await fetch(url).then(r => r.json());
+  const data = await fetch(apiUrl(path)).then(r => r.json());
   if (!data.items.length) {
     grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>沒有符合的場景</div>';
     return;
@@ -458,7 +531,7 @@ function setFilter(key, val, el) {
 
 // ── Decisions ──
 async function loadDecisions() {
-  const data = await fetch(API + '/api/decisions').then(r => r.json());
+  const data = await fetch(apiUrl('/api/decisions')).then(r => r.json());
   const list = document.getElementById('decisionList');
   if (!data.length) {
     list.innerHTML = '<div class="empty"><div class="empty-icon">⚡</div>尚未有行動決策場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
@@ -496,7 +569,7 @@ async function loadDecisions() {
 
 // ── Negotiation ──
 async function loadNegotiation() {
-  const data = await fetch(API + '/api/negotiation').then(r => r.json());
+  const data = await fetch(apiUrl('/api/negotiation')).then(r => r.json());
   const list = document.getElementById('negoList');
   if (!data.length) {
     list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>尚未偵測到談判場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
@@ -529,7 +602,7 @@ async function loadNegotiation() {
 let _arcData = [];
 async function loadArc() {
   const char = document.getElementById('arcChar').value;
-  const data = await fetch(API + '/api/arc/' + encodeURIComponent(char)).then(r => r.json());
+  const data = await fetch(apiUrl('/api/arc/' + encodeURIComponent(char))).then(r => r.json());
   _arcData = data;
 
   const shiftColors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
@@ -586,7 +659,7 @@ async function loadArc() {
 
 // ── Scene Modal ──
 async function openSceneModal(ch, sc) {
-  const d = await fetch(API + `/api/scene/${ch}/${sc}`).then(r => r.json());
+  const d = await fetch(apiUrl(`/api/scene/${ch}/${sc}`)).then(r => r.json());
   const sit = d.situation || {};
   const des = d.desire || {};
   const ms = d.mind_shift || {};
@@ -670,7 +743,7 @@ async function toggleNegotiation(ch, sc, setTo) {
   await fetch(API + `/api/scene/${ch}/${sc}/negotiation`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_negotiation_scene: setTo, negotiation_pattern_tags: [] })
+    body: JSON.stringify({ is_negotiation_scene: setTo, negotiation_pattern_tags: [], book_id: _currentBookId })
   });
   closeModal();
   loadNegotiation();
@@ -680,7 +753,7 @@ async function toggleNegotiation(ch, sc, setTo) {
 // ── Costs ──
 let _costChart = null;
 async function loadCosts() {
-  const d = await fetch(API + '/api/costs').then(r => r.json());
+  const d = await fetch(apiUrl('/api/costs')).then(r => r.json());
 
   const usdTwd = 32.5;  // 匯率參考
   const totalUsd = d.total_cost_usd;
@@ -804,18 +877,22 @@ async function processFile(file) {
     const res = await fetch(API + '/api/upload', { method: 'POST', body: fd }).then(r => r.json());
     if (res.detail) throw new Error(res.detail);
     _uploadedPath = res.path;
+    _currentBookId = res.book_id;
     document.getElementById('uploadName').textContent = res.filename;
-    document.getElementById('uploadMeta').textContent = `${(res.size_chars/10000).toFixed(1)}萬字 · 偵測到 ${res.detected_chapters} 章`;
+    document.getElementById('uploadMeta').textContent = `${(res.size_chars/10000).toFixed(1)}萬字 · 偵測到 ${res.detected_chapters} 章 · book_id: ${res.book_id}`;
     document.getElementById('chEnd').value = Math.min(res.detected_chapters, 10);
+    await loadBooks(true);
+    loadStats();
   } catch(e) {
     document.getElementById('uploadName').textContent = '上傳失敗：' + e.message;
   }
 }
 
 async function startAnalysis() {
-  if (!_uploadedPath) { alert('請先上傳小說檔案'); return; }
+  if (!_uploadedPath || !_currentBookId) { alert('請先上傳小說檔案'); return; }
   const fd = new FormData();
   fd.append('filepath', _uploadedPath);
+  fd.append('book_id', _currentBookId);
   fd.append('chapters_start', document.getElementById('chStart').value);
   fd.append('chapters_end', document.getElementById('chEnd').value);
   fd.append('mode', document.getElementById('analyzeMode').value);
@@ -830,31 +907,81 @@ async function startAnalysis() {
 
   try {
     const res = await fetch(API + '/api/analyze', { method: 'POST', body: fd }).then(r => r.json());
-    const jobId = res.job_id;
-    if (_jobPoller) clearInterval(_jobPoller);
-    _jobPoller = setInterval(async () => {
-      const j = await fetch(API + `/api/job/${jobId}`).then(r => r.json());
-      if (j.total > 0) fill.style.width = Math.min(99, j.progress / j.total * 100) + '%';
-      log.textContent = j.last_lines.join('\n');
-      log.scrollTop = log.scrollHeight;
-      if (j.status === 'done') {
-        fill.style.width = '100%';
-        log.textContent += '\n\n✅ 分析完成！';
-        clearInterval(_jobPoller);
-        loadStats();
-      } else if (j.status === 'error') {
-        log.textContent += '\n\n❌ 分析失敗';
-        clearInterval(_jobPoller);
-      }
-    }, 2000);
+    await trackJob(res.job_id);
   } catch(e) {
     log.textContent = '啟動失敗：' + e.message;
   }
 }
 
+async function continueAnalysis() {
+  if (!_currentBookId) { alert('請先從清單選擇一本書'); return; }
+  const fd = new FormData();
+  fd.append('book_id', _currentBookId);
+  fd.append('mode', document.getElementById('analyzeMode').value);
+  fd.append('chapters_end', document.getElementById('chEnd').value);
+
+  const bar = document.getElementById('progressBar');
+  const fill = document.getElementById('progressFill');
+  const log = document.getElementById('logBox');
+  bar.style.display = 'block';
+  log.style.display = 'block';
+  fill.style.width = '2%';
+  log.textContent = '接續分析啟動中...';
+
+  try {
+    const res = await fetch(API + '/api/analyze/continue', { method: 'POST', body: fd }).then(r => r.json());
+    if (res.done) {
+      log.textContent = '✅ 這本書已經分析完成';
+      fill.style.width = '100%';
+      return;
+    }
+    await trackJob(res.job_id);
+  } catch(e) {
+    log.textContent = '接續失敗：' + e.message;
+  }
+}
+
+async function trackJob(jobId) {
+  const fill = document.getElementById('progressFill');
+  const log = document.getElementById('logBox');
+  if (_jobPoller) clearInterval(_jobPoller);
+  _jobPoller = setInterval(async () => {
+    const j = await fetch(API + `/api/job/${jobId}`).then(r => r.json());
+    if (j.total > 0) fill.style.width = Math.min(99, j.progress / j.total * 100) + '%';
+    log.textContent = j.last_lines.join('\n');
+    log.scrollTop = log.scrollHeight;
+    if (j.status === 'done') {
+      fill.style.width = '100%';
+      log.textContent += '\n\n✅ 分析完成！';
+      clearInterval(_jobPoller);
+      await loadBooks(true);
+      loadStats();
+    } else if (j.status === 'error') {
+      log.textContent += '\n\n❌ 分析失敗';
+      clearInterval(_jobPoller);
+    }
+  }, 2000);
+}
+
+function getInitialPage() {
+  const allowed = new Set(['dashboard', 'scenes', 'decisions', 'negotiation', 'arc', 'costs', 'upload']);
+  const hashPage = (window.location.hash || '').replace('#', '').trim();
+  return allowed.has(hashPage) ? hashPage : 'dashboard';
+}
+
+async function initApp() {
+  await loadBooks(false);
+  loadStats();
+  showPage(getInitialPage(), false);
+}
+
+window.addEventListener('hashchange', () => {
+  const page = getInitialPage();
+  showPage(page, false);
+});
+
 // ── Init ──
-loadStats();
-loadDashboard();
+initApp();
 </script>
 </body>
 </html>

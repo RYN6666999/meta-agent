@@ -1,0 +1,28 @@
+{
+  "checked_at": "2026-03-30 18:21:22",
+  "policy": "suggest-hide-if-critical-dependency-down",
+  "candidates": [
+    {
+      "tool_id": "douyin-sender",
+      "critical_dependency": "localhost:5678",
+      "dependency_up": false
+    },
+    {
+      "tool_id": "douyin-cookie-refresh",
+      "critical_dependency": "localhost:8000",
+      "dependency_up": false
+    }
+  ],
+  "keep": [
+    {
+      "tool_id": "crm-dev",
+      "critical_dependency": "localhost:5188",
+      "dependency_up": true
+    },
+    {
+      "tool_id": "novel-server",
+      "critical_dependency": "localhost:8765",
+      "dependency_up": true
+    }
+  ]
+}
