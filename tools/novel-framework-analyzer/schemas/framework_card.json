@@ -1,0 +1,181 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://novel-analyzer/schemas/framework_card.json",
+  "title": "SceneFrameworkCard",
+  "description": "局欲心變場景分析卡的完整 JSON Schema",
+  "type": "object",
+  "required": [
+    "scene_id",
+    "scene_summary",
+    "main_characters",
+    "situation",
+    "desire",
+    "mind_shift",
+    "framework_match",
+    "evidence",
+    "confidence"
+  ],
+  "properties": {
+    "scene_id": {
+      "type": "string",
+      "description": "場景唯一識別碼"
+    },
+    "scene_summary": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "場景摘要，100字以內"
+    },
+    "main_characters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "role", "stance"],
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "stance": { "type": "string" }
+        }
+      }
+    },
+    "situation": {
+      "type": "object",
+      "required": [
+        "external_situation",
+        "power_dynamics",
+        "risks_and_constraints",
+        "active_party",
+        "passive_party",
+        "resource_holders",
+        "insufficient_context",
+        "evidence"
+      ],
+      "properties": {
+        "external_situation": { "type": "string" },
+        "power_dynamics": { "type": "string" },
+        "risks_and_constraints": { "type": "string" },
+        "active_party": { "type": "string" },
+        "passive_party": { "type": "string" },
+        "resource_holders": { "type": "string" },
+        "insufficient_context": { "type": "boolean" },
+        "evidence": { "$ref": "#/definitions/evidence_array" }
+      }
+    },
+    "desire": {
+      "type": "object",
+      "required": [
+        "explicit_desire",
+        "implicit_desire",
+        "true_objective",
+        "desire_conflicts",
+        "obstacles",
+        "insufficient_context",
+        "evidence"
+      ],
+      "properties": {
+        "explicit_desire": { "type": "string" },
+        "implicit_desire": { "type": "string" },
+        "true_objective": { "type": "string" },
+        "desire_conflicts": { "type": "string" },
+        "obstacles": { "type": "string" },
+        "insufficient_context": { "type": "boolean" },
+        "evidence": { "$ref": "#/definitions/evidence_array" }
+      }
+    },
+    "mind_shift": {
+      "type": "object",
+      "required": [
+        "before_mindset",
+        "trigger_event",
+        "after_mindset",
+        "shift_type",
+        "shift_description",
+        "is_reversible",
+        "insufficient_context",
+        "evidence"
+      ],
+      "properties": {
+        "before_mindset": { "type": "string" },
+        "trigger_event": { "type": "string" },
+        "after_mindset": { "type": "string" },
+        "shift_type": {
+          "type": "string",
+          "enum": ["emotion", "values", "strategy", "identity", "stance", "none"]
+        },
+        "shift_description": { "type": "string" },
+        "is_reversible": { "type": "boolean" },
+        "insufficient_context": { "type": "boolean" },
+        "evidence": { "$ref": "#/definitions/evidence_array" }
+      }
+    },
+    "framework_match": {
+      "type": "object",
+      "required": [
+        "match_level",
+        "reasoning",
+        "missing_dimensions",
+        "insufficient_context"
+      ],
+      "properties": {
+        "match_level": {
+          "type": "string",
+          "enum": ["full", "partial", "weak", "none"]
+        },
+        "reasoning": { "type": "string" },
+        "missing_dimensions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "insufficient_context": { "type": "boolean" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["strongest_quotes"],
+      "properties": {
+        "strongest_quotes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["text", "supports"],
+            "properties": {
+              "text": { "type": "string" },
+              "supports": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "分析信心分數，0.0–1.0"
+    },
+    "analysis_notes": {
+      "type": "string",
+      "description": "分析注記，可選"
+    }
+  },
+  "definitions": {
+    "evidence_array": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "relevance"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 5,
+            "description": "原文引用，不得虛構"
+          },
+          "relevance": {
+            "type": "string",
+            "description": "此引用如何支持分析"
+          }
+        }
+      }
+    }
+  }
+}
