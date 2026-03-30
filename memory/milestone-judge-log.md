@@ -1787,3 +1787,48 @@
   其他變更 "tools/novel-framework-analyzer/\344\270\212\345\237\216\344\271\213\344\270\213.txt" +10
 
 ---
+
+## 2026-03-30 12:25 | auto-git-score | 分數 370 | 📥 達到閾值（370/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=200），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/novel-framework-analyzer/backend/__init__.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/__init__.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/database.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/models/__init__.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/models/scene_framework_card.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/__init__.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/character_extractor.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/framework_analyzer.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/msa_analyzer.py +10
+  其他變更 tools/novel-framework-analyzer/docs/architecture.md +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/output/.gitkeep +10
+  其他變更 "tools/novel-framework-analyzer/output/arc_\345\257\247\345\207\241.html" +10
+  其他變更 "tools/novel-framework-analyzer/output/arc_\345\257\247\345\207\241_vs_\346\236\227\345\267\235.html" +10
+  其他變更 "tools/novel-framework-analyzer/output/arc_\345\257\247\345\207\241_vs_\350\274\235\345\255\220.html" +10
+  其他變更 tools/novel-framework-analyzer/output_ch1_s1.json +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_analysis_prompt.txt +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_few_shot.txt +10
+  其他變更 tools/novel-framework-analyzer/prompts/framework_user_template.txt +10
+  其他變更 tools/novel-framework-analyzer/schemas/framework_card.json +10
+  其他變更 tools/novel-framework-analyzer/scripts/analyze_scene.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/batch_analyze.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/character_arc.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/quality_compare.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/query.py +10
+  其他變更 tools/novel-framework-analyzer/scripts/scan_characters.py +10
+  其他變更 tools/novel-framework-analyzer/services/__init__.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/__init__.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/ollama_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/openrouter_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/services/vector_store/__init__.py +10
+
+---
