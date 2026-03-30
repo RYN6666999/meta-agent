@@ -20,6 +20,7 @@
   .topbar { grid-column: 1/-1; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; }
   .topbar h1 { font-size: 16px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
   .topbar .stats { display: flex; gap: 20px; margin-left: auto; }
+  .scope-select { margin-left: 8px; min-width: 130px; }
   .stat { text-align: center; }
   .stat .n { font-size: 18px; font-weight: 700; color: var(--accent); }
   .stat .l { font-size: 11px; color: var(--muted); }
@@ -114,6 +115,10 @@
     <h1>局心欲變</h1>
     <div style="width:1px;height:24px;background:var(--border)"></div>
     <span style="color:var(--muted);font-size:13px" id="currentBookLabel">未選擇書籍 · 分析系統</span>
+    <select id="scopeSelect" class="scope-select" onchange="setDataScopeFromUI()">
+      <option value="book">目前書籍</option>
+      <option value="all">全部書籍</option>
+    </select>
     <div class="stats" id="statsBar">
       <div class="stat"><div class="n" id="s-total">—</div><div class="l">場景</div></div>
       <div class="stat"><div class="n" id="s-ch">—</div><div class="l">章節</div></div>
@@ -337,13 +342,43 @@ let _filters = { match: 'all', nego: false };
 let _uploadedPath = '';
 let _currentBookId = '';
 let _books = [];
+let _dataScope = 'book';
 let _arcChart = null, _shiftChart = null, _charChart = null;
 let _jobPoller = null;
 
 function apiUrl(path, includeBook = true) {
-  if (!includeBook || !_currentBookId) return API + path;
+  if (!includeBook) return API + path;
+  if (_dataScope === 'all') return API + path;
+  if (!_currentBookId) return null;
   const sep = path.includes('?') ? '&' : '?';
   return API + path + sep + 'book_id=' + encodeURIComponent(_currentBookId);
+}
+
+function renderNeedBookState(targetId, hint = '請先在「上傳 / 分析」上傳或選擇一本書，或切換為「全部書籍」') {
+  if (!targetId) return;
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.innerHTML = `<div class="empty"><div class="empty-icon">📚</div>${hint}</div>`;
+}
+
+function clearStatsBar() {
+  document.getElementById('s-total').textContent = '—';
+  document.getElementById('s-ch').textContent = '—';
+  document.getElementById('s-decision').textContent = '—';
+  document.getElementById('s-nego').textContent = '—';
+  document.getElementById('s-conf').textContent = '—';
+}
+
+function requiresSelectedBook() {
+  return _dataScope === 'book' && !_currentBookId;
+}
+
+function setDataScopeFromUI() {
+  _dataScope = document.getElementById('scopeSelect').value || 'book';
+  updateBookMeta();
+  loadStats();
+  const activePage = (window.location.hash || '').replace('#', '').trim() || 'dashboard';
+  showPage(activePage, false);
 }
 
 function setCurrentBook(bookId) {
@@ -358,6 +393,10 @@ function setCurrentBook(bookId) {
 function updateBookMeta() {
   const current = _books.find(b => b.book_id === _currentBookId);
   const el = document.getElementById('bookProgressMeta');
+  if (_dataScope === 'all') {
+    el.textContent = '目前使用「全部書籍」視角；接續分析仍會針對下方選擇的單一本書執行。';
+    return;
+  }
   if (!current) {
     el.textContent = '尚未選擇';
     return;
@@ -416,8 +455,17 @@ function showPage(name, pushHash = true) {
 
 // ── Stats bar ──
 async function loadStats() {
+  if (requiresSelectedBook()) {
+    clearStatsBar();
+    return null;
+  }
   try {
-    const d = await fetch(apiUrl('/api/summary')).then(r => r.json());
+    const url = apiUrl('/api/summary');
+    if (!url) {
+      clearStatsBar();
+      return null;
+    }
+    const d = await fetch(url).then(r => r.json());
     document.getElementById('s-total').textContent = d.total_scenes;
     document.getElementById('s-ch').textContent = d.chapters_analyzed;
     document.getElementById('s-decision').textContent = d.decision_scenes || 0;
@@ -430,7 +478,12 @@ async function loadStats() {
 // ── Dashboard ──
 async function loadDashboard() {
   const d = await loadStats();
-  if (!d) return;
+  if (!d) {
+    renderNeedBookState('negoPreview');
+    if (_shiftChart) { _shiftChart.destroy(); _shiftChart = null; }
+    if (_charChart) { _charChart.destroy(); _charChart = null; }
+    return;
+  }
 
   // Shift chart
   const shiftCtx = document.getElementById('shiftChart').getContext('2d');
@@ -462,7 +515,12 @@ async function loadDashboard() {
   });
 
   // Recent negotiation preview
-  const nego = await fetch(apiUrl('/api/negotiation')).then(r => r.json());
+  const negoUrl = apiUrl('/api/negotiation');
+  if (!negoUrl) {
+    renderNeedBookState('negoPreview');
+    return;
+  }
+  const nego = await fetch(negoUrl).then(r => r.json());
   const container = document.getElementById('negoPreview');
   if (!nego.length) {
     container.innerHTML = '<div style="color:var(--muted);padding:8px">尚未偵測到談判場景</div>';
@@ -484,6 +542,10 @@ async function loadDashboard() {
 
 // ── Scenes ──
 async function loadScenes() {
+  if (requiresSelectedBook()) {
+    renderNeedBookState('scenesGrid');
+    return;
+  }
   const char = document.getElementById('sceneSearch').value.trim();
   let path = '/api/scenes?limit=100&offset=0';
   if (char) path += '&char=' + encodeURIComponent(char);
@@ -493,7 +555,12 @@ async function loadScenes() {
   const grid = document.getElementById('scenesGrid');
   grid.innerHTML = '<div style="color:var(--muted);padding:20px">載入中...</div>';
 
-  const data = await fetch(apiUrl(path)).then(r => r.json());
+  const url = apiUrl(path);
+  if (!url) {
+    renderNeedBookState('scenesGrid');
+    return;
+  }
+  const data = await fetch(url).then(r => r.json());
   if (!data.items.length) {
     grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>沒有符合的場景</div>';
     return;
@@ -531,7 +598,16 @@ function setFilter(key, val, el) {
 
 // ── Decisions ──
 async function loadDecisions() {
-  const data = await fetch(apiUrl('/api/decisions')).then(r => r.json());
+  if (requiresSelectedBook()) {
+    renderNeedBookState('decisionList');
+    return;
+  }
+  const url = apiUrl('/api/decisions');
+  if (!url) {
+    renderNeedBookState('decisionList');
+    return;
+  }
+  const data = await fetch(url).then(r => r.json());
   const list = document.getElementById('decisionList');
   if (!data.length) {
     list.innerHTML = '<div class="empty"><div class="empty-icon">⚡</div>尚未有行動決策場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
@@ -569,7 +645,16 @@ async function loadDecisions() {
 
 // ── Negotiation ──
 async function loadNegotiation() {
-  const data = await fetch(apiUrl('/api/negotiation')).then(r => r.json());
+  if (requiresSelectedBook()) {
+    renderNeedBookState('negoList');
+    return;
+  }
+  const url = apiUrl('/api/negotiation');
+  if (!url) {
+    renderNeedBookState('negoList');
+    return;
+  }
+  const data = await fetch(url).then(r => r.json());
   const list = document.getElementById('negoList');
   if (!data.length) {
     list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>尚未偵測到談判場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
@@ -601,8 +686,18 @@ async function loadNegotiation() {
 // ── Arc ──
 let _arcData = [];
 async function loadArc() {
+  if (requiresSelectedBook()) {
+    renderNeedBookState('arcTable');
+    if (_arcChart) { _arcChart.destroy(); _arcChart = null; }
+    return;
+  }
   const char = document.getElementById('arcChar').value;
-  const data = await fetch(apiUrl('/api/arc/' + encodeURIComponent(char))).then(r => r.json());
+  const url = apiUrl('/api/arc/' + encodeURIComponent(char));
+  if (!url) {
+    renderNeedBookState('arcTable');
+    return;
+  }
+  const data = await fetch(url).then(r => r.json());
   _arcData = data;
 
   const shiftColors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
@@ -659,7 +754,16 @@ async function loadArc() {
 
 // ── Scene Modal ──
 async function openSceneModal(ch, sc) {
-  const d = await fetch(apiUrl(`/api/scene/${ch}/${sc}`)).then(r => r.json());
+  if (requiresSelectedBook()) {
+    alert('請先選擇一本書，或切換到「全部書籍」後再查看場景詳情');
+    return;
+  }
+  const url = apiUrl(`/api/scene/${ch}/${sc}`);
+  if (!url) {
+    alert('目前沒有可查詢的書籍範圍');
+    return;
+  }
+  const d = await fetch(url).then(r => r.json());
   const sit = d.situation || {};
   const des = d.desire || {};
   const ms = d.mind_shift || {};
@@ -753,7 +857,26 @@ async function toggleNegotiation(ch, sc, setTo) {
 // ── Costs ──
 let _costChart = null;
 async function loadCosts() {
-  const d = await fetch(apiUrl('/api/costs')).then(r => r.json());
+  if (requiresSelectedBook()) {
+    document.getElementById('costKpis').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📚</div>請先選擇一本書，或切換到「全部書籍」</div>';
+    document.getElementById('compareGrid').innerHTML = '';
+    document.getElementById('costByModel').innerHTML = '';
+    document.getElementById('costTableBody').innerHTML = '';
+    if (_costChart) { _costChart.destroy(); _costChart = null; }
+    return;
+  }
+  const url = apiUrl('/api/costs');
+  if (!url) return;
+  const d = await fetch(url).then(r => r.json());
+
+  if (!d.total_scenes) {
+    document.getElementById('costKpis').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">💰</div>目前範圍沒有可用成本資料</div>';
+    document.getElementById('compareGrid').innerHTML = '';
+    document.getElementById('costByModel').innerHTML = '';
+    document.getElementById('costTableBody').innerHTML = '';
+    if (_costChart) { _costChart.destroy(); _costChart = null; }
+    return;
+  }
 
   const usdTwd = 32.5;  // 匯率參考
   const totalUsd = d.total_cost_usd;
@@ -970,6 +1093,7 @@ function getInitialPage() {
 }
 
 async function initApp() {
+  document.getElementById('scopeSelect').value = _dataScope;
   await loadBooks(false);
   loadStats();
   showPage(getInitialPage(), false);

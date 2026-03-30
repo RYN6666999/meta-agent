@@ -1,0 +1,33 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="96" y1="128" x2="904" y2="936" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1F1F3A"/>
+      <stop offset="0.52" stop-color="#B24555"/>
+      <stop offset="1" stop-color="#FFB547"/>
+    </linearGradient>
+    <radialGradient id="beam" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(704 372) rotate(160) scale(640 360)">
+      <stop stop-color="#FFE8AE" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFE8AE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tower" x1="512" y1="308" x2="512" y2="822" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF5D2"/>
+      <stop offset="1" stop-color="#FFD98A"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="72" y="72" width="880" height="880" rx="220" fill="url(#bg2)"/>
+  <rect x="72" y="72" width="880" height="880" rx="220" fill="url(#beam)"/>
+
+  <path d="M292 714H732" stroke="#2F223A" stroke-width="42" stroke-linecap="round"/>
+  <path d="M402 816H622" stroke="#2F223A" stroke-width="36" stroke-linecap="round" opacity="0.75"/>
+
+  <path d="M512 308L642 776H382L512 308Z" fill="url(#tower)"/>
+  <rect x="462" y="250" width="100" height="96" rx="28" fill="#FFF0C4"/>
+  <rect x="446" y="356" width="132" height="66" rx="24" fill="#3C2A4A"/>
+
+  <path d="M512 446V758" stroke="#3C2A4A" stroke-width="48" stroke-linecap="round"/>
+  <path d="M452 540H572" stroke="#3C2A4A" stroke-width="36" stroke-linecap="round"/>
+  <path d="M452 624H572" stroke="#3C2A4A" stroke-width="36" stroke-linecap="round"/>
+
+  <circle cx="512" cy="385" r="18" fill="#FFD15A"/>
+</svg>

@@ -1929,3 +1929,67 @@
   其他變更 tools/novel-framework-analyzer/services/llm/smart_router.py +10
 
 ---
+
+## 2026-03-30 19:03 | auto-git-score | 分數 1610 | 📥 達到閾值（1610/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=265），含重要變更
+
+**評分明細：**
+  其他變更 .claude/commands/douyin-preflight.md +10
+  其他變更 .claude/commands/toolbox-health.md +10
+  其他變更 .claude/commands/toolbox-open.md +10
+  其他變更 .claude/commands/toolbox-prune.md +10
+  其他變更 .claude/commands/toolbox-sync-status.md +10
+  其他變更 .claude/skills/toolbox-ops/SKILL.md +10
+  其他變更 .mcp.json +10
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/douyin-preflight.json +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/toolbox-health.json +10
+  其他變更 memory/toolbox-prune-report.json +10
+  核心腳本變更 scripts/crm/.vite/deps/_metadata.json +40
+  核心腳本變更 scripts/crm/.vite/deps/package.json +40
+  核心腳本變更 scripts/crm/src/App.tsx +40
+  核心腳本變更 scripts/toolbox-console/.gitignore +40
+  核心腳本變更 scripts/toolbox-console/README.md +40
+  核心腳本變更 scripts/toolbox-console/eslint.config.js +40
+  核心腳本變更 scripts/toolbox-console/index.html +40
+  核心腳本變更 scripts/toolbox-console/package-lock.json +40
+  核心腳本變更 scripts/toolbox-console/package.json +40
+  核心腳本變更 scripts/toolbox-console/public/favicon.svg +40
+  核心腳本變更 scripts/toolbox-console/public/icons.svg +40
+  核心腳本變更 scripts/toolbox-console/public/toolbox-status/douyin-preflight.json +40
+  核心腳本變更 scripts/toolbox-console/public/toolbox-status/toolbox-health.json +40
+  核心腳本變更 scripts/toolbox-console/public/toolbox-status/toolbox-prune-report.json +40
+  核心腳本變更 scripts/toolbox-console/src/App.css +40
+  核心腳本變更 scripts/toolbox-console/src/App.tsx +40
+  核心腳本變更 scripts/toolbox-console/src/assets/hero.png +40
+  核心腳本變更 scripts/toolbox-console/src/assets/react.svg +40
+  核心腳本變更 scripts/toolbox-console/src/assets/vite.svg +40
+  核心腳本變更 scripts/toolbox-console/src/index.css +40
+  核心腳本變更 scripts/toolbox-console/src/main.tsx +40
+  核心腳本變更 scripts/toolbox-console/src/toolbox/core-tools.ts +40
+  核心腳本變更 scripts/toolbox-console/src/toolbox/extensions.ts +40
+  核心腳本變更 scripts/toolbox-console/src/toolbox/index.ts +40
+  核心腳本變更 scripts/toolbox-console/src/toolbox/types.ts +40
+  核心腳本變更 scripts/toolbox-console/tsconfig.app.json +40
+  核心腳本變更 scripts/toolbox-console/tsconfig.json +40
+  核心腳本變更 scripts/toolbox-console/tsconfig.node.json +40
+  核心腳本變更 scripts/toolbox-console/vite.config.ts +40
+  核心腳本變更 scripts/toolbox/douyin-preflight.sh +40
+  核心腳本變更 scripts/toolbox/sync-status-to-ui.sh +40
+  核心腳本變更 scripts/toolbox/toolbox-health.sh +40
+  核心腳本變更 scripts/toolbox/toolbox-open.sh +40
+  核心腳本變更 scripts/toolbox/toolbox-prune.py +40
+  核心腳本變更 scripts/toolbox/toolbox-runner.py +40
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/scripts/batch_analyze.py +10
+  其他變更 tools/novel-framework-analyzer/server.py +10
+  其他變更 tools/toolbox-mcp/README.md +10
+  其他變更 tools/toolbox-mcp/server.py +10
+
+---
