@@ -768,8 +768,9 @@ async function loadDecisions() {
       </div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:8px">
         <strong style="color:var(--text)">局：</strong>${sit.external_situation||'—'}<br>
+        <strong style="color:var(--text)">心：</strong>${ms.before_mindset||'—'}<br>
         <strong style="color:var(--text)">欲：</strong>${des.explicit_desire||'—'}<br>
-        <strong style="color:var(--text)">心→變：</strong>${ms.before_mindset||'—'} → ${ms.after_mindset||'—'}
+        <strong style="color:var(--text)">變：</strong>${ms.after_mindset||'—'}
         <span class="tag" style="margin-left:8px;background:${shiftColors[n.mind_shift_type]||'#475569'}22;color:${shiftColors[n.mind_shift_type]||'#475569'}">${n.mind_shift_type||'—'} ${n.mind_shift_intensity ? '強度'+n.mind_shift_intensity : ''}</span>
       </div>
       <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">
@@ -828,8 +829,9 @@ async function loadNegotiation() {
       </div>
       <div style="margin-top:10px;font-size:13px;color:var(--muted)">
         <strong style="color:var(--text)">局：</strong>${(n.situation||{}).external_situation||''}<br>
+        <strong style="color:var(--text)">心：</strong>${(n.mind_shift||{}).before_mindset||''}<br>
         <strong style="color:var(--text)">欲：</strong>${(n.desire||{}).explicit_desire||''}<br>
-        <strong style="color:var(--text)">心→變：</strong>${(n.mind_shift||{}).before_mindset||''} → ${(n.mind_shift||{}).after_mindset||''}
+        <strong style="color:var(--text)">變：</strong>${(n.mind_shift||{}).after_mindset||''}
       </div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">
         ${n.scene_text_preview.slice(0,200)}...
@@ -995,19 +997,8 @@ async function openSceneModal(ch, sc) {
     </div>
 
     <div class="dim-block">
-      <div class="dim-label">心 Mind · 變 Change</div>
-      <div class="dim-text" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><span style="color:var(--muted);font-size:11px">進入場景</span><br>${ms.before_mindset||''}</div>
-        <div><span style="color:var(--muted);font-size:11px">離開場景</span><br>${ms.after_mindset||''}</div>
-      </div>
-      <div style="margin-top:8px;padding:8px;background:var(--bg);border-radius:6px;font-size:12px">
-        <span style="color:var(--accent)">觸發：</span>${ms.trigger_event||'—'}
-      </div>
-      <div style="margin-top:6px;font-size:12px;color:var(--muted)">
-        類型：<strong style="color:var(--text)">${ms.shift_type||'—'}</strong> ·
-        強度：<strong style="color:var(--text)">${ms.shift_intensity||ms.mind_shift_intensity||'—'}/5</strong> ·
-        可逆：${ms.is_reversible ? '是' : '否'}
-      </div>
+      <div class="dim-label">心 Mind</div>
+      <div class="dim-text"><span style="color:var(--muted);font-size:11px">進入場景時的認知</span><br>${ms.before_mindset||''}</div>
       <div class="quotes">${quoteHtml(ms.evidence_quotes)}</div>
     </div>
 
@@ -1016,6 +1007,19 @@ async function openSceneModal(ch, sc) {
       <div class="dim-text"><span style="color:var(--muted)">顯：</span>${des.explicit_desire||''}</div>
       <div class="dim-text" style="margin-top:6px"><span style="color:var(--muted)">隱：</span>${des.implicit_desire||''}</div>
       <div class="quotes">${quoteHtml(des.evidence_quotes)}</div>
+    </div>
+
+    <div class="dim-block">
+      <div class="dim-label">變 Change</div>
+      <div class="dim-text"><span style="color:var(--muted);font-size:11px">離開場景時的狀態</span><br>${ms.after_mindset||''}</div>
+      <div style="margin-top:8px;padding:8px;background:var(--bg);border-radius:6px;font-size:12px">
+        <span style="color:var(--accent)">觸發：</span>${ms.trigger_event||'—'}
+      </div>
+      <div style="margin-top:6px;font-size:12px;color:var(--muted)">
+        類型：<strong style="color:var(--text)">${ms.shift_type||'—'}</strong> ·
+        強度：<strong style="color:var(--text)">${ms.shift_intensity||ms.mind_shift_intensity||'—'}/5</strong> ·
+        可逆：${ms.is_reversible ? '是' : '否'}
+      </div>
     </div>
 
     <div class="dim-block" style="border-color:${d.match_level==='full'?'#4ade80':d.match_level==='partial'?'#facc15':'#f87171'}40">
@@ -1061,63 +1065,82 @@ let _progressBooks = [];    // 多書籍進度數據
 let _progressCurrentBook = null;  // 當前選擇的書籍
 
 function setProgressTab(bookId) {
-  _progressCurrentBook = bookId === 'all' ? null : bookId;
+  const isAll = bookId === 'all';
+  _progressCurrentBook = isAll ? null : bookId;
+
+  // 同步切換全域選擇書籍（讓其他頁面一起跟著切換）
+  if (!isAll && bookId && _books.some(b => b.book_id === bookId)) {
+    setCurrentBook(bookId);
+    document.getElementById('bookSelect').value = bookId;
+    loadStats();
+  }
+
+  // 更新 tab 高亮
   document.querySelectorAll('[id^="prog-tab-"]').forEach(b => {
-    b.style.color = b.id === 'prog-tab-' + bookId ? 'var(--accent)' : 'var(--muted)';
-    b.style.borderBottomColor = b.id === 'prog-tab-' + bookId ? 'var(--accent)' : 'transparent';
+    const active = b.id === 'prog-tab-' + bookId;
+    b.style.color = active ? 'var(--accent)' : 'var(--muted)';
+    b.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+    b.style.fontWeight = active ? '600' : 'normal';
   });
   loadProgress();
 }
 
 async function loadProgress() {
-  // 加載多書籍進度
+  // ── 1. 取多書籍摘要 → 建 tabs ──────────────────────────────────────────
   let booksData = [];
   try {
     booksData = await fetch(API + '/api/progress/books').then(r => r.json());
     _progressBooks = booksData;
   } catch(e) {
     console.warn('無法讀取多書籍進度', e);
-    booksData = [];
   }
 
-  // 建立 tabs
+  // 建立 tabs（用 display_name，fallback book_id 後段）
   const tabsContainer = document.getElementById('progressTabsContainer');
-  tabsContainer.innerHTML = booksData.map(b => `
-    <button id="prog-tab-${b.book_id}" class="btn" style="background:none;border:none;padding:8px 12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-size:13px" onclick="setProgressTab('${b.book_id}')">
-      ${b.book_id.split('-')[0]}
-    </button>
-  `).join('');
+  tabsContainer.innerHTML = booksData.map(b => {
+    const reg = _books.find(bk => bk.book_id === b.book_id);
+    const label = reg?.display_name || b.book_id.split('-').slice(1).join('-') || b.book_id;
+    const pct = b.progress_pct != null ? ` ${b.progress_pct.toFixed(0)}%` : '';
+    return `<button id="prog-tab-${b.book_id}" class="btn" style="background:none;border:none;padding:8px 12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap" onclick="setProgressTab('${b.book_id}')">${label}${pct}</button>`;
+  }).join('');
 
-  // 選擇書籍進度或全局進度
-  let displayData = null;
-  if (_progressCurrentBook && booksData.length) {
-    const bookData = booksData.find(b => b.book_id === _progressCurrentBook);
-    displayData = bookData || booksData[0];
-  } else {
-    // 讀全局進度
-    displayData = await fetch(API + '/api/progress').then(r => r.json());
-  }
+  // 初始高亮（維持當前選取）
+  const activeId = _progressCurrentBook || 'all';
+  document.querySelectorAll('[id^="prog-tab-"]').forEach(b => {
+    const active = b.id === 'prog-tab-' + activeId;
+    b.style.color = active ? 'var(--accent)' : 'var(--muted)';
+    b.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+    b.style.fontWeight = active ? '600' : 'normal';
+  });
 
-  const d = displayData;
+  // ── 2. 取當前書籍詳細進度（含 chapters[]）──────────────────────────────
+  // 永遠用 /api/progress 格式（有 done_chapters, pending_chapters, chapters[]）
+  const progUrl = _progressCurrentBook
+    ? API + '/api/progress?book_id=' + encodeURIComponent(_progressCurrentBook)
+    : API + '/api/progress';
+  const d = await fetch(progUrl).then(r => r.json());
   _progressData = d;
 
-  // 大進度條
-  const pct = d.progress_pct;
-  document.getElementById('prog-done').textContent = d.done_chapters;
-  document.getElementById('prog-total').textContent = d.total_chapters;
+  // ── 3. 更新進度條 ──────────────────────────────────────────────────────
+  const pct = d.progress_pct ?? 0;
+  document.getElementById('prog-done').textContent = d.done_chapters ?? 0;
+  document.getElementById('prog-total').textContent = d.total_chapters ?? 0;
   document.getElementById('prog-pct').textContent = pct.toFixed(1) + '%';
   document.getElementById('prog-bar').style.width = pct + '%';
 
-  // KPI
-  const summary = await fetch(API + '/api/summary').then(r => r.json());
-  document.getElementById('prog-scenes').textContent = summary.total_scenes;
-  document.getElementById('prog-pending').textContent = d.pending_chapters;
-  document.getElementById('prog-decisions-total').textContent = summary.decision_scenes || 0;
-  document.getElementById('prog-nego-total').textContent = summary.negotiation_scenes || 0;
+  // ── 4. KPI（用書籍篩選或全局）─────────────────────────────────────────
+  const summaryUrl = _progressCurrentBook
+    ? API + '/api/summary?book_id=' + encodeURIComponent(_progressCurrentBook)
+    : API + '/api/summary';
+  const summary = await fetch(summaryUrl).then(r => r.json());
+  document.getElementById('prog-scenes').textContent = summary.total_scenes ?? 0;
+  document.getElementById('prog-pending').textContent = d.pending_chapters ?? 0;
+  document.getElementById('prog-decisions-total').textContent = summary.decision_scenes ?? 0;
+  document.getElementById('prog-nego-total').textContent = summary.negotiation_scenes ?? 0;
 
-  // 預估剩餘（以目前速度：約 3 場景/章，12s/場景）
-  const avgSecPerCh = 36;  // ~3 scenes × 12s
-  const remainSec = d.pending_chapters * avgSecPerCh;
+  // ── 5. 預估剩餘 ────────────────────────────────────────────────────────
+  const avgSecPerCh = 36;
+  const remainSec = (d.pending_chapters ?? 0) * avgSecPerCh;
   const etaText = remainSec > 3600
     ? `預估剩餘：約 ${(remainSec/3600).toFixed(1)} 小時`
     : remainSec > 60
@@ -1127,27 +1150,31 @@ async function loadProgress() {
 
   renderChapterWall();
 
-  // 更新「繼續分析」提示訊息
+  // ── 6. 「繼續分析」提示 ────────────────────────────────────────────────
   const nextInfoEl = document.getElementById('prog-next-info');
   if (nextInfoEl && !_progJobPoller) {
-    const nextCh = d.done_chapters + 1;
-    if (d.done_chapters >= d.total_chapters) {
-      nextInfoEl.textContent = '✅ 全部 1264 章已分析完成';
+    const done = d.done_chapters ?? 0;
+    const total = d.total_chapters ?? 0;
+    const nextCh = done + 1;
+    if (done >= total && total > 0) {
+      nextInfoEl.textContent = `✅ 全部 ${total} 章已分析完成`;
       const btn = document.getElementById('prog-continue-btn');
       if (btn) { btn.disabled = true; btn.textContent = '已完成'; }
     } else {
       nextInfoEl.textContent = `下一段從第 ${nextCh} 章開始（預設跑 10 章）`;
       const endEl = document.getElementById('prog-end-chapter');
-      // 不在 focus 時才更新 placeholder，避免干擾使用者正在輸入或 IME 組字
       if (endEl && !endEl.value && document.activeElement !== endEl) {
         endEl.placeholder = String(nextCh + 9);
       }
+      // 確保分析按鈕可點
+      const btn = document.getElementById('prog-continue-btn');
+      if (btn) { btn.disabled = false; btn.textContent = '開始分析'; }
     }
   }
 
-  // 若有批次在跑，每 10 秒自動刷新
+  // ── 7. 自動刷新 ────────────────────────────────────────────────────────
   if (_progressTimer) clearInterval(_progressTimer);
-  if (d.done_chapters < d.total_chapters) {
+  if ((d.done_chapters ?? 0) < (d.total_chapters ?? 1)) {
     _progressTimer = setInterval(loadProgress, 10000);
   }
 }

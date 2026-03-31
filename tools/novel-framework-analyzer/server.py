@@ -357,23 +357,43 @@ def api_progress_books():
 
 
 @app.get("/api/progress")
-def api_progress():
-    """逐章進度：每章的場景數、信心分數、決策/談判數，用於視覺化進度牆"""
-    TOTAL_CHAPTERS = 1264  # 全書章節數
+def api_progress(book_id: Optional[str] = None):
+    """逐章進度：每章的場景數、信心分數、決策/談判數，用於視覺化進度牆。
+    book_id 指定時只顯示該書；否則顯示全部書籍合併進度。
+    total_chapters 從 book_registry 讀取 detected_chapters；全局模式取最大值。
+    """
     conn = get_db()
-    rows = conn.execute("""
+
+    where = "WHERE book_id=?" if book_id else ""
+    params = (book_id,) if book_id else ()
+
+    rows = conn.execute(f"""
         SELECT chapter_number,
-               COUNT(*)                                              AS scenes,
-               ROUND(AVG(confidence_score), 3)                      AS avg_conf,
+               COUNT(*)                                                      AS scenes,
+               ROUND(AVG(confidence_score), 3)                               AS avg_conf,
                COUNT(CASE WHEN scene_labels LIKE '%decision%' THEN 1 END)    AS decisions,
-               COUNT(CASE WHEN is_negotiation_scene=1 THEN 1 END)   AS negotiation,
-               MAX(match_level)                                      AS best_match,
-               GROUP_CONCAT(DISTINCT focal_character)               AS characters
+               COUNT(CASE WHEN is_negotiation_scene=1 THEN 1 END)            AS negotiation,
+               MAX(match_level)                                               AS best_match,
+               GROUP_CONCAT(DISTINCT focal_character)                        AS characters
         FROM scene_framework_cards
+        {where}
         GROUP BY chapter_number
         ORDER BY chapter_number
-    """).fetchall()
+    """, params).fetchall()
     conn.close()
+
+    # 計算 total_chapters：優先用 registry 的 detected_chapters，否則用已分析最大章號
+    registry = load_book_registry()
+    if book_id:
+        meta = registry.get(book_id, {})
+        detected = int(meta.get("detected_chapters") or 0)
+        max_analyzed = rows[-1][0] if rows else 0
+        total_chapters = max(detected, max_analyzed, 1)
+    else:
+        # 全局：各書 detected_chapters 加總，或取最大已分析章號（上城之下等舊書）
+        detected_sum = sum(int(m.get("detected_chapters") or 0) for m in registry.values())
+        max_analyzed = rows[-1][0] if rows else 0
+        total_chapters = max(detected_sum, max_analyzed, 1)
 
     analyzed = {r[0]: {
         "chapter": r[0], "scenes": r[1], "avg_conf": r[2],
@@ -382,7 +402,7 @@ def api_progress():
     } for r in rows}
 
     chapters = []
-    for ch in range(1, TOTAL_CHAPTERS + 1):
+    for ch in range(1, total_chapters + 1):
         if ch in analyzed:
             chapters.append({"chapter": ch, "status": "done", **analyzed[ch]})
         else:
@@ -392,10 +412,10 @@ def api_progress():
 
     done = len(analyzed)
     return {
-        "total_chapters": TOTAL_CHAPTERS,
+        "total_chapters": total_chapters,
         "done_chapters": done,
-        "pending_chapters": TOTAL_CHAPTERS - done,
-        "progress_pct": round(done / TOTAL_CHAPTERS * 100, 2),
+        "pending_chapters": max(total_chapters - done, 0),
+        "progress_pct": round(done / total_chapters * 100, 2),
         "chapters": chapters,
     }
 
