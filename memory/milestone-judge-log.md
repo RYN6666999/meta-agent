@@ -2077,3 +2077,16 @@
   其他變更 "tools/novel-framework-analyzer/uploads/2b450255_1dcdd831_\345\274\225\347\210\206\347\202\271.txt" +10
 
 ---
+
+## 2026-03-31 12:56 | auto-git-score | 分數 50 | ⏳ 未達閾值（50/60）→ 不建分支
+
+**描述：** git-score 自動 commit（score=60），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-31-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-31-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+
+---
