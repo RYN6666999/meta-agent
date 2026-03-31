@@ -2054,3 +2054,26 @@
   其他變更 tools/novel-framework-analyzer/vector_store/chroma/chroma.sqlite3 +10
 
 ---
+
+## 2026-03-31 10:41 | auto-git-score | 分數 150 | 📥 達到閾值（150/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=110），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-31-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-31-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/persona-tech-radar-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/pdf_ingestor.py +10
+  其他變更 tools/novel-framework-analyzer/backend/app/services/scene_splitter.py +10
+  其他變更 tools/novel-framework-analyzer/book_registry.json +10
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/mcp_server.py +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/server.py +10
+  其他變更 "tools/novel-framework-analyzer/uploads/1dcdd831_\345\274\225\347\210\206\347\202\271.txt" +10
+  其他變更 "tools/novel-framework-analyzer/uploads/2b450255_1dcdd831_\345\274\225\347\210\206\347\202\271.txt" +10
+
+---
