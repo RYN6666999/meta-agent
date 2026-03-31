@@ -178,20 +178,53 @@
 
     <!-- Dashboard -->
     <div class="page active" id="page-dashboard">
-      <h2>總覽</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-        <div class="card">
-          <h3>心態轉變分布</h3>
-          <canvas id="shiftChart" height="180"></canvas>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h2 style="margin:0">總覽</h2>
+        <button class="btn btn-secondary" style="font-size:12px" onclick="loadDashboard()">↻ 重新整理</button>
+      </div>
+
+      <!-- ZONE 1: 全域數字 (4 stat cards) -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:700;color:var(--accent)" id="d-total-all">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">總場景數</div>
         </div>
-        <div class="card">
-          <h3>角色出場次數</h3>
-          <canvas id="charChart" height="180"></canvas>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:700;color:var(--green)" id="d-total-clean">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">高品質 conf≥0.6</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:700;color:var(--yellow)" id="d-nego-count">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">談判場景</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:700;color:var(--accent2)" id="d-unique-chars">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">跨書角色數</div>
         </div>
       </div>
-      <div class="card" id="recentNego">
-        <h3>🎯 最新談判場景</h3>
-        <div id="negoPreview">載入中...</div>
+
+      <!-- ZONE 2 + 3: 書籍進度 + 品質警示 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="card">
+          <h3 style="margin-bottom:14px">📖 書籍進度一覽</h3>
+          <div id="dash-zone2">載入中...</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:14px">🔍 資料品質警示</h3>
+          <div id="dash-zone3">載入中...</div>
+        </div>
+      </div>
+
+      <!-- ZONE 4: 跨書分布 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <h3>轉變類型分布（高品質資料）</h3>
+          <canvas id="shiftChart" height="200"></canvas>
+        </div>
+        <div class="card">
+          <h3>🏆 高價值場景（conf≥0.8 + 談判）</h3>
+          <div id="dash-top-scenes">載入中...</div>
+        </div>
       </div>
     </div>
 
@@ -201,9 +234,9 @@
       <div class="filter-bar">
         <input class="search-input" id="sceneSearch" placeholder="角色名搜尋..." oninput="filterScenes()">
         <div class="filter-chip active" onclick="setFilter('match','all',this)">全部</div>
-        <div class="filter-chip" onclick="setFilter('match','full',this)">Full</div>
-        <div class="filter-chip" onclick="setFilter('match','partial',this)">Partial</div>
-        <div class="filter-chip" onclick="setFilter('match','weak',this)">Weak</div>
+        <div class="filter-chip" onclick="setFilter('match','full',this)">完整</div>
+        <div class="filter-chip" onclick="setFilter('match','partial',this)">局部</div>
+        <div class="filter-chip" onclick="setFilter('match','weak',this)">弱</div>
         <div class="filter-chip" style="border-color:var(--accent);color:var(--accent)" onclick="setFilter('nego',true,this)">🎯 談判</div>
       </div>
       <div class="grid" id="scenesGrid">載入中...</div>
@@ -219,7 +252,7 @@
     <!-- Negotiation -->
     <div class="page" id="page-negotiation">
       <h2>🎯 談判場景</h2>
-      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">focal_character 主動參與的談判 / 博弈場景</p>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">主角主動參與的談判 / 博弈場景</p>
       <div class="filter-bar">
         <span class="form-label">按角色篩選：</span>
         <select id="negoCharFilter" onchange="loadNegotiation()" style="min-width:150px">
@@ -239,11 +272,11 @@
         <span style="color:var(--muted);font-size:12px">輸入或選擇角色名查看心態弧線</span>
       </div>
       <div class="arc-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>emotion</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>stance</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#facc15"></div>strategy</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>values</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>identity</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>情緒</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>立場</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#facc15"></div>策略</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>價值觀</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>身份認同</div>
         <div class="legend-item"><div class="legend-dot" style="background:#f43f5e"></div>談判場景</div>
       </div>
       <div class="chart-wrap">
@@ -687,67 +720,131 @@ async function loadStats() {
 
 // ── Dashboard ──
 async function loadDashboard() {
-  const d = await loadStats();
-  if (!d) {
-    renderNeedBookState('negoPreview');
-    if (_shiftChart) { _shiftChart.destroy(); _shiftChart = null; }
-    if (_charChart) { _charChart.destroy(); _charChart = null; }
+  // 總覽固定顯示全書資料，不依賴當前選擇的書
+  let d;
+  try {
+    d = await fetch(API + '/api/dashboard').then(r => r.json());
+  } catch(e) {
+    console.error('loadDashboard error:', e);
     return;
   }
 
-  // Shift chart
+  const g = d.global || {};
+
+  // Zone 1: 全域數字
+  document.getElementById('d-total-all').textContent   = g.total_all   ?? '—';
+  document.getElementById('d-total-clean').textContent = g.total_clean  ?? '—';
+  document.getElementById('d-nego-count').textContent  = g.nego_clean   ?? '—';
+  document.getElementById('d-unique-chars').textContent = g.unique_chars ?? '—';
+
+  const books = d.books || [];
+
+  // Zone 2: 書籍進度一覽
+  const zone2 = document.getElementById('dash-zone2');
+  if (!books.length) {
+    zone2.innerHTML = '<div class="empty"><div class="empty-icon">📚</div>尚無書籍資料</div>';
+  } else {
+    zone2.innerHTML = books.map(b => {
+      const detected = b.detected_ch || b.max_ch || 0;
+      const scenesTotal = b.total || 0;
+      const confColor = b.avg_conf >= 0.8 ? 'var(--green)' : b.avg_conf >= 0.6 ? 'var(--yellow)' : 'var(--red)';
+      const pct = detected > 0 ? Math.min(100, Math.round(b.max_ch / detected * 100)) : (scenesTotal > 0 ? 100 : 0);
+      const typeIcon = b.book_type === 'nonfiction' ? '🔬' : '📖';
+      const cleanBadge = b.garbage_count > 0
+        ? `<span class="tag" style="color:var(--red)">⚠️ 垃圾 ${b.garbage_count}</span>`
+        : '<span class="tag" style="color:var(--green)">✅ 乾淨</span>';
+      return `
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-weight:600">${typeIcon} ${b.display_name}</span>
+          <span style="font-size:12px;color:${confColor}">${(b.avg_conf*100).toFixed(0)}% conf</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap">${b.total}場景 / ${detected ? detected+'章' : '？章'}</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">
+          ${b.nego > 0 ? `<span class="tag" style="color:var(--accent)">🎯 談判 ${b.nego}</span>` : ''}
+          ${cleanBadge}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Zone 3: 資料品質警示
+  const zone3 = document.getElementById('dash-zone3');
+  const warnings = books.filter(b => b.garbage_count > 0 || b.low_conf > 0);
+  if (!books.length) {
+    zone3.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>尚無資料</div>';
+  } else if (!warnings.length) {
+    zone3.innerHTML = '<div style="color:var(--green);padding:12px 0">✅ 所有書籍資料品質良好</div>';
+  } else {
+    zone3.innerHTML = warnings.map(b => `
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:600">${b.display_name}</span>
+          ${b.garbage_count > 0 ? `<button class="btn btn-secondary" style="padding:3px 12px;font-size:11px;color:var(--red);border-color:var(--red)" onclick="cleanGarbage('${b.book_id}',this)">🗑 一鍵清理</button>` : ''}
+        </div>
+        ${b.garbage_count > 0 ? `
+          <div style="font-size:12px;color:var(--red);margin-bottom:6px">⚠️ 垃圾角色名：${b.garbage_count} 筆</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+            ${(b.garbage_chars||[]).slice(0,6).map(gc=>`<span class="tag" style="color:var(--red);font-size:10px">${gc.name}(${gc.count})</span>`).join('')}
+            ${(b.garbage_chars||[]).length > 6 ? `<span class="tag" style="color:var(--muted);font-size:10px">+${b.garbage_chars.length-6}更多</span>` : ''}
+          </div>` : ''}
+        ${b.low_conf > 0 ? `<div style="font-size:12px;color:var(--yellow)">⚠️ 低信心(&lt;0.45)：${b.low_conf} 筆</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // Zone 4a: 轉變類型分布
+  const shifts = d.shift_dist || [];
   const shiftCtx = document.getElementById('shiftChart').getContext('2d');
   if (_shiftChart) _shiftChart.destroy();
   const colors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
-  _shiftChart = new Chart(shiftCtx, {
-    type: 'doughnut',
-    data: {
-      labels: d.shift_distribution.map(x => x.type),
-      datasets: [{ data: d.shift_distribution.map(x => x.count), backgroundColor: d.shift_distribution.map(x => colors[x.type] || '#475569'), borderWidth: 0 }]
-    },
-    options: { plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } } } }, cutout: '65%' }
-  });
-
-  // Char chart
-  const charCtx = document.getElementById('charChart').getContext('2d');
-  if (_charChart) _charChart.destroy();
-  _charChart = new Chart(charCtx, {
-    type: 'bar',
-    data: {
-      labels: d.top_characters.map(x => x.name),
-      datasets: [{ data: d.top_characters.map(x => x.count), backgroundColor: '#7c6ff7', borderRadius: 4 }]
-    },
-    options: {
-      indexAxis: 'y',
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { color: '#64748b' }, grid: { color: '#2e3250' } }, y: { ticks: { color: '#e2e8f0' }, grid: { display: false } } }
-    }
-  });
-
-  // Recent negotiation preview
-  const negoUrl = apiUrl('/api/negotiation');
-  if (!negoUrl) {
-    renderNeedBookState('negoPreview');
-    return;
+  const shiftZhLabels = { emotion:'情緒', stance:'立場', strategy:'策略', values:'價值觀', identity:'身份認同', none:'無' };
+  if (shifts.length) {
+    _shiftChart = new Chart(shiftCtx, {
+      type: 'doughnut',
+      data: {
+        labels: shifts.map(x => shiftZhLabels[x.type] || x.type),
+        datasets: [{ data: shifts.map(x => x.count), backgroundColor: shifts.map(x => colors[x.type] || '#475569'), borderWidth: 0 }]
+      },
+      options: { plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } } } }, cutout: '65%' }
+    });
   }
-  const nego = await fetch(negoUrl).then(r => r.json());
-  const container = document.getElementById('negoPreview');
-  if (!nego.length) {
-    container.innerHTML = '<div style="color:var(--muted);padding:8px">尚未偵測到談判場景</div>';
-    return;
-  }
-  container.innerHTML = nego.slice(0, 3).map(n => `
-    <div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openSceneModal(${n.chapter_number},${n.scene_number})">
-      <div style="display:flex;gap:8px;align-items:center">
-        <span style="color:var(--accent);font-weight:700">ch${n.chapter_number}s${n.scene_number}</span>
-        <span>${n.focal_character}</span>
-        <div style="margin-left:auto;display:flex;gap:4px">
-          ${(n.negotiation_pattern_tags||[]).slice(0,2).map(t=>`<span class="tag">${t}</span>`).join('')}
+
+  // Zone 4b: Top 高價值場景
+  const topEl = document.getElementById('dash-top-scenes');
+  const topScenes = d.top_scenes || [];
+  if (!topScenes.length) {
+    topEl.innerHTML = '<div style="color:var(--muted);padding:12px 0">尚無高品質談判場景（需 conf≥0.8）</div>';
+  } else {
+    topEl.innerHTML = topScenes.map(s => `
+      <div style="padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openSceneModal(${s.chapter_number},${s.scene_number})">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--accent);font-weight:700">ch${s.chapter_number}s${s.scene_number}</span>
+          <span style="font-size:12px">${s.focal_character}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto">${((s.confidence_score||0)*100).toFixed(0)}%</span>
         </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.book_id} · ${s.mind_shift_type||'—'} 強度${s.mind_shift_intensity||'?'}</div>
       </div>
-      <div style="color:var(--muted);font-size:12px;margin-top:4px">${n.scene_text_preview.slice(0,100)}...</div>
-    </div>
-  `).join('');
+    `).join('');
+  }
+}
+
+async function cleanGarbage(bookId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '清理中...'; }
+  try {
+    const r = await fetch(API + '/api/book/' + encodeURIComponent(bookId) + '/garbage', { method: 'DELETE' });
+    const res = await r.json();
+    alert(`✅ 已刪除 ${res.deleted} 筆垃圾資料`);
+    loadDashboard();
+  } catch(e) {
+    alert('清理失敗：' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 一鍵清理'; }
+  }
 }
 
 // ── Scenes ──
@@ -779,7 +876,12 @@ async function loadScenes() {
   const shiftColors  = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
   const shiftLabels  = { emotion:'情緒', stance:'立場', strategy:'策略', values:'價值觀', identity:'身份認同', none:'無' };
   const matchLabels  = { full:'完整', partial:'局部', weak:'弱', none:'無' };
-  grid.innerHTML = data.items.map(s => `
+  grid.innerHTML = data.items.map(s => {
+    let sit = {};
+    try { sit = typeof s.situation === 'string' ? JSON.parse(s.situation) : (s.situation || {}); } catch(e) {}
+    const sceneTitle = sit.external_situation || s.scene_text_preview || s.focal_character || '—';
+    const titleShort = sceneTitle.length > 60 ? sceneTitle.slice(0, 60) + '…' : sceneTitle;
+    return `
     <div class="scene-card ${s.is_negotiation_scene ? 'nego' : ''}" onclick="openSceneModal(${s.chapter_number},${s.scene_number})">
       <div style="display:flex;justify-content:space-between;align-items:start">
         <div>
@@ -789,15 +891,16 @@ async function loadScenes() {
         </div>
         <span class="badge badge-${s.match_level}">${matchLabels[s.match_level]||s.match_level}</span>
       </div>
-      <div style="margin-top:8px;font-size:13px;font-weight:600">${s.focal_character}</div>
-      <div class="scene-meta">
+      <div style="margin-top:8px;font-size:13px;font-weight:600;line-height:1.5">${titleShort}</div>
+      <div class="scene-meta" style="margin-top:6px">
+        ${s.focal_character ? `<span class="tag" style="color:var(--muted)">👤 ${s.focal_character}</span>` : ''}
         <span class="tag" style="background:${shiftColors[s.mind_shift_type]||'#475569'}22;color:${shiftColors[s.mind_shift_type]||'#475569'}">${shiftLabels[s.mind_shift_type]||s.mind_shift_type}</span>
         ${s.mind_shift_intensity ? `<span class="tag">強度 ${s.mind_shift_intensity}/5</span>` : ''}
       </div>
-      <div class="conf-bar"><div class="conf-fill" style="width:${(s.confidence_score||0)*100}%"></div></div>
+      <div class="conf-bar" style="margin-top:8px"><div class="conf-fill" style="width:${(s.confidence_score||0)*100}%"></div></div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px">${((s.confidence_score||0)*100).toFixed(0)}% 信心</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function filterScenes() {

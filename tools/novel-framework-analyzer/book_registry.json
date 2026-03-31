@@ -5,14 +5,29 @@
     "filename": "1dcdd831_引爆点.txt",
     "path": "/Users/ryan/meta-agent/tools/novel-framework-analyzer/uploads/1dcdd831_引爆点.txt",
     "detected_chapters": 35,
-    "uploaded_at": "2026-03-31T01:56:07.586577+00:00"
+    "uploaded_at": "2026-03-31T01:56:07.586577+00:00",
+    "notes": "",
+    "tags": [
+      "商業",
+      "科普",
+      "心理學",
+      "社會學"
+    ]
   },
-  "book-e7cb19292326": {
-    "book_id": "book-e7cb19292326",
-    "display_name": "1dcdd831_引爆点",
-    "filename": "2b450255_1dcdd831_引爆点.txt",
-    "path": "/Users/ryan/meta-agent/tools/novel-framework-analyzer/uploads/2b450255_1dcdd831_引爆点.txt",
-    "detected_chapters": 35,
-    "uploaded_at": "2026-03-31T02:08:06.167380+00:00"
+  "shangchengzhixia-001": {
+    "book_id": "shangchengzhixia-001",
+    "display_name": "上城之下",
+    "filename": "上城之下.txt",
+    "path": "/Users/ryan/meta-agent/tools/novel-framework-analyzer/上城之下.txt",
+    "detected_chapters": 1264,
+    "book_type": "novel",
+    "tags": [
+      "寧凡",
+      "談判",
+      "博弈",
+      "小說"
+    ],
+    "uploaded_at": "2026-03-01T00:00:00+00:00",
+    "notes": ""
   }
 }

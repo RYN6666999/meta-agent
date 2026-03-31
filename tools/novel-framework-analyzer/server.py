@@ -253,6 +253,139 @@ def api_costs(book_id: Optional[str] = None):
     }
 
 
+@app.get("/api/dashboard")
+def api_dashboard():
+    """總覽 — 全書聚合資料、書籍進度、資料品質警示、跨書分布"""
+    registry = load_book_registry()
+    conn = get_db()
+    cur  = conn.cursor()
+
+    # ── 1. 全域數字（只算信心 >= 0.6 的有效場景）
+    total_all   = cur.execute("SELECT COUNT(*) FROM scene_framework_cards").fetchone()[0]
+    total_clean = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE confidence_score >= 0.6").fetchone()[0]
+    nego_clean  = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE is_negotiation_scene=1 AND confidence_score >= 0.6").fetchone()[0]
+    decision_clean = cur.execute("SELECT COUNT(*) FROM scene_framework_cards WHERE scene_labels LIKE '%decision%' AND confidence_score >= 0.6").fetchone()[0]
+    unique_chars = cur.execute("SELECT COUNT(DISTINCT focal_character) FROM scene_framework_cards WHERE confidence_score >= 0.6").fetchone()[0]
+    avg_conf_all = cur.execute("SELECT AVG(confidence_score) FROM scene_framework_cards").fetchone()[0] or 0
+
+    # ── 2. 每本書進度 + 品質指標
+    books_raw = cur.execute("""
+        SELECT book_id,
+               COUNT(*) total,
+               SUM(CASE WHEN confidence_score >= 0.6 THEN 1 ELSE 0 END) clean,
+               SUM(CASE WHEN confidence_score < 0.45 THEN 1 ELSE 0 END) low_conf,
+               AVG(confidence_score) avg_conf,
+               MAX(chapter_number) max_ch,
+               SUM(CASE WHEN is_negotiation_scene=1 THEN 1 ELSE 0 END) nego
+        FROM scene_framework_cards
+        GROUP BY book_id
+    """).fetchall()
+
+    # 垃圾角色名偵測（在 Python 層做，複用已有規則）
+    garbage_chars_sql = """
+        SELECT book_id, focal_character, COUNT(*) n
+        FROM scene_framework_cards
+        WHERE (
+            focal_character IN ('未知','法則','條件','因素','環境','機制','原則','現象','系統',
+                '理論','結果','影響','效果','過程','方式','方法','模式','關係','結構',
+                '框架','背景','情況','狀態','階段','程度','問題','答案','原因',
+                '有人','沒有','所有','任何','這個','那個','一個','每個',
+                '同烟','得到','找到','看到','想到','讓人','使人','令人','還有',
+                '也有','只有','件中','其中','之中','心中','自己','他們','我們',
+                '联系员','还有人','让人','自己的轨','得到的回')
+            OR length(focal_character) > 10
+            OR focal_character GLOB '*的*'
+            OR focal_character GLOB '*了*'
+        )
+        GROUP BY book_id, focal_character
+    """
+    garbage_rows = cur.execute(garbage_chars_sql).fetchall()
+    garbage_by_book: dict = {}
+    for r in garbage_rows:
+        bid = r["book_id"]
+        garbage_by_book.setdefault(bid, []).append({"name": r["focal_character"], "count": r["n"]})
+
+    books_list = []
+    for r in books_raw:
+        bid   = r["book_id"]
+        meta  = registry.get(bid, {})
+        detected = int(meta.get("detected_chapters") or 0)
+        garbage  = garbage_by_book.get(bid, [])
+        books_list.append({
+            "book_id":      bid,
+            "display_name": meta.get("display_name") or bid,
+            "book_type":    meta.get("book_type") or "",
+            "tags":         meta.get("tags") or [],
+            "total":        int(r["total"]),
+            "clean":        int(r["clean"]),
+            "low_conf":     int(r["low_conf"]),
+            "avg_conf":     round(float(r["avg_conf"] or 0), 3),
+            "max_ch":       int(r["max_ch"] or 0),
+            "detected_ch":  detected,
+            "nego":         int(r["nego"]),
+            "garbage_chars": garbage,
+            "garbage_count": sum(g["count"] for g in garbage),
+        })
+
+    # ── 3. 跨書轉變類型分布（只算高品質資料）
+    shifts_clean = cur.execute("""
+        SELECT mind_shift_type t, COUNT(*) n FROM scene_framework_cards
+        WHERE confidence_score >= 0.6
+        GROUP BY mind_shift_type ORDER BY n DESC
+    """).fetchall()
+
+    # ── 4. 高價值場景（conf>=0.8 且談判，Top 5）
+    top_scenes = cur.execute("""
+        SELECT book_id, chapter_number, scene_number, focal_character,
+               confidence_score, mind_shift_type, mind_shift_intensity
+        FROM scene_framework_cards
+        WHERE confidence_score >= 0.8 AND is_negotiation_scene=1
+        ORDER BY confidence_score DESC, mind_shift_intensity DESC
+        LIMIT 5
+    """).fetchall()
+
+    conn.close()
+    return {
+        "global": {
+            "total_all":      total_all,
+            "total_clean":    total_clean,
+            "nego_clean":     nego_clean,
+            "decision_clean": decision_clean,
+            "unique_chars":   unique_chars,
+            "avg_conf":       round(avg_conf_all, 3),
+        },
+        "books":       books_list,
+        "shift_dist":  [{"type": r["t"], "count": r["n"]} for r in shifts_clean],
+        "top_scenes":  [dict(r) for r in top_scenes],
+    }
+
+
+@app.delete("/api/book/{book_id}/garbage")
+def api_clean_garbage(book_id: str):
+    """清理指定書籍的垃圾角色名場景"""
+    conn = get_db()
+    cur  = conn.cursor()
+    cur.execute("""
+        DELETE FROM scene_framework_cards
+        WHERE book_id=? AND (
+            focal_character IN ('未知','法則','條件','因素','環境','機制','原則','現象','系統',
+                '理論','結果','影響','效果','過程','方式','方法','模式','關係','結構',
+                '框架','背景','情況','狀態','階段','程度','問題','答案','原因',
+                '有人','沒有','所有','任何','這個','那個','一個','每個',
+                '同烟','得到','找到','看到','想到','讓人','使人','令人','還有',
+                '也有','只有','件中','其中','之中','心中','自己','他們','我們',
+                '联系员','还有人','让人','自己的轨','得到的回')
+            OR length(focal_character) > 10
+            OR focal_character GLOB '*的*'
+            OR focal_character GLOB '*了*'
+        )
+    """, (book_id,))
+    deleted = cur.rowcount
+    conn.commit()
+    conn.close()
+    return {"ok": True, "deleted": deleted}
+
+
 @app.get("/api/summary")
 def api_summary(book_id: Optional[str] = None):
     conn = get_db()
@@ -508,7 +641,7 @@ def api_scenes(
         where.append("is_negotiation_scene=?"); params.append(1 if negotiation else 0)
     if book_id:
         where.append("book_id=?"); params.append(book_id)
-    sql = "SELECT chapter_number, scene_number, focal_character, secondary_characters, match_level, confidence_score, mind_shift_type, mind_shift_intensity, is_negotiation_scene, negotiation_pattern_tags, created_at, book_id FROM scene_framework_cards"
+    sql = "SELECT chapter_number, scene_number, focal_character, secondary_characters, match_level, confidence_score, mind_shift_type, mind_shift_intensity, is_negotiation_scene, negotiation_pattern_tags, created_at, book_id, situation, SUBSTR(scene_text,1,120) as scene_text_preview FROM scene_framework_cards"
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY chapter_number, scene_number LIMIT ? OFFSET ?"
