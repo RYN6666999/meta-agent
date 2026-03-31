@@ -315,7 +315,7 @@ class FrameworkAnalyzer:
                 response = await self.llm.complete(
                     messages,
                     temperature=0.1 + (attempt - 1) * 0.1,  # retry 時略提高 temperature
-                    max_tokens=6000,  # 4096 不夠長場景的 JSON 輸出
+                    max_tokens=8192,  # 8192 避免長場景 JSON 被截斷
                 )
                 total_tokens += response.input_tokens + response.output_tokens
 
@@ -641,6 +641,20 @@ class FrameworkAnalyzer:
             raise InsufficientEvidenceError(
                 f"judgment 缺少 key_evidence_quotes，場景 {ctx.scene_id}"
             )
+
+        # Coerce LLM 可能輸出的「合理但不在 enum 的」shift_type 值
+        _SHIFT_TYPE_COERCE = {
+            "epistemic": "values",
+            "cognitive":  "values",
+            "belief":     "values",
+            "behavioral": "strategy",
+            "relational": "stance",
+        }
+        ms_data = data.get("mind_shift", {})
+        raw_st = ms_data.get("shift_type", "none")
+        if raw_st not in {e.value for e in MindShiftType}:
+            ms_data["shift_type"] = _SHIFT_TYPE_COERCE.get(raw_st, "none")
+            data["mind_shift"] = ms_data
 
         try:
             card = SceneFrameworkCardSchema(

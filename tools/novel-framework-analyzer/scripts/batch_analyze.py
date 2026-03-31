@@ -183,9 +183,18 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
         if not gemini_key:
             raise ValueError("找不到 GEMINI_API_KEY，請在 .env 加入：GEMINI_API_KEY=your_key")
         from services.llm.gemini_adapter import GeminiClient, GEMINI_FREE_MODELS
-        g_model = GEMINI_FREE_MODELS.get(model_choice, "gemini-1.5-flash")
-        print(f"[模式] Gemini Free — {g_model}（免費額度，1500 req/day）")
-        llm = GeminiClient(api_key=gemini_key, model=g_model)
+        from services.llm.fallback_router import FallbackRouter
+        g_model = GEMINI_FREE_MODELS.get(model_choice, "gemini-2.5-flash")
+        gemini_llm = GeminiClient(api_key=gemini_key, model=g_model)
+        # 備用：OpenRouter Haiku（quota 耗盡時自動切換）
+        or_key = _load_api_key(env_path)
+        if or_key:
+            fallback_llm = OpenRouterClient(api_key=or_key, model="anthropic/claude-haiku-4-5")
+            llm = FallbackRouter(primary=gemini_llm, secondary=fallback_llm, wait_seconds=15)
+            print(f"[模式] Gemini Free → Fallback Haiku — {g_model}（quota 耗盡時自動切 haiku）")
+        else:
+            llm = gemini_llm
+            print(f"[模式] Gemini Free — {g_model}（免費額度，無 fallback）")
         return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir, db_path=db_path)
 
     if mode == "hybrid":
@@ -425,6 +434,17 @@ async def run(
                 print(f"  ❌ ch{chapter.chapter_number} s{scene.scene_number} 失敗：{e}")
                 db.rollback()
                 return None
+            except Exception as e:
+                # ContentBlockedError 或其他非預期錯誤
+                from services.llm.gemini_adapter import ContentBlockedError
+                if isinstance(e, ContentBlockedError):
+                    print(f"  [跳過] ch{chapter.chapter_number} s{scene.scene_number} 內容被擋，跳過")
+                    stats.scenes_skipped += 1
+                else:
+                    stats.scenes_failed += 1
+                    print(f"  ❌ ch{chapter.chapter_number} s{scene.scene_number} 未預期錯誤：{e}")
+                db.rollback()
+                return None
 
     # 逐章處理（章內場景可並發）
     for chapter in chapters:
@@ -432,8 +452,13 @@ async def run(
         stats.scenes_total += len(scenes)
         print(f"\n【第 {chapter.chapter_number} 章】{chapter.title} — {len(scenes)} 個場景")
 
-        tasks = [analyze_one(chapter, scene) for scene in scenes]
-        await asyncio.gather(*tasks)
+        if concurrency <= 1:
+            # 串行：確保 retry sleep 期間不讓下一個 task 插入，避免 RPM 超標
+            for scene in scenes:
+                await analyze_one(chapter, scene)
+        else:
+            tasks = [analyze_one(chapter, scene) for scene in scenes]
+            await asyncio.gather(*tasks)
 
     db.close()
     stats.elapsed = time.time() - t0
