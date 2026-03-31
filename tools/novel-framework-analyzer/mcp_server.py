@@ -152,11 +152,20 @@ def get_scene(chapter: int, scene: int, book_id: Optional[str] = None) -> str:
     return (
         f"## 第{chapter}章 場景{scene}｜{d.get('focal_character', '未知')}視角\n\n"
         f"**場景原文（前300字）**\n{d.get('scene_text', '')[:300]}...\n\n"
-        f"**情境（Situation）**\n{situation.get('description', '—')}\n\n"
-        f"**欲望（Desire）**\n類型：{desire.get('type', '—')}\n{desire.get('description', '—')}\n\n"
-        f"**心理轉變（Mind Shift）**\n類型：{d.get('mind_shift_type', '—')}（強度 {d.get('mind_shift_intensity', 0)}/5）\n"
-        f"{mind_shift.get('description', '—')}\n\n"
-        f"**判斷（Judgment）**\n{judgment.get('description', '—')}\n\n"
+        f"**局 Situation**\n"
+        f"  外部局勢：{situation.get('external_situation', '—')}\n"
+        f"  權力動態：{situation.get('power_dynamics', '—')}\n"
+        f"  主動方：{situation.get('active_party', '—')} ｜ 被動方：{situation.get('passive_party', '—')}\n\n"
+        f"**欲 Desire**\n"
+        f"  顯性欲望：{desire.get('explicit_desire', '—')}\n"
+        f"  隱性欲望：{desire.get('implicit_desire', '—')}\n"
+        f"  真正目標：{desire.get('true_objective', '—')}\n\n"
+        f"**心 Mind → 變 Shift**\n"
+        f"  類型：{d.get('mind_shift_type', '—')}（強度 {d.get('mind_shift_intensity', 0)}/5）\n"
+        f"  進入場景：{mind_shift.get('before_mindset', '—')}\n"
+        f"  觸發事件：{mind_shift.get('trigger_event', '—')}\n"
+        f"  離開場景：{mind_shift.get('after_mindset', '—')}\n\n"
+        f"**框架判定**\n{judgment.get('reasoning', '—')}\n\n"
         f"**配對等級**：{d.get('match_level', '—')}｜信心分數：{d.get('confidence_score', 0):.2f}\n"
         f"**談判場景**：{'是' if d.get('is_negotiation_scene') else '否'}\n"
         f"**場景標籤**：{', '.join(d.get('scene_labels') or []) or '無'}"
@@ -164,7 +173,7 @@ def get_scene(chapter: int, scene: int, book_id: Optional[str] = None) -> str:
 
 
 @mcp.tool()
-def search_scenes(
+async def search_scenes(
     query: str,
     top_k: int = 5,
     book_id: Optional[str] = None,
@@ -182,8 +191,6 @@ def search_scenes(
     Returns:
         最相關場景列表，含章節位置、主角、相似度評分與摘要。
     """
-    import asyncio
-
     chroma = _get_chroma()
     if chroma is None:
         return (
@@ -201,11 +208,7 @@ def search_scenes(
         filters={"book_id": book_id} if book_id else {},
     )
 
-    loop = asyncio.new_event_loop()
-    try:
-        results = loop.run_until_complete(chroma.retrieve(req))
-    finally:
-        loop.close()
+    results = await chroma.retrieve(req)
 
     if not results:
         return f"未找到與「{query}」相關的場景（相似度 < {min_score}）。"
@@ -449,7 +452,7 @@ def filter_scenes(
 
 
 @mcp.tool()
-def ingest_to_memory(
+async def ingest_to_memory(
     chapter: int,
     scene: int,
     book_id: Optional[str] = None,
@@ -468,7 +471,6 @@ def ingest_to_memory(
     Returns:
         匯入結果。
     """
-    import asyncio
     import httpx
 
     # 先拿場景資料
@@ -495,11 +497,13 @@ def ingest_to_memory(
     content = (
         f"[小說場景分析] 第{chapter}章 場景{scene}｜{focal}視角\n"
         f"書籍ID：{d.get('book_id')}\n"
-        f"情境：{situation.get('description', '—')}\n"
-        f"欲望({desire.get('type', '—')})：{desire.get('description', '—')}\n"
+        f"外部局勢：{situation.get('external_situation', '—')}\n"
+        f"顯性欲望：{desire.get('explicit_desire', '—')}\n"
+        f"隱性欲望：{desire.get('implicit_desire', '—')}\n"
         f"心理轉變({d.get('mind_shift_type', '—')},強度{d.get('mind_shift_intensity')}): "
-        f"{mind_shift.get('description', '—')}\n"
-        f"判斷：{judgment.get('description', '—')}\n"
+        f"{mind_shift.get('before_mindset', '—')} → {mind_shift.get('after_mindset', '—')}\n"
+        f"觸發事件：{mind_shift.get('trigger_event', '—')}\n"
+        f"判斷理由：{judgment.get('reasoning', '—')}\n"
         f"配對等級：{d.get('match_level')}｜信心：{d.get('confidence_score', 0):.2f}\n"
     )
     if memo:
@@ -522,11 +526,7 @@ def ingest_to_memory(
                 "請確認 memory-mcp 的 LightRAG 服務是否正在執行。"
             )
 
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(_ingest())
-    finally:
-        loop.close()
+    return await _ingest()
 
 
 # ════════════════════════════════════════════════════════════════════════════

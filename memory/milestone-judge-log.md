@@ -1993,3 +1993,29 @@
   其他變更 tools/toolbox-mcp/server.py +10
 
 ---
+
+## 2026-03-30 20:03 | auto-git-score | 分數 330 | 📥 達到閾值（330/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=110），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  核心腳本變更 scripts/crm/assets/icons/README.md +40
+  核心腳本變更 scripts/crm/assets/icons/ai-toolbox.icns +40
+  核心腳本變更 scripts/crm/assets/icons/ai-toolbox.svg +40
+  核心腳本變更 scripts/crm/assets/icons/app-lighthouse.svg +40
+  核心腳本變更 scripts/crm/assets/icons/app-orbit.svg +40
+  其他變更 tools/novel-framework-analyzer/deploy.sh +10
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/mcp_server.py +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/requirements-mcp.txt +10
+  其他變更 tools/novel-framework-analyzer/scripts/index_vectors.py +10
+  其他變更 tools/novel-framework-analyzer/services/vector_store/chroma_adapter.py +10
+
+---

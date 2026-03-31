@@ -46,9 +46,22 @@ class SmartRouter:
         analyzer, label = self._route(ctx)
         if label == "haiku":
             self._haiku_count += 1
+            return await analyzer.analyze(ctx)
         else:
-            self._free_count += 1
-        return await analyzer.analyze(ctx)
+            # 免費模型失敗時自動 fallback 到 Haiku
+            try:
+                result = await analyzer.analyze(ctx)
+                self._free_count += 1
+                return result
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Free model 失敗（{ctx.focal_character} ch{ctx.chapter_number}s{ctx.scene_number}）"
+                    f"，fallback 到 Haiku：{e}"
+                )
+                print(f"  ⚠️  Gemini 失敗 → fallback Haiku（{ctx.focal_character}）")
+                self._haiku_count += 1
+                return await self.haiku.analyze(ctx)
 
     @property
     def stats(self) -> dict:

@@ -306,6 +306,50 @@ def api_summary(book_id: Optional[str] = None):
     }
 
 
+@app.get("/api/progress")
+def api_progress():
+    """逐章進度：每章的場景數、信心分數、決策/談判數，用於視覺化進度牆"""
+    TOTAL_CHAPTERS = 1264  # 全書章節數
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT chapter_number,
+               COUNT(*)                                              AS scenes,
+               ROUND(AVG(confidence_score), 3)                      AS avg_conf,
+               COUNT(CASE WHEN scene_labels LIKE '%decision%' THEN 1 END)    AS decisions,
+               COUNT(CASE WHEN is_negotiation_scene=1 THEN 1 END)   AS negotiation,
+               MAX(match_level)                                      AS best_match,
+               GROUP_CONCAT(DISTINCT focal_character)               AS characters
+        FROM scene_framework_cards
+        GROUP BY chapter_number
+        ORDER BY chapter_number
+    """).fetchall()
+    conn.close()
+
+    analyzed = {r[0]: {
+        "chapter": r[0], "scenes": r[1], "avg_conf": r[2],
+        "decisions": r[3], "negotiation": r[4],
+        "best_match": r[5], "characters": r[6] or ""
+    } for r in rows}
+
+    chapters = []
+    for ch in range(1, TOTAL_CHAPTERS + 1):
+        if ch in analyzed:
+            chapters.append({"chapter": ch, "status": "done", **analyzed[ch]})
+        else:
+            chapters.append({"chapter": ch, "status": "pending",
+                             "scenes": 0, "avg_conf": 0, "decisions": 0,
+                             "negotiation": 0, "best_match": None, "characters": ""})
+
+    done = len(analyzed)
+    return {
+        "total_chapters": TOTAL_CHAPTERS,
+        "done_chapters": done,
+        "pending_chapters": TOTAL_CHAPTERS - done,
+        "progress_pct": round(done / TOTAL_CHAPTERS * 100, 2),
+        "chapters": chapters,
+    }
+
+
 @app.get("/api/books")
 def api_books():
     registry = load_book_registry()

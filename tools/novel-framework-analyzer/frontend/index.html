@@ -102,6 +102,20 @@
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
+  /* Chapter wall cells */
+  .ch-cell {
+    width: 28px; height: 28px; border-radius: 4px; font-size: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform .1s, opacity .1s;
+    color: rgba(255,255,255,0.6); font-weight: 600; line-height: 1;
+    overflow: hidden;
+  }
+  .ch-cell:hover { transform: scale(1.3); z-index: 10; position: relative; opacity: 1 !important; }
+  .ch-cell.done     { background: var(--green); opacity: .75; }
+  .ch-cell.decision { background: #e86f3a; opacity: .85; }
+  .ch-cell.nego     { background: var(--accent); opacity: .9; }
+  .ch-cell.pending  { background: var(--border); opacity: .4; cursor: default; }
+
   .empty { text-align: center; padding: 48px; color: var(--muted); }
   .empty-icon { font-size: 40px; margin-bottom: 10px; }
   h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
@@ -147,6 +161,9 @@
       <span class="icon">📈</span> 角色弧線
     </div>
     <div class="nav-section">工具</div>
+    <div class="nav-item" onclick="showPage('progress')" id="nav-progress">
+      <span class="icon">🗺️</span> 分析進度
+    </div>
     <div class="nav-item" onclick="showPage('costs')" id="nav-costs">
       <span class="icon">💰</span> 成本分析
     </div>
@@ -229,6 +246,105 @@
         <canvas id="arcChart" height="260"></canvas>
       </div>
       <div id="arcTable" style="margin-top:16px"></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="page" id="page-progress">
+      <h2>🗺️ 分析進度</h2>
+
+      <!-- 大進度條區 -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+          <div>
+            <span id="prog-done" style="font-size:32px;font-weight:700;color:var(--green)">—</span>
+            <span style="color:var(--muted);font-size:14px"> / <span id="prog-total">1264</span> 章</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:28px;font-weight:700;color:var(--accent)" id="prog-pct">—%</div>
+            <div style="font-size:11px;color:var(--muted)">完成率</div>
+          </div>
+        </div>
+        <!-- 主進度條 -->
+        <div style="height:14px;background:var(--border);border-radius:7px;overflow:hidden;margin-bottom:8px">
+          <div id="prog-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:7px;transition:width .6s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+          <span>ch 1</span>
+          <span id="prog-eta">預估剩餘：計算中...</span>
+          <span>ch 1264</span>
+        </div>
+      </div>
+
+      <!-- KPI 行 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div class="card" style="text-align:center;padding:12px">
+          <div style="font-size:20px;font-weight:700;color:var(--green)" id="prog-scenes">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">已分析場景</div>
+        </div>
+        <div class="card" style="text-align:center;padding:12px">
+          <div style="font-size:20px;font-weight:700;color:var(--accent)" id="prog-pending">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">待分析章節</div>
+        </div>
+        <div class="card" style="text-align:center;padding:12px">
+          <div style="font-size:20px;font-weight:700;color:var(--yellow)" id="prog-decisions-total">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">行動決策場景</div>
+        </div>
+        <div class="card" style="text-align:center;padding:12px">
+          <div style="font-size:20px;font-weight:700;color:var(--accent2)" id="prog-nego-total">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">談判場景</div>
+        </div>
+      </div>
+
+      <!-- 圖例 -->
+      <div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+        <span><span style="display:inline-block;width:12px;height:12px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:4px"></span>已完成</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#4ade8066;border-radius:2px;vertical-align:middle;margin-right:4px"></span>含決策場景</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:var(--accent);border-radius:2px;vertical-align:middle;margin-right:4px"></span>含談判場景</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:var(--border);border-radius:2px;vertical-align:middle;margin-right:4px"></span>待分析</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;cursor:pointer"><input type="checkbox" id="prog-show-all" onchange="renderChapterWall()"> 顯示全部 1264 章</label>
+          <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px" onclick="loadProgress()">↻ 重新整理</button>
+        </div>
+      </div>
+
+      <!-- 章節格子牆 -->
+      <div class="card" style="padding:16px">
+        <div id="chapterWall" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+      </div>
+
+      <!-- 繼續分析控制區 -->
+      <div class="card" style="margin-top:16px;padding:16px" id="prog-continue-card">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">繼續分析下一段</div>
+            <div style="font-size:11px;color:var(--muted)" id="prog-next-info">—</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+            <div>
+              <span style="font-size:11px;color:var(--muted);margin-right:4px">模式：</span>
+              <select id="prog-mode-select" style="font-size:12px;padding:4px 8px">
+                <option value="smart">Smart（寧凡→Haiku，其他→Gemini）</option>
+                <option value="haiku">Haiku（全部）</option>
+                <option value="gemini-free">Gemini 免費（全部）</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size:11px;color:var(--muted);margin-right:4px">跑到：</span>
+              <input type="number" id="prog-end-chapter" style="width:80px;font-size:12px;padding:4px 8px" placeholder="自動">
+            </div>
+            <button class="btn btn-primary" style="padding:6px 16px;font-size:13px" id="prog-continue-btn" onclick="continueFromProgress()">
+              ▶ 接續分析
+            </button>
+          </div>
+        </div>
+        <!-- 進度條 + log -->
+        <div id="prog-job-bar" style="display:none;margin-top:12px">
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">
+            <div id="prog-job-fill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:3px;transition:width .4s"></div>
+          </div>
+          <div id="prog-job-log" style="background:#000;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:11px;color:#4ade80;max-height:120px;overflow-y:auto;white-space:pre-wrap"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Costs -->
@@ -450,6 +566,7 @@ function showPage(name, pushHash = true) {
   if (name === 'negotiation') loadNegotiation();
   if (name === 'arc') loadArc();
   if (name === 'costs') loadCosts();
+  if (name === 'progress') loadProgress();
   if (name === 'dashboard') loadDashboard();
 }
 
@@ -852,6 +969,166 @@ async function toggleNegotiation(ch, sc, setTo) {
   closeModal();
   loadNegotiation();
   if (document.getElementById('page-scenes').classList.contains('active')) loadScenes();
+}
+
+// ── Progress ──
+let _progressData = null;
+let _progressTimer = null;
+
+async function loadProgress() {
+  const d = await fetch(API + '/api/progress').then(r => r.json());
+  _progressData = d;
+
+  // 大進度條
+  const pct = d.progress_pct;
+  document.getElementById('prog-done').textContent = d.done_chapters;
+  document.getElementById('prog-total').textContent = d.total_chapters;
+  document.getElementById('prog-pct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('prog-bar').style.width = pct + '%';
+
+  // KPI
+  const summary = await fetch(API + '/api/summary').then(r => r.json());
+  document.getElementById('prog-scenes').textContent = summary.total_scenes;
+  document.getElementById('prog-pending').textContent = d.pending_chapters;
+  document.getElementById('prog-decisions-total').textContent = summary.decision_scenes || 0;
+  document.getElementById('prog-nego-total').textContent = summary.negotiation_scenes || 0;
+
+  // 預估剩餘（以目前速度：約 3 場景/章，12s/場景）
+  const avgSecPerCh = 36;  // ~3 scenes × 12s
+  const remainSec = d.pending_chapters * avgSecPerCh;
+  const etaText = remainSec > 3600
+    ? `預估剩餘：約 ${(remainSec/3600).toFixed(1)} 小時`
+    : remainSec > 60
+    ? `預估剩餘：約 ${Math.round(remainSec/60)} 分鐘`
+    : '即將完成';
+  document.getElementById('prog-eta').textContent = etaText;
+
+  renderChapterWall();
+
+  // 更新「繼續分析」提示訊息
+  const nextInfoEl = document.getElementById('prog-next-info');
+  if (nextInfoEl && !_progJobPoller) {
+    const nextCh = d.done_chapters + 1;
+    if (d.done_chapters >= d.total_chapters) {
+      nextInfoEl.textContent = '✅ 全部 1264 章已分析完成';
+      const btn = document.getElementById('prog-continue-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '已完成'; }
+    } else {
+      nextInfoEl.textContent = `下一段從第 ${nextCh} 章開始（預設跑 10 章）`;
+      const endEl = document.getElementById('prog-end-chapter');
+      if (endEl && !endEl.value) endEl.placeholder = String(nextCh + 9);
+    }
+  }
+
+  // 若有批次在跑，每 10 秒自動刷新
+  if (_progressTimer) clearInterval(_progressTimer);
+  if (d.done_chapters < d.total_chapters) {
+    _progressTimer = setInterval(loadProgress, 10000);
+  }
+}
+
+function renderChapterWall() {
+  if (!_progressData) return;
+  const showAll = document.getElementById('prog-show-all').checked;
+  const wall = document.getElementById('chapterWall');
+  const chapters = showAll ? _progressData.chapters : _progressData.chapters.slice(0, 400);
+
+  wall.innerHTML = chapters.map(c => {
+    if (c.status === 'pending') {
+      return `<div class="ch-cell pending" title="ch${c.chapter} 未分析" onclick=""></div>`;
+    }
+    // 顏色優先級：談判 > 決策 > 一般完成
+    const cls = c.negotiation > 0 ? 'nego' : c.decisions > 0 ? 'decision' : 'done';
+    const conf = Math.round((c.avg_conf || 0) * 100);
+    const label = `ch${c.chapter}\n${c.scenes}場景 信心${conf}%${c.decisions ? '\n⚡決策x'+c.decisions : ''}${c.negotiation ? '\n🎯談判x'+c.negotiation : ''}`;
+    return `<div class="ch-cell ${cls}" title="${label}" onclick="goToChapter(${c.chapter})">${c.chapter}</div>`;
+  }).join('');
+
+  if (!showAll && _progressData.chapters.length > 400) {
+    wall.innerHTML += `<div style="color:var(--muted);font-size:12px;padding:8px;width:100%">⋯ 勾選「顯示全部」查看 ch401–1264</div>`;
+  }
+}
+
+function goToChapter(ch) {
+  showPage('scenes');
+  // 觸發場景列表並跳到該章
+  setTimeout(() => {
+    fetch(API + `/api/scenes?chapter=${ch}&limit=10`).then(r => r.json()).then(data => {
+      if (data.items.length) openSceneModal(data.items[0].chapter_number, data.items[0].scene_number);
+    });
+  }, 300);
+}
+
+let _progJobPoller = null;
+
+async function continueFromProgress() {
+  if (!_currentBookId) {
+    alert('請先在頂部選擇一本書，再按接續分析');
+    return;
+  }
+
+  const btn   = document.getElementById('prog-continue-btn');
+  const bar   = document.getElementById('prog-job-bar');
+  const fill  = document.getElementById('prog-job-fill');
+  const log   = document.getElementById('prog-job-log');
+  const mode  = document.getElementById('prog-mode-select').value;
+  const endCh = document.getElementById('prog-end-chapter').value;
+
+  btn.disabled = true;
+  btn.textContent = '啟動中...';
+  bar.style.display = 'block';
+  fill.style.width = '2%';
+  log.textContent = '接續分析啟動中...';
+
+  try {
+    const fd = new FormData();
+    fd.append('book_id', _currentBookId);
+    fd.append('mode', mode);
+    if (endCh) fd.append('chapters_end', endCh);
+
+    const res = await fetch(API + '/api/analyze/continue', { method: 'POST', body: fd }).then(r => r.json());
+
+    if (res.done) {
+      log.textContent = '✅ ' + (res.message || '本書已全部分析完成！');
+      fill.style.width = '100%';
+      btn.disabled = false;
+      btn.textContent = '▶ 接續分析';
+      return;
+    }
+
+    log.textContent = `🚀 已啟動 job ${res.job_id}｜ch${res.chapters_start}–${res.chapters_end}`;
+    document.getElementById('prog-next-info').textContent =
+      `正在跑：第 ${res.chapters_start}–${res.chapters_end} 章`;
+
+    // 輪詢 job 狀態
+    if (_progJobPoller) clearInterval(_progJobPoller);
+    _progJobPoller = setInterval(async () => {
+      const j = await fetch(API + `/api/job/${res.job_id}`).then(r => r.json());
+      if (j.total > 0) fill.style.width = Math.min(99, j.progress / j.total * 100) + '%';
+      log.textContent = j.last_lines.join('\n');
+      log.scrollTop = log.scrollHeight;
+
+      if (j.status === 'done') {
+        fill.style.width = '100%';
+        log.textContent += '\n\n✅ 分析完成！';
+        clearInterval(_progJobPoller);
+        btn.disabled = false;
+        btn.textContent = '▶ 接續分析';
+        // 刷新進度頁
+        await loadProgress();
+      } else if (j.status === 'error') {
+        log.textContent += '\n\n❌ 分析失敗，請查看 log';
+        clearInterval(_progJobPoller);
+        btn.disabled = false;
+        btn.textContent = '▶ 接續分析';
+      }
+    }, 3000);
+
+  } catch(e) {
+    log.textContent = '❌ 啟動失敗：' + e.message;
+    btn.disabled = false;
+    btn.textContent = '▶ 接續分析';
+  }
 }
 
 // ── Costs ──

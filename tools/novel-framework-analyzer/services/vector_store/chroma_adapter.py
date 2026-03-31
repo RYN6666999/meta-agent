@@ -138,6 +138,23 @@ class ChromaAdapter(AbstractVectorStore):
         self._col.delete(where={"scene_id": {"$eq": scene_id}})
         return before - self._col.count()
 
+    async def update_metadata(self, chunk_id: str, metadata_update: dict) -> bool:
+        """更新某 chunk 的 metadata"""
+        try:
+            self._col.update(ids=[chunk_id], metadatas=[metadata_update])
+            return True
+        except Exception as e:
+            logger.warning("update_metadata failed for %s: %s", chunk_id, e)
+            return False
+
+    async def health_check(self) -> bool:
+        """確認 ChromaDB 是否可用"""
+        try:
+            self._col.count()
+            return True
+        except Exception:
+            return False
+
 
 # ── 工具函式 ─────────────────────────────────────────────────────────────────
 

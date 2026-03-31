@@ -83,6 +83,7 @@ class GeminiClient(AbstractLLMClient):
             },
         }
 
+        data: dict = {}
         for attempt in range(5):
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 resp = await client.post(url, json=payload,
@@ -116,9 +117,28 @@ class GeminiClient(AbstractLLMClient):
                 )
 
             resp.raise_for_status()
-            break
 
-        data = resp.json()
+            # Gemini 偶爾用 HTTP 200 夾帶 error body（如 quota exceeded）
+            data = resp.json()
+            if "error" in data:
+                err = data["error"]
+                code = err.get("code", 0)
+                msg  = err.get("message", "unknown error")
+                if code == 429 or "quota" in msg.lower() or "RESOURCE_EXHAUSTED" in str(err):
+                    wait = 4 + attempt * 8   # 4, 12, 20, 28, 36s
+                    logger.warning(f"Gemini quota (200 body)，{wait}s 後重試（attempt {attempt+1}/5）")
+                    print(f"Gemini quota exceeded，{wait}s 後重試（attempt {attempt+1}/5）")
+                    await asyncio.sleep(wait)
+                    data = {}   # reset so we know retries were exhausted
+                    continue
+                raise ValueError(f"Gemini error {code}：{msg[:200]}")
+            break
+        else:
+            # for/else：所有 5 次重試都因 rate limit / quota 耗盡
+            raise ValueError("Gemini 已達最大重試次數（5 次），quota 可能已耗盡，請稍後再試。")
+
+        if not data:
+            raise ValueError("Gemini 回應為空（data 未被賦值），請檢查網路或 API key。")
 
         # 解析 Gemini 回應格式
         try:
