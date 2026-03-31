@@ -917,8 +917,14 @@ def _is_valid_character(name: str) -> bool:
     """判斷角色名是否為有效人名（非垃圾分析結果）"""
     if not name:
         return False
-    # 長度：1 字太短，超過 8 字通常是描述句
-    if len(name) < 2 or len(name) > 8:
+    # 方括號標記的描述性佔位符（如 [個別人物法則的傳播者]）直接排除
+    if name.startswith("[") and name.endswith("]"):
+        return False
+    # 含間隔號（·）的非虛構人名最長可達 15 字（如「達內爾·"老板人"·麥吉」）
+    has_middle_dot = "·" in name or "\u00b7" in name
+    max_len = 15 if has_middle_dot else 8
+    # 長度：1 字太短，超過上限通常是描述句
+    if len(name) < 2 or len(name) > max_len:
         return False
     # 含空格或斜線通常是描述（敘述者/讀者視角）
     if "/" in name or "／" in name or " " in name or "　" in name:

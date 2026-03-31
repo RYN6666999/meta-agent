@@ -34,6 +34,23 @@ DEFAULT_NOVEL_PATH = os.path.join(ROOT, "上城之下.txt")
 DEFAULT_BOOK_ID    = "shangchengzhixia-001"
 
 
+def _get_book_info(book_id: str) -> dict:
+    """從 book_registry.json 取得書籍資訊，包含 book_type"""
+    registry_path = os.path.join(ROOT, "book_registry.json")
+    if not os.path.exists(registry_path):
+        return {}
+    import json as _json
+    with open(registry_path, encoding="utf-8") as f:
+        registry = _json.load(f)
+    return registry.get(book_id, {})
+
+
+def _is_nonfiction_book(book_id: str) -> bool:
+    """若 book_type 不是 'novel'，則視為非虛構——跳過字元提取"""
+    info = _get_book_info(book_id)
+    return info.get("book_type", "") not in ("novel", "fiction")
+
+
 # ---------------------------------------------------------------------------
 # LLM 工廠
 # ---------------------------------------------------------------------------
@@ -328,12 +345,14 @@ async def run(
 
             focal, secondary = extract_characters(scene.raw_text)
 
-            # 閥門 2：角色名品質不過關，跳過
+            # 閥門 2：角色名品質不過關 → 非虛構書可能無法提取，改由 LLM 自行判斷，不跳過
             if not is_valid_character_name(focal):
-                stats.scenes_skipped += 1
-                print(f"  [SKIP-CHAR] ch{chapter.chapter_number} s{scene.scene_number} "
-                      f"| 垃圾角色名：{focal!r}")
-                return None
+                focal = ""   # 留空，讓 LLM 從場景內容自行決定 focal_character
+
+            # 非虛構書：不傳入任何角色名提示，完全讓 LLM 從局勢分析推導
+            if _is_nonfiction_book(book_id):
+                focal = ""
+                secondary = []
 
             # 閥門 3：已分析過（含 focal_character 一起判斷，防止競態重複）
             key = (chapter.chapter_number, scene.scene_number, focal)

@@ -529,27 +529,91 @@ class FrameworkAnalyzer:
         return results
 
     @staticmethod
+    @staticmethod
+    def _sanitize_json_strings(s: str) -> str:
+        """
+        修復 LLM 在 JSON 字串值內輸出的非法字元：
+        1. literal control characters（換行、Tab 等）
+        2. 未 escape 的 ASCII 雙引號（LLM 用 "xxx" 強調片語時常見）
+        策略：字元掃描，追蹤 in_string 狀態，遇到 in_string + 問題字元時修補。
+        """
+        result = []
+        in_string = False
+        escape_next = False
+        i = 0
+        while i < len(s):
+            ch = s[i]
+            if escape_next:
+                result.append(ch)
+                escape_next = False
+                i += 1
+                continue
+            if ch == '\\':
+                result.append(ch)
+                escape_next = True
+                i += 1
+                continue
+            if ch == '"':
+                if in_string:
+                    # Peek: is this really the closing quote?
+                    # After a real closing quote, the next non-space char must be
+                    # one of: , : } ] or end-of-string.
+                    j = i + 1
+                    while j < len(s) and s[j] in ' \t\r\n':
+                        j += 1
+                    next_structural = s[j] if j < len(s) else ''
+                    if next_structural in (',', ':', '}', ']', ''):
+                        # Looks like a real closing quote
+                        result.append(ch)
+                        in_string = False
+                    else:
+                        # Unescaped inner quote — escape it
+                        result.append('\\"')
+                else:
+                    result.append(ch)
+                    in_string = True
+                i += 1
+                continue
+            if in_string and ord(ch) < 0x20:
+                # control character inside a JSON string — escape it
+                if ch == '\n':
+                    result.append('\\n')
+                elif ch == '\r':
+                    result.append('\\r')
+                elif ch == '\t':
+                    result.append('\\t')
+                else:
+                    result.append('\\u{:04x}'.format(ord(ch)))
+                i += 1
+                continue
+            result.append(ch)
+            i += 1
+        return ''.join(result)
+
+    @staticmethod
     def _extract_json(raw: str) -> str:
         """
         從 LLM 輸出中提取 JSON。
         處理模型常見的輸出問題：
         1. 包在 ```json ... ``` 裡
         2. 前後有多餘文字
-        3. 單引號代替雙引號（部分模型的壞習慣）
+        3. JSON 字串值含 literal control characters（換行等）
         """
         # 嘗試找 code fence
         fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
         if fence_match:
-            return fence_match.group(1)
+            raw = fence_match.group(1)
+        else:
+            # 嘗試找最外層的 { ... }
+            brace_match = re.search(r"\{.*\}", raw, re.DOTALL)
+            if brace_match:
+                raw = brace_match.group(0)
+            else:
+                raise LLMResponseParseError(
+                    f"無法從 LLM 輸出中提取 JSON。原始輸出前 200 字：{raw[:200]}"
+                )
 
-        # 嘗試找最外層的 { ... }
-        brace_match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if brace_match:
-            return brace_match.group(0)
-
-        raise LLMResponseParseError(
-            f"無法從 LLM 輸出中提取 JSON。原始輸出前 200 字：{raw[:200]}"
-        )
+        return FrameworkAnalyzer._sanitize_json_strings(raw)
 
     def _parse_and_validate(
         self,
@@ -586,6 +650,9 @@ class FrameworkAnalyzer:
                 scene_number=ctx.scene_number,
                 focal_character=data.get("focal_character", ctx.focal_character),
                 secondary_characters=data.get("secondary_characters", []),
+                scene_type=data.get("scene_type", "fiction_narrative"),
+                insufficient_context=data.get("insufficient_context", False),
+                name_unresolved=data.get("name_unresolved", False),
                 is_negotiation_scene=data.get("is_negotiation_scene", False),
                 negotiation_pattern_tags=data.get("negotiation_pattern_tags", []),
                 scene_labels=data.get("scene_labels", []),

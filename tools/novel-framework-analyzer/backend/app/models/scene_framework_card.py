@@ -33,6 +33,11 @@ class FrameworkMatchLevel(str, enum.Enum):
     WEAK    = "weak"
     NONE    = "none"
 
+class SceneType(str, enum.Enum):
+    FICTION_NARRATIVE    = "fiction_narrative"
+    NONFICTION_CASE      = "nonfiction_case"
+    NONFICTION_ARGUMENT  = "nonfiction_argument"
+
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas
@@ -50,6 +55,7 @@ class SituationAnalysis(BaseModel):
     active_party: str
     passive_party: str
     resource_holders: str
+    macro_context: Optional[str] = None  # nonfiction: 作者用此案例論證什麼
     evidence_quotes: List[EvidenceQuote] = Field(..., min_length=1)
 
 class DesireAnalysis(BaseModel):
@@ -68,6 +74,7 @@ class MindShiftAnalysis(BaseModel):
     shift_intensity: int = Field(default=3, ge=1, le=5)  # 強度 1-5，與類型分離
     shift_description: str
     is_reversible: bool
+    shift_subject_level: Optional[str] = None  # individual / system / epistemic
     evidence_quotes: List[EvidenceQuote] = Field(..., min_length=1)
 
 class FrameworkJudgment(BaseModel):
@@ -98,6 +105,9 @@ class SceneFrameworkCardSchema(BaseModel):
     scene_number: int
     focal_character: str
     secondary_characters: List[str] = Field(default_factory=list)
+    scene_type: SceneType = SceneType.FICTION_NARRATIVE
+    insufficient_context: bool = False
+    name_unresolved: bool = False
     is_negotiation_scene: bool = False
     negotiation_pattern_tags: List[str] = Field(default_factory=list)
     scene_labels: List[str] = Field(default_factory=list)  # decision / negotiation / confrontation / revelation
@@ -134,6 +144,9 @@ class SceneFrameworkCard(Base):
 
     focal_character: Mapped[str]       = mapped_column(String(100), nullable=False, index=True)
     secondary_characters: Mapped[list] = mapped_column(JSON, default=list)
+    scene_type: Mapped[str]            = mapped_column(String(30), default="fiction_narrative", nullable=False, index=True)
+    insufficient_context: Mapped[bool] = mapped_column(Boolean, default=False)
+    name_unresolved: Mapped[bool]      = mapped_column(Boolean, default=False)
     is_negotiation_scene: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     negotiation_pattern_tags: Mapped[list] = mapped_column(JSON, default=list)
     scene_labels: Mapped[list] = mapped_column(JSON, default=list)
@@ -169,6 +182,9 @@ class SceneFrameworkCard(Base):
             scene_text=scene_text,
             focal_character=card.focal_character,
             secondary_characters=card.secondary_characters,
+            scene_type=enum_val(card.scene_type),
+            insufficient_context=card.insufficient_context,
+            name_unresolved=card.name_unresolved,
             is_negotiation_scene=card.is_negotiation_scene,
             negotiation_pattern_tags=card.negotiation_pattern_tags,
             scene_labels=card.scene_labels,

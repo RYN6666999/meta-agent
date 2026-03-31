@@ -1,11 +1,13 @@
-# version: 1.4.0
-請分析以下中文小說場景，按照「局心欲變」框架輸出 JSON 分析卡。
+# version: 2.0.0
+請分析以下場景，按照「局心欲變」框架輸出 JSON 分析卡。
+（**分析起點是局，不是角色。** 先定義局勢結構，再從局的角度推導心、欲、變。）
+（場景可能來自小說或非虛構書籍，請先判斷 scene_type 再分析）
 
 ## 場景資訊
 - 書名：{book_title}
 - 章節：第 {chapter_number} 章
 - 場景序號：{scene_number}
-- 核心分析角色：{focal_character}
+- 核心分析角色：{focal_character}（若此欄位為空，請先分析局，再從局中推導關鍵節點行動者）
 - 其他出現角色：{known_characters}
 
 ## 場景原文
@@ -24,40 +26,45 @@
 請輸出以下結構的 JSON：
 
 {
-  "focal_character": "角色名",
+  "scene_type": "fiction_narrative",
+  "focal_character": "此局關鍵節點上的行動者（最能揭示局勢結構的那個）——不一定是主角，而是在這個局裡誰的行動最能說明局的機制",
   "secondary_characters": ["角色A", "角色B"],
+  "insufficient_context": false,
+  "name_unresolved": false,
   "is_negotiation_scene": false,
   "negotiation_pattern_tags": [],
   "scene_labels": [],
   "situation": {
-    "external_situation": "描述外部局勢",
-    "power_dynamics": "誰強誰弱的分析",
-    "risks_and_constraints": "風險與限制",
-    "active_party": "主動方角色名",
-    "passive_party": "被動方角色名",
-    "resource_holders": "資源持有者與其資源",
+    "macro_context": "（僅 nonfiction_case/nonfiction_argument 填寫：作者用此段要論證什麼局勢機制）",
+    "external_situation": "此局的客觀結構：誰握有籌碼、誰有退路、哪些約束是結構性而非個人性的",
+    "power_dynamics": "局勢中的不對稱：誰處於強勢位、誰被迫應對、不對稱的來源是什麼",
+    "risks_and_constraints": "局的邊界：不可見的天花板、退出成本、資訊不對稱",
+    "active_party": "主動推動局勢的一方",
+    "passive_party": "被局勢逼迫應對的一方",
+    "resource_holders": "誰握有哪種決定性資源（籌碼、資訊、時間、人脈）",
     "evidence_quotes": [
       {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
     ]
   },
   "mind_shift": {
-    "before_mindset": "場景開始前的心態（心：認知框架、情緒底色、信念前提）",
-    "trigger_event": "觸發轉變的事件或對話（變：導致變化的關鍵節點）",
-    "after_mindset": "場景結束後的新心態（變：轉化結果）",
+    "shift_subject_level": "individual / system / epistemic",
+    "before_mindset": "此局在行動者身上形成的初始認知框架——是局造成的心理條件，而非單純的個人性格",
+    "trigger_event": "改變局勢均衡的具體事件或對話（必須能引原文）",
+    "after_mindset": "局勢相變後，行動者的認知框架如何重組",
     "shift_type": "emotion",
     "shift_intensity": 3,
-    "shift_description": "從X到Y的轉變描述，是否帶來成長（抗脆弱）或退縮",
+    "shift_description": "局從X狀態轉向Y狀態，行動者的心態/策略/身份認知因此從A轉向B（因局而變，不是因個人頓悟而變）",
     "is_reversible": true,
     "evidence_quotes": [
       {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
     ]
   },
   "desire": {
-    "explicit_desire": "顯性欲望",
-    "implicit_desire": "隱性欲望",
-    "true_objective": "真正目標",
-    "desire_conflicts": "欲望衝突",
-    "obstacles": "阻礙",
+    "explicit_desire": "此局讓行動者顯性表達/行動的欲望（局勢壓力召喚出的）",
+    "implicit_desire": "此局讓行動者未說出口的欲望（局勢結構決定他不能或不敢明說的）",
+    "true_objective": "剝去局勢偽裝後，行動者的真正目標",
+    "desire_conflicts": "此局讓哪些欲望必然相撞（局勢結構性的衝突，非性格衝突）",
+    "obstacles": "局的哪些部分阻擋了欲望的實現",
     "evidence_quotes": [
       {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
     ]
@@ -65,7 +72,7 @@
   "judgment": {
     "match_level": "full",
     "matches_framework": true,
-    "reasoning": "判定理由（局心欲變四維是否齊備）",
+    "reasoning": "以局為基礎的判定：局是否有清晰的結構性特徵？心/欲是否能從局推導？變是否能用局的相變解釋？",
     "confidence_score": 0.85,
     "missing_dimensions": [],
     "key_evidence_quotes": [
@@ -74,10 +81,13 @@
   }
 }
 
+【最高原則】分析起點永遠是局。先問「這個局的結構是什麼」，再問「這個局在行動者身上造成了什麼心理條件」，再問「這個局召喚了什麼欲望」，最後問「這個局如何從一個狀態轉向另一個狀態」。
+若 situation 只是在複述情節（「A對B說了X」），不是在描述結構，請重寫直到能回答「換一個人在同樣的局裡，他面對的結構性壓力是什麼」。
+
 注意：shift_type 只能是 emotion / values / strategy / identity / stance / none 之一。
 注意：shift_intensity 是強度 1-5，與 shift_type 完全分離，不能混為一個欄位。
 注意：match_level 只能是 full / partial / weak / none 之一。
-注意：mind_shift 欄位同時承載「心」（before_mindset）與「變」（trigger_event + after_mindset + shift_type）兩個維度。
+注意：mind_shift 欄位同時承載「心」（before_mindset：此局造成的認知條件）與「變」（trigger_event + after_mindset：局的相變如何重寫認知）兩個維度。
 注意：is_negotiation_scene=true 的條件必須同時滿足：
   (1) focal_character 是談判或博弈的主動方或共同參與方（不能只是旁觀者或被動接受方）
   (2) focal_character 本人有明確的條件交換、試探、借勢、施壓、讓步等行為或對話
