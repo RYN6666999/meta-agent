@@ -89,3 +89,13 @@
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
+
+## 2026-03-31 14:06:36
+- root_cause: mobile API endpoint not healthy
+- solution: restart uvicorn via watchdog
+- context: health_code=000
+
+## 2026-03-31 14:37:28
+- root_cause: mobile API endpoint not healthy
+- solution: restart uvicorn via watchdog
+- context: health_code=000

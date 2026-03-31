@@ -25,7 +25,7 @@ sys.path.insert(0, ROOT)
 from backend.app.database import init_db, SessionLocal
 from backend.app.models.scene_framework_card import SceneFrameworkCard
 from backend.app.services.scene_splitter import split_chapters, split_scenes
-from backend.app.services.character_extractor import extract_characters
+from backend.app.services.character_extractor import extract_characters, is_valid_character_name
 from backend.app.services.framework_analyzer import (
     FrameworkAnalyzer, AnalysisContext, AnalysisError, MockLLMClient
 )
@@ -285,17 +285,19 @@ async def run(
     analyzer = build_analyzer(mode, model_choice, env_path, prompt_dir,
                               priority_chars=priority_chars)
 
-    # 取已存在的 (chapter, scene) 組合（用於 skip）
-    # 注意：scene_id 是每次執行重新生成的 uuid，不能用於去重
-    existing_ch_sc: set[tuple] = set()
-    if skip_existing:
-        rows = (
-            db.query(SceneFrameworkCard.chapter_number, SceneFrameworkCard.scene_number)
-            .filter(SceneFrameworkCard.book_id == book_id)
-            .all()
-        )
-        existing_ch_sc = {(r[0], r[1]) for r in rows}
-        print(f"DB 中書籍 {book_id} 已有 {len(existing_ch_sc)} 個場景卡，跳過重複分析")
+    # 取已存在的 (chapter, scene, focal_character) 組合（用於 skip）
+    existing_keys: set[tuple] = set()
+    rows = (
+        db.query(SceneFrameworkCard.chapter_number, SceneFrameworkCard.scene_number,
+                 SceneFrameworkCard.focal_character)
+        .filter(SceneFrameworkCard.book_id == book_id)
+        .all()
+    )
+    existing_keys = {(r[0], r[1], r[2]) for r in rows}
+    print(f"DB 中書籍 {book_id} 已有 {len(existing_keys)} 筆場景卡")
+
+    # 防重複 lock（防止並發競態插入同一場景）
+    _insert_lock = asyncio.Lock()
 
     # 切章節
     chapters = [
@@ -308,20 +310,44 @@ async def run(
     # 建立 semaphore 控制並發
     sem = asyncio.Semaphore(concurrency)
 
+    # ── 閥門 1：場景最小長度（太短的碎片不送 LLM）
+    MIN_SCENE_CHARS = 150
+
+    # ── 閥門 2：信心分最低門檻（低於此值不存 DB）
+    MIN_CONFIDENCE = 0.45
+
     async def analyze_one(chapter, scene) -> Optional[SceneFrameworkCard]:
         async with sem:
-            if (chapter.chapter_number, scene.scene_number) in existing_ch_sc:
+            # 閥門 1：場景太短，跳過
+            if scene.char_count < MIN_SCENE_CHARS:
                 stats.scenes_skipped += 1
+                print(f"  [SKIP-SHORT] ch{chapter.chapter_number} s{scene.scene_number} "
+                      f"| {scene.char_count}字 < {MIN_SCENE_CHARS}")
                 return None
 
+            focal, secondary = extract_characters(scene.raw_text)
+
+            # 閥門 2：角色名品質不過關，跳過
+            if not is_valid_character_name(focal):
+                stats.scenes_skipped += 1
+                print(f"  [SKIP-CHAR] ch{chapter.chapter_number} s{scene.scene_number} "
+                      f"| 垃圾角色名：{focal!r}")
+                return None
+
+            # 閥門 3：已分析過（含 focal_character 一起判斷，防止競態重複）
+            key = (chapter.chapter_number, scene.scene_number, focal)
+            async with _insert_lock:
+                if key in existing_keys:
+                    stats.scenes_skipped += 1
+                    return None
+                # 先佔位，防止並發的其他 task 搶同一個 key
+                existing_keys.add(key)
+
             if dry_run:
-                focal, secondary = extract_characters(scene.raw_text)
                 print(f"  [DRY] ch{chapter.chapter_number} s{scene.scene_number} "
                       f"| {scene.char_count}字 | 主角:{focal}")
                 stats.scenes_analyzed += 1
                 return None
-
-            focal, secondary = extract_characters(scene.raw_text)
 
             ctx = AnalysisContext(
                 scene_id=scene.scene_id,
@@ -338,20 +364,33 @@ async def run(
                 card = result.card
                 stats.tokens_used += result.total_tokens
 
-                # 存 DB
-                orm = SceneFrameworkCard.from_schema(card, scene_text=scene.raw_text)
-                db.add(orm)
-                db.commit()
+                conf = card.judgment.confidence_score
+
+                # 閥門 4：信心分太低，不存 DB
+                if conf < MIN_CONFIDENCE:
+                    stats.scenes_skipped += 1
+                    print(f"  [SKIP-CONF] ch{chapter.chapter_number} s{scene.scene_number} "
+                          f"| conf={conf:.2f} < {MIN_CONFIDENCE} | 主角:{focal}")
+                    return None
+
+                # 存 DB（UNIQUE constraint 會擋掉任何漏網的重複）
+                try:
+                    orm = SceneFrameworkCard.from_schema(card, scene_text=scene.raw_text)
+                    db.add(orm)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+                    stats.scenes_skipped += 1
+                    return None
 
                 level = card.judgment.match_level
                 level_str = level.value if hasattr(level, "value") else level
                 stats.match_counts[level_str] = stats.match_counts.get(level_str, 0) + 1
                 stats.scenes_analyzed += 1
 
-                conf = card.judgment.confidence_score
                 conf_icon = "🟢" if conf >= 0.8 else "🟡" if conf >= 0.5 else "🔴"
                 print(f"  {conf_icon} ch{chapter.chapter_number:3d} s{scene.scene_number} "
-                      f"| {level_str:7s} | conf={conf:.2f} | 主角:{focal[:4]:4s} "
+                      f"| {level_str:7s} | conf={conf:.2f} | 主角:{focal[:6]:6s} "
                       f"| retry={result.retry_count}")
                 return orm
 
