@@ -990,6 +990,93 @@ def api_arc(character: str, book_id: Optional[str] = None):
     return result
 
 
+# ── Nonfiction 專屬端點 ──────────────────────────────────────────────────────
+
+@app.get("/api/nonfiction/cases")
+def api_nonfiction_cases(book_id: Optional[str] = None, limit: int = 100, offset: int = 0):
+    """返回 nonfiction_case 類型場景（真實案例）"""
+    conn = get_db()
+    where, params = ["scene_type='nonfiction_case'"], []
+    if book_id:
+        where.append("book_id=?"); params.append(book_id)
+    sql = f"""
+        SELECT chapter_number, scene_number, focal_character, confidence_score,
+               match_level, situation, mind_shift, desire, book_id,
+               SUBSTR(scene_text,1,200) as scene_text_preview
+        FROM scene_framework_cards
+        WHERE {' AND '.join(where)}
+        ORDER BY chapter_number, scene_number
+        LIMIT ? OFFSET ?
+    """
+    params += [limit, offset]
+    rows = conn.execute(sql, params).fetchall()
+    total = conn.execute(f"SELECT COUNT(*) FROM scene_framework_cards WHERE {' AND '.join(where)}", params[:-2]).fetchone()[0]
+    conn.close()
+    items = []
+    for r in rows:
+        d = dict(r)
+        for k in ("situation", "mind_shift", "desire"):
+            d[k] = json_safe(d[k])
+        items.append(d)
+    return {"total": total, "items": items}
+
+
+@app.get("/api/nonfiction/arguments")
+def api_nonfiction_arguments(book_id: Optional[str] = None, limit: int = 100, offset: int = 0):
+    """返回 nonfiction_argument 類型場景（知識論點）"""
+    conn = get_db()
+    where, params = ["scene_type='nonfiction_argument'"], []
+    if book_id:
+        where.append("book_id=?"); params.append(book_id)
+    sql = f"""
+        SELECT chapter_number, scene_number, focal_character, confidence_score,
+               match_level, situation, mind_shift, desire, book_id,
+               SUBSTR(scene_text,1,200) as scene_text_preview
+        FROM scene_framework_cards
+        WHERE {' AND '.join(where)}
+        ORDER BY chapter_number, scene_number
+        LIMIT ? OFFSET ?
+    """
+    params += [limit, offset]
+    rows = conn.execute(sql, params).fetchall()
+    total = conn.execute(f"SELECT COUNT(*) FROM scene_framework_cards WHERE {' AND '.join(where)}", params[:-2]).fetchone()[0]
+    conn.close()
+    items = []
+    for r in rows:
+        d = dict(r)
+        for k in ("situation", "mind_shift", "desire"):
+            d[k] = json_safe(d[k])
+        items.append(d)
+    return {"total": total, "items": items}
+
+
+@app.get("/api/nonfiction/epistemic")
+def api_nonfiction_epistemic(book_id: Optional[str] = None):
+    """返回所有 nonfiction 場景，按章節排列，用於概念演化時間軸"""
+    conn = get_db()
+    where = ["(scene_type='nonfiction_case' OR scene_type='nonfiction_argument')"]
+    params = []
+    if book_id:
+        where.append("book_id=?"); params.append(book_id)
+    sql = f"""
+        SELECT chapter_number, scene_number, focal_character, scene_type,
+               confidence_score, match_level, situation, mind_shift, desire, book_id,
+               mind_shift_type, mind_shift_intensity
+        FROM scene_framework_cards
+        WHERE {' AND '.join(where)}
+        ORDER BY chapter_number, scene_number
+    """
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    items = []
+    for r in rows:
+        d = dict(r)
+        for k in ("situation", "mind_shift", "desire"):
+            d[k] = json_safe(d[k])
+        items.append(d)
+    return items
+
+
 @app.post("/api/upload")
 async def api_upload(file: UploadFile = File(...)):
     """上傳小說 txt / pdf，暫存到 uploads/"""

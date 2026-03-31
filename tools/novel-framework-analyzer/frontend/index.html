@@ -120,6 +120,23 @@
   .empty-icon { font-size: 40px; margin-bottom: 10px; }
   h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
   h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--muted); }
+
+  /* Nonfiction scene cards */
+  .nf-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all .15s; }
+  .nf-card:hover { border-color: var(--accent); }
+  .nf-card.case-type { border-left: 3px solid #4ade80; }
+  .nf-card.arg-type  { border-left: 3px solid var(--accent); }
+  .nf-badge-case { background: #14532d; color: var(--green); padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+  .nf-badge-arg  { background: #2d3561; color: #a5b4fc; padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+
+  /* Epistemic timeline */
+  .ep-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; cursor: pointer; }
+  .ep-row:hover .ep-content { background: #7c6ff711; border-radius: 6px; }
+  .ep-step { width: 48px; flex-shrink: 0; text-align: center; }
+  .ep-dot  { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); margin: 4px auto 2px; }
+  .ep-dot.case-dot { background: var(--green); }
+  .ep-content { flex: 1; padding: 4px 8px; }
+  .ep-line  { width: 1px; background: var(--border); flex-shrink: 0; align-self: stretch; margin: 0 23px; }
 </style>
 </head>
 <body>
@@ -157,6 +174,16 @@
     </div>
     <div class="nav-item" onclick="showPage('arc')" id="nav-arc">
       <span class="icon">📈</span> 角色弧線
+    </div>
+    <!-- Nonfiction-only items (hidden for novels) -->
+    <div class="nav-item" onclick="showPage('cases')" id="nav-cases" style="display:none">
+      <span class="icon">📦</span> 案例庫
+    </div>
+    <div class="nav-item" onclick="showPage('arguments')" id="nav-arguments" style="display:none">
+      <span class="icon">💡</span> 知識張力
+    </div>
+    <div class="nav-item" onclick="showPage('epistemic')" id="nav-epistemic" style="display:none">
+      <span class="icon">🌀</span> 概念演化
     </div>
     <div class="nav-item" onclick="showPage('bookshelf')" id="nav-bookshelf">
       <span class="icon">📚</span> 書架
@@ -512,6 +539,32 @@
       </div>
     </div>
 
+    <!-- Cases (nonfiction) -->
+    <div class="page" id="page-cases">
+      <h2>📦 案例庫</h2>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">書中直接引用的真實案例——作者用來支撐論點的現實事件或研究</p>
+      <div id="casesList">載入中...</div>
+    </div>
+
+    <!-- Arguments (nonfiction) -->
+    <div class="page" id="page-arguments">
+      <h2>💡 知識張力</h2>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">論點機制與概念建構——書中每個核心主張的「局心欲變」結構</p>
+      <div id="argumentsList">載入中...</div>
+    </div>
+
+    <!-- Epistemic timeline (nonfiction) -->
+    <div class="page" id="page-epistemic">
+      <h2>🌀 概念演化</h2>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">從第一章到最後——書中的認知建構時間軸，看作者如何一步步重塑讀者的世界觀</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <div class="filter-chip active" onclick="setEpFilter('all',this)">全部</div>
+        <div class="filter-chip" onclick="setEpFilter('nonfiction_case',this)">📦 案例</div>
+        <div class="filter-chip" onclick="setEpFilter('nonfiction_argument',this)">💡 論點</div>
+      </div>
+      <div id="epistemicTimeline">載入中...</div>
+    </div>
+
   </main>
 </div>
 
@@ -528,11 +581,13 @@ const API = '';
 let _filters = { match: 'all', nego: false };
 let _uploadedPath = '';
 let _currentBookId = '';
+let _currentBookType = '';   // 'novel' | 'nonfiction' | ''
 let _books = [];
 let _dataScope = 'book';
 let _arcChart = null, _shiftChart = null, _charChart = null;
 let _jobPoller = null;
 let _filterTimer = null;
+let _epFilter = 'all';
 
 function apiUrl(path, includeBook = true) {
   if (!includeBook) return API + path;
@@ -569,10 +624,12 @@ function setCurrentBook(bookId) {
   _currentBookId = bookId || '';
   const current = _books.find(b => b.book_id === _currentBookId);
   _uploadedPath = current?.path || '';
+  _currentBookType = current?.book_type || '';
   // 同步 topbar select
   const topSel = document.getElementById('topbarBookSelect');
   if (topSel && bookId) topSel.value = bookId;
   updateBookMeta();
+  updateSidebarForBookType(_dataScope === 'all' ? 'all' : _currentBookType);
 }
 
 function updateBookMeta() {
@@ -629,7 +686,9 @@ function topbarSelectBook() {
   if (val === '__all__') {
     _dataScope = 'all';
     _currentBookId = '';
+    _currentBookType = '';
     document.getElementById('bookSelect') && (document.getElementById('bookSelect').value = '');
+    updateSidebarForBookType('all');
   } else {
     _dataScope = 'book';
     setCurrentBook(val);
@@ -682,8 +741,11 @@ function showPage(name, pushHash = true) {
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  document.getElementById('nav-' + name).classList.add('active');
+  const pageEl = document.getElementById('page-' + name);
+  const navEl  = document.getElementById('nav-' + name);
+  if (!pageEl) return;   // 頁面不存在時安全跳過
+  pageEl.classList.add('active');
+  if (navEl) navEl.classList.add('active');
   if (pushHash) window.location.hash = name;
   if (name === 'scenes') loadScenes();
   if (name === 'decisions') loadDecisions();
@@ -693,6 +755,45 @@ function showPage(name, pushHash = true) {
   if (name === 'progress') loadProgress();
   if (name === 'dashboard') loadDashboard();
   if (name === 'bookshelf') loadBookshelf();
+  if (name === 'cases') loadCases();
+  if (name === 'arguments') loadArguments();
+  if (name === 'epistemic') loadEpistemic();
+}
+
+// ── Sidebar 根據書籍類型顯示/隱藏 ──
+function updateSidebarForBookType(bookType) {
+  // bookType = 'novel' | 'nonfiction' | 'all' | ''
+  const isNovel      = bookType === 'novel';
+  const isNonfiction = bookType === 'nonfiction';
+  const isAll        = bookType === 'all' || bookType === '';
+
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? '' : 'none';
+  };
+
+  // novel-only items
+  show('nav-decisions',   isNovel || isAll);
+  show('nav-negotiation', isNovel || isAll);
+  show('nav-arc',         isNovel || isAll);
+
+  // nonfiction-only items
+  show('nav-cases',     isNonfiction || isAll);
+  show('nav-arguments', isNonfiction || isAll);
+  show('nav-epistemic', isNonfiction || isAll);
+
+  // 如果目前顯示的頁面已被隱藏，跳到 dashboard
+  const activePage = document.querySelector('.page.active');
+  if (activePage) {
+    const pageName = activePage.id.replace('page-', '');
+    const novelOnlyPages     = new Set(['decisions', 'negotiation', 'arc']);
+    const nonfictionOnlyPages = new Set(['cases', 'arguments', 'epistemic']);
+    if (isNonfiction && novelOnlyPages.has(pageName)) {
+      showPage('dashboard', false);
+    } else if (isNovel && nonfictionOnlyPages.has(pageName)) {
+      showPage('dashboard', false);
+    }
+  }
 }
 
 // ── Stats bar ──
@@ -1828,9 +1929,103 @@ async function trackJob(jobId) {
 }
 
 function getInitialPage() {
-  const allowed = new Set(['dashboard', 'scenes', 'decisions', 'negotiation', 'arc', 'costs', 'upload', 'bookshelf', 'progress']);
+  const allowed = new Set(['dashboard', 'scenes', 'decisions', 'negotiation', 'arc', 'costs', 'upload', 'bookshelf', 'progress', 'cases', 'arguments', 'epistemic']);
   const hashPage = (window.location.hash || '').replace('#', '').trim();
   return allowed.has(hashPage) ? hashPage : 'dashboard';
+}
+
+// ── Nonfiction: 案例庫 ──
+async function loadCases() {
+  if (requiresSelectedBook()) { renderNeedBookState('casesList'); return; }
+  const url = apiUrl('/api/nonfiction/cases');
+  if (!url) { renderNeedBookState('casesList'); return; }
+  const data = await fetch(url).then(r => r.json());
+  const el = document.getElementById('casesList');
+  if (!data.items || !data.items.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📦</div>此書尚無案例場景<br><span style="font-size:12px">nonfiction_case 類型場景分析後會顯示在這裡</span></div>';
+    return;
+  }
+  el.innerHTML = data.items.map(s => renderNonfictionCard(s, 'case')).join('');
+}
+
+// ── Nonfiction: 知識張力 ──
+async function loadArguments() {
+  if (requiresSelectedBook()) { renderNeedBookState('argumentsList'); return; }
+  const url = apiUrl('/api/nonfiction/arguments');
+  if (!url) { renderNeedBookState('argumentsList'); return; }
+  const data = await fetch(url).then(r => r.json());
+  const el = document.getElementById('argumentsList');
+  if (!data.items || !data.items.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">💡</div>此書尚無知識張力場景<br><span style="font-size:12px">nonfiction_argument 類型場景分析後會顯示在這裡</span></div>';
+    return;
+  }
+  el.innerHTML = data.items.map(s => renderNonfictionCard(s, 'argument')).join('');
+}
+
+// ── Nonfiction: 概念演化 ──
+function setEpFilter(val, el) {
+  _epFilter = val;
+  document.querySelectorAll('#page-epistemic .filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  loadEpistemic();
+}
+
+async function loadEpistemic() {
+  if (requiresSelectedBook()) { renderNeedBookState('epistemicTimeline'); return; }
+  const url = apiUrl('/api/nonfiction/epistemic');
+  if (!url) { renderNeedBookState('epistemicTimeline'); return; }
+  const data = await fetch(url).then(r => r.json());
+  const el = document.getElementById('epistemicTimeline');
+  const items = Array.isArray(data) ? data : [];
+  const filtered = _epFilter === 'all' ? items : items.filter(s => s.scene_type === _epFilter);
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🌀</div>尚無概念演化資料<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
+    return;
+  }
+  el.innerHTML = filtered.map((s, i) => {
+    const sit = s.situation || {};
+    const ms = s.mind_shift || {};
+    const isCase = s.scene_type === 'nonfiction_case';
+    return `
+    <div class="ep-row" onclick="openSceneModal(${s.chapter_number},${s.scene_number})">
+      <div class="ep-step">
+        <div style="font-size:10px;color:var(--muted)">ch${s.chapter_number}</div>
+        <div class="ep-dot ${isCase ? 'case-dot' : ''}"></div>
+        <div style="font-size:9px;color:var(--muted)">${isCase ? '案例' : '論點'}</div>
+      </div>
+      <div class="ep-content">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">${s.focal_character || '—'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${(sit.external_situation || '').slice(0, 120)}${(sit.external_situation||'').length > 120 ? '…' : ''}</div>
+        <div style="display:flex;gap:16px;font-size:12px">
+          <span style="color:var(--muted)">→ <span style="color:var(--text)">${(ms.after_mindset || '').slice(0, 80)}</span></span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding-top:4px;flex-shrink:0">${((s.confidence_score||0)*100).toFixed(0)}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderNonfictionCard(s, type) {
+  const sit = s.situation || {};
+  const ms  = s.mind_shift || {};
+  const des = s.desire || {};
+  const isCase = type === 'case';
+  const badgeHtml = isCase
+    ? '<span class="nf-badge-case">📦 案例</span>'
+    : '<span class="nf-badge-arg">💡 論點</span>';
+  const situationText = (sit.external_situation || '').slice(0, 200);
+  const afterText     = (ms.after_mindset || des.explicit_desire || '').slice(0, 120);
+  return `
+  <div class="nf-card ${isCase ? 'case-type' : 'arg-type'}" onclick="openSceneModal(${s.chapter_number},${s.scene_number})">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700;color:var(--accent)">ch${s.chapter_number} s${s.scene_number}</span>
+      ${badgeHtml}
+      <span style="font-size:12px;color:var(--muted);margin-left:auto">${((s.confidence_score||0)*100).toFixed(0)}%</span>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">${s.focal_character || '—'}</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px">${situationText}${situationText.length >= 200 ? '…' : ''}</div>
+    ${afterText ? `<div style="font-size:12px;border-top:1px solid var(--border);padding-top:6px;margin-top:4px"><span style="color:var(--accent)">▶</span> ${afterText}</div>` : ''}
+  </div>`;
 }
 
 // ── Bookshelf ──
@@ -2004,6 +2199,7 @@ async function loadBookshelf() {
 async function initApp() {
   await loadBooks(false);
   loadStats();
+  updateSidebarForBookType(_dataScope === 'all' ? 'all' : _currentBookType);
   showPage(getInitialPage(), false);
 }
 
