@@ -4,7 +4,7 @@ scene_splitter.py
 中文小說章節與場景切分器。
 
 切分策略：
-1. 章節切分：正則比對「第N章標題」行
+1. 章節切分：正則比對「第N章標題」行（支援多種前綴格式）
 2. 場景切分（章節內）：依以下規則偵測場景邊界
    - 空行分隔的段落群（3 個以上連續空行視為強邊界）
    - 時間跳轉詞（次日、數日後、幾天後...）
@@ -17,11 +17,23 @@ scene_splitter.py
 - 在章節中的位置（start_line, end_line）
 - 估算主要角色（出現次數最多的名詞）
 - 場景長度（字數）
+
+支援格式（章節標題偵測）：
+- 第1章 標題           ← 阿拉伯數字
+- 第一章 標題          ← 中文數字
+- 正文 第1章 標題      ← 正文前綴
+- 正文 第一章 標題     ← 正文前綴 + 中文數字
+- 第一章標題（N）      ← 帶序號後綴的非虛構書
+- 【第1章 標題】       ← 方括號格式
+- 卷一 第1章           ← 卷章格式
+- Chapter 1            ← 英文格式
+- 序章 / 尾聲 / 後記   ← 特殊章節
 """
 
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from typing import Iterator, List, Optional, Tuple
@@ -76,16 +88,113 @@ class RawScene:
 
 
 # ---------------------------------------------------------------------------
+# 編碼與文字正規化工具
+# ---------------------------------------------------------------------------
+
+# 全形數字 → 半形
+_FULLWIDTH_DIGIT_TABLE = str.maketrans("０１２３４５６７８９", "0123456789")
+# 全形英文 → 半形
+_FULLWIDTH_ALPHA_TABLE = str.maketrans(
+    "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ"
+    "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ",
+    "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+)
+
+
+def normalize_text(text: str) -> str:
+    """
+    文字編碼正規化（讀入後立即執行）：
+    1. Unicode NFC 正規化（合成字元）
+    2. 移除 BOM（\\ufeff）
+    3. 全形數字 → 半形（方便章節號碼正則）
+    4. 全形英文 → 半形
+    5. 統一換行符 → \\n
+    6. 移除不可見控制字元（保留 \\n \\t）
+    """
+    # BOM
+    text = text.lstrip("\ufeff")
+    # 換行統一
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Unicode 正規化
+    text = unicodedata.normalize("NFC", text)
+    # 全形 → 半形
+    text = text.translate(_FULLWIDTH_DIGIT_TABLE)
+    text = text.translate(_FULLWIDTH_ALPHA_TABLE)
+    # 移除控制字元（CC 類別，保留 \n \t \r 但 \r 已轉換）
+    text = "".join(
+        ch for ch in text
+        if unicodedata.category(ch) not in ("Cc",) or ch in ("\n", "\t")
+    )
+    return text
+
+
+def detect_and_decode(raw: bytes) -> str:
+    """
+    自動偵測編碼並解碼 bytes → str。
+    嘗試順序：UTF-8-sig → UTF-8 → GBK → Big5 → Latin-1
+    若已安裝 chardet，優先使用 chardet。
+    """
+    # 嘗試用 chardet
+    try:
+        import chardet
+        result = chardet.detect(raw)
+        enc = result.get("encoding") or "utf-8"
+        confidence = result.get("confidence", 0)
+        if confidence >= 0.7:
+            try:
+                return normalize_text(raw.decode(enc, errors="replace"))
+            except (LookupError, UnicodeDecodeError):
+                pass
+    except ImportError:
+        pass
+
+    # Fallback：依序嘗試
+    for enc in ("utf-8-sig", "utf-8", "gbk", "gb2312", "big5", "latin-1"):
+        try:
+            return normalize_text(raw.decode(enc))
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    return normalize_text(raw.decode("utf-8", errors="replace"))
+
+
+# ---------------------------------------------------------------------------
 # 章節切分器
 # ---------------------------------------------------------------------------
 
+# 中文數字字元集
+_CN_DIGITS = "零一二三四五六七八九十百千萬"
+
+# 允許出現在章節標題行「第」字之前的前綴（可選）
+# 例：正文、【、卷一、上冊 等
+_CHAPTER_PREFIX = (
+    r"(?:"
+    r"正文|序文|前言"           # 常見非虛構前綴
+    r"|【|〖|\[|（"            # 括號前綴
+    r"|卷[一二三四五六七八九十\d]+\s*"   # 卷N
+    r"|[上下中]\s*冊?\s*"      # 上/下冊
+    r")?\s*"
+)
+
 # 章節標題規則（依優先序）
 CHAPTER_TITLE_PATTERNS = [
-    re.compile(r'^第\d+章\s*(.+)'),           # 第1章落選
-    re.compile(r'^第[零一二三四五六七八九十百千萬]+章\s*(.+)'),  # 第一章...
-    re.compile(r'^【第\d+章\s*(.+)】'),        # 【第1章...】
-    re.compile(r'^chapter\s+\d+', re.IGNORECASE),
+    re.compile(rf'^{_CHAPTER_PREFIX}第\d+章\s*(.*)'),                # 第1章
+    re.compile(rf'^{_CHAPTER_PREFIX}第[{_CN_DIGITS}]+章\s*(.*)'),    # 第一章
+    re.compile(r'^【第\d+章\s*(.*)】'),                               # 【第1章...】
+    re.compile(r'^chapter\s+\d+', re.IGNORECASE),                    # Chapter 1
+    re.compile(r'^第\d+節\s*(.+)'),                                   # 第1節（節級）
+    re.compile(rf'^第[{_CN_DIGITS}]+節\s*(.+)'),                     # 第一節
 ]
+
+# 特殊章節（序章、後記等）→ 賦予固定章號
+_SPECIAL_CHAPTERS: dict[str, int] = {
+    "序章": 0, "序言": 0, "序": 0, "前言": 0, "引言": 0,
+    "尾聲": 9990, "終章": 9991, "後記": 9992, "跋": 9993,
+    "附錄": 9994, "附記": 9995, "番外": 9996,
+}
+_SPECIAL_CHAPTER_RE = re.compile(
+    r'^(' + "|".join(re.escape(k) for k in _SPECIAL_CHAPTERS) + r')\s*(.*?)$'
+)
 
 # 分隔行標記（非內容行，跳過）
 SEPARATOR_PATTERNS = [
@@ -94,29 +203,54 @@ SEPARATOR_PATTERNS = [
     re.compile(r'^第.+章節內容開始'),
     re.compile(r'^愛.+電子書'),
     re.compile(r'^https?://'),
+    re.compile(r'^={5,}'),      # ===== 分隔線
+    re.compile(r'^#{3,}'),      # ### Markdown 標題行（不是章節）
 ]
 
 
 def is_chapter_title(line: str) -> Optional[Tuple[int, str]]:
     """
-    判斷是否為章節標題行。
+    判斷是否為章節標題行。支援多種前綴與格式。
     Returns: (chapter_number, title) 或 None
     """
     stripped = line.strip()
     if not stripped:
         return None
+    # 長度過長的行不可能是標題（超過 60 字通常是正文）
+    if len(stripped) > 60:
+        return None
 
-    # 最常見格式：第N章標題
-    m = re.match(r'^第(\d+)章\s*(.*)$', stripped)
+    # ── 1. 帶前綴的阿拉伯數字章號：正文 第1章 / 【第1章】 / 卷一 第1章
+    m = re.match(
+        rf'^{_CHAPTER_PREFIX}第(\d+)[章节節]\s*(.*?)(?:[（(]\d+[）)])?$',
+        stripped,
+    )
     if m:
-        return int(m.group(1)), m.group(2).strip() or f"第{m.group(1)}章"
+        title = m.group(2).strip() or f"第{m.group(1)}章"
+        return int(m.group(1)), title
 
-    # 中文數字章號
-    cn_digits = "零一二三四五六七八九十百千萬"
-    m2 = re.match(rf'^第([{cn_digits}]+)章\s*(.*)$', stripped)
+    # ── 2. 帶前綴的中文數字章號：正文 第一章 / 第十二章
+    m2 = re.match(
+        rf'^{_CHAPTER_PREFIX}第([{_CN_DIGITS}]+)[章节節]\s*(.*?)(?:[（(]\d+[）)])?$',
+        stripped,
+    )
     if m2:
         num = _cn_to_int(m2.group(1))
-        return num, m2.group(2).strip() or f"第{m2.group(1)}章"
+        title = m2.group(2).strip() or f"第{m2.group(1)}章"
+        return num, title
+
+    # ── 3. 特殊章節（序章、後記等）
+    m3 = _SPECIAL_CHAPTER_RE.match(stripped)
+    if m3:
+        keyword = m3.group(1)
+        title = m3.group(2).strip() or keyword
+        return _SPECIAL_CHAPTERS[keyword], title
+
+    # ── 4. 英文 Chapter N
+    m4 = re.match(r'^chapter\s+(\d+)\s*(.*?)$', stripped, re.IGNORECASE)
+    if m4:
+        title = m4.group(2).strip() or f"Chapter {m4.group(1)}"
+        return int(m4.group(1)), title
 
     return None
 
@@ -150,15 +284,19 @@ def split_chapters(
     text: str,
     book_id: str,
     skip_header_lines: int = 6,
+    auto_normalize: bool = True,
 ) -> List[RawChapter]:
     """
     將整本小說切成章節。
 
     Args:
-        text: 完整小說文字（UTF-8）
+        text: 完整小說文字（UTF-8 str）
         book_id: 書籍 ID
-        skip_header_lines: 跳過前 N 行的書頭資訊
+        skip_header_lines: 跳過前 N 行的書頭資訊（0 = 不跳過）
+        auto_normalize: 是否自動執行編碼正規化（推薦 True）
     """
+    if auto_normalize:
+        text = normalize_text(text)
     lines = text.splitlines()
     chapters: List[RawChapter] = []
 
@@ -177,23 +315,30 @@ def split_chapters(
 
         chapter_info = is_chapter_title(line)
         if chapter_info:
-            # 儲存上一章
-            if current_chapter_num is not None and current_lines:
-                chapters.append(
-                    RawChapter(
-                        chapter_id=str(uuid.uuid4()),
-                        book_id=book_id,
-                        chapter_number=current_chapter_num,
-                        title=current_title or "",
-                        raw_text="\n".join(current_lines).strip(),
-                        start_line=current_start,
-                        end_line=i - 1,
+            new_num, new_title = chapter_info
+            if new_num == current_chapter_num:
+                # 同一章號的子節（如「第一章（2）」）→ 作為場景邊界標記，不切新章
+                # 插入空行作為場景切分提示，保留原行作為小節標題
+                current_lines.append("")
+                current_lines.append(f"── {new_title} ──")
+            else:
+                # 新章節：先儲存上一章
+                if current_chapter_num is not None and current_lines:
+                    chapters.append(
+                        RawChapter(
+                            chapter_id=str(uuid.uuid4()),
+                            book_id=book_id,
+                            chapter_number=current_chapter_num,
+                            title=current_title or "",
+                            raw_text="\n".join(current_lines).strip(),
+                            start_line=current_start,
+                            end_line=i - 1,
+                        )
                     )
-                )
-
-            current_chapter_num, current_title = chapter_info
-            current_start = i
-            current_lines = []
+                current_chapter_num = new_num
+                current_title = new_title
+                current_start = i
+                current_lines = []
         elif current_chapter_num is not None:
             current_lines.append(line)
 
@@ -488,6 +633,7 @@ def split_novel(
     text: str,
     book_id: str,
     chapter_range: Optional[Tuple[int, int]] = None,
+    auto_normalize: bool = True,
 ) -> Iterator[Tuple[RawChapter, List[RawScene]]]:
     """
     切分整本小說，逐章 yield (chapter, scenes)。
@@ -496,8 +642,9 @@ def split_novel(
         text: 完整小說文字
         book_id: 書籍 ID
         chapter_range: 可選，只切 (start_chapter, end_chapter) 範圍（含）
+        auto_normalize: 是否自動執行編碼正規化
     """
-    chapters = split_chapters(text, book_id)
+    chapters = split_chapters(text, book_id, auto_normalize=auto_normalize)
 
     for chapter in chapters:
         if chapter_range:

@@ -2019,3 +2019,38 @@
   其他變更 tools/novel-framework-analyzer/services/vector_store/chroma_adapter.py +10
 
 ---
+
+## 2026-03-31 09:26 | auto-git-score | 分數 390 | 📥 達到閾值（390/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=300），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-30-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-30-mobile-bridge-tunnel-down.md +10
+  error-log 新增根因 error-log/2026-03-31-health-check.md +50
+  error-log 新增根因 error-log/2026-03-31-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-03-31-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/health-check.log +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/truth-xval.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/mcp_server.py +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/server.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/gemini_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/services/llm/smart_router.py +10
+  其他變更 tools/novel-framework-analyzer/services/vector_store/chroma_adapter.py +10
+  其他變更 tools/novel-framework-analyzer/vector_store/chroma/68f6cdca-987b-464c-bcfd-b45da1a9de42/data_level0.bin +10
+  其他變更 tools/novel-framework-analyzer/vector_store/chroma/68f6cdca-987b-464c-bcfd-b45da1a9de42/header.bin +10
+  其他變更 tools/novel-framework-analyzer/vector_store/chroma/68f6cdca-987b-464c-bcfd-b45da1a9de42/length.bin +10
+  其他變更 tools/novel-framework-analyzer/vector_store/chroma/68f6cdca-987b-464c-bcfd-b45da1a9de42/link_lists.bin +10
+  其他變更 tools/novel-framework-analyzer/vector_store/chroma/chroma.sqlite3 +10
+
+---

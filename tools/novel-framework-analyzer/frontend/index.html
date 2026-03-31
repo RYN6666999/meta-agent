@@ -406,9 +406,9 @@
 
       <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <div class="upload-icon">📄</div>
-        <div style="font-size:15px;font-weight:600">拖曳或點擊上傳小說 .txt</div>
-        <div style="color:var(--muted);margin-top:6px;font-size:12px">支援 UTF-8 / GBK 編碼</div>
-        <input type="file" id="fileInput" accept=".txt" onchange="handleUpload(this)">
+        <div style="font-size:15px;font-weight:600">拖曳或點擊上傳小說</div>
+        <div style="color:var(--muted);margin-top:6px;font-size:12px">支援 .txt（UTF-8 / GBK / Big5）和 .pdf（數位或掃描件）</div>
+        <input type="file" id="fileInput" accept=".txt,.pdf" onchange="handleUpload(this)">
       </div>
 
       <div class="upload-info" id="uploadInfo">
@@ -461,6 +461,7 @@ let _books = [];
 let _dataScope = 'book';
 let _arcChart = null, _shiftChart = null, _charChart = null;
 let _jobPoller = null;
+let _filterTimer = null;
 
 function apiUrl(path, includeBook = true) {
   if (!includeBook) return API + path;
@@ -556,6 +557,11 @@ function selectBookFromList() {
 
 // ── Navigation ──
 function showPage(name, pushHash = true) {
+  // 離開 progress 頁時清除自動刷新計時器，避免背景持續重建 400+ DOM 節點卡住 UI thread
+  if (name !== 'progress' && _progressTimer) {
+    clearInterval(_progressTimer);
+    _progressTimer = null;
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
@@ -705,7 +711,11 @@ async function loadScenes() {
   `).join('');
 }
 
-function filterScenes() { loadScenes(); }
+function filterScenes() {
+  // debounce 300ms：防止每個 keypress 都觸發 API + innerHTML 重建，同時避免中文 IME 被打斷
+  clearTimeout(_filterTimer);
+  _filterTimer = setTimeout(loadScenes, 300);
+}
 function setFilter(key, val, el) {
   _filters[key] = val;
   if (key === 'match') document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
@@ -1016,7 +1026,10 @@ async function loadProgress() {
     } else {
       nextInfoEl.textContent = `下一段從第 ${nextCh} 章開始（預設跑 10 章）`;
       const endEl = document.getElementById('prog-end-chapter');
-      if (endEl && !endEl.value) endEl.placeholder = String(nextCh + 9);
+      // 不在 focus 時才更新 placeholder，避免干擾使用者正在輸入或 IME 組字
+      if (endEl && !endEl.value && document.activeElement !== endEl) {
+        endEl.placeholder = String(nextCh + 9);
+      }
     }
   }
 
@@ -1378,6 +1391,9 @@ async function initApp() {
 
 window.addEventListener('hashchange', () => {
   const page = getInitialPage();
+  // 防止 showPage() 設 hash 後又觸發第二次 showPage，造成 display:none 瞬間奪走 focus
+  const active = document.querySelector('.page.active');
+  if (active && active.id === 'page-' + page) return;
   showPage(page, false);
 });
 

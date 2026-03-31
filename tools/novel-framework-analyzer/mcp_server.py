@@ -550,8 +550,13 @@ def main() -> None:
         print("請先執行：python scripts/batch_analyze.py", flush=True)
 
     if args.transport == "sse":
+        mcp.settings.host = args.host
+        mcp.settings.port = args.port
+        # 在 Cloudflare Tunnel 後方，DNS rebinding 保護由 CF 處理，本地關閉即可
+        if mcp.settings.transport_security is not None:
+            mcp.settings.transport_security.enable_dns_rebinding_protection = False
         print(f"[Novel MCP] SSE 模式啟動 → http://{args.host}:{args.port}/sse", flush=True)
-        mcp.run(transport="sse", host=args.host, port=args.port)
+        mcp.run(transport="sse")
     else:
         mcp.run(transport="stdio")
 

@@ -1,0 +1,18 @@
+{
+  "book-de1676ee7555": {
+    "book_id": "book-de1676ee7555",
+    "display_name": "引爆点",
+    "filename": "1dcdd831_引爆点.txt",
+    "path": "/Users/ryan/meta-agent/tools/novel-framework-analyzer/uploads/1dcdd831_引爆点.txt",
+    "detected_chapters": 35,
+    "uploaded_at": "2026-03-31T01:56:07.586577+00:00"
+  },
+  "book-e7cb19292326": {
+    "book_id": "book-e7cb19292326",
+    "display_name": "1dcdd831_引爆点",
+    "filename": "2b450255_1dcdd831_引爆点.txt",
+    "path": "/Users/ryan/meta-agent/tools/novel-framework-analyzer/uploads/2b450255_1dcdd831_引爆点.txt",
+    "detected_chapters": 35,
+    "uploaded_at": "2026-03-31T02:08:06.167380+00:00"
+  }
+}

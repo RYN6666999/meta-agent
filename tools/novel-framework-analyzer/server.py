@@ -570,39 +570,66 @@ def api_arc(character: str, book_id: Optional[str] = None):
 
 @app.post("/api/upload")
 async def api_upload(file: UploadFile = File(...)):
-    """上傳小說 txt，暫存到 uploads/"""
-    if not file.filename.endswith(".txt"):
-        raise HTTPException(400, "只支援 .txt 格式")
+    """上傳小說 txt / pdf，暫存到 uploads/"""
+    filename_lower = (file.filename or "").lower()
+    allowed_ext = (".txt", ".pdf")
+    if not any(filename_lower.endswith(e) for e in allowed_ext):
+        raise HTTPException(400, "只支援 .txt 或 .pdf 格式")
+
     content = await file.read()
-    # 嘗試 UTF-8，再試 GBK
-    for enc in ("utf-8", "gbk", "big5"):
+
+    # ── TXT：自動偵測編碼 ──────────────────────────────────────────────────
+    if filename_lower.endswith(".txt"):
+        from backend.app.services.scene_splitter import detect_and_decode
+        text = detect_and_decode(content)
+
+    # ── PDF：pymupdf 數位提取 / PaddleOCR 掃描件 ──────────────────────────
+    elif filename_lower.endswith(".pdf"):
         try:
-            text = content.decode(enc)
-            break
-        except Exception:
-            text = None
-    if not text:
-        raise HTTPException(400, "無法解碼檔案，請確認編碼（UTF-8 / GBK）")
+            from backend.app.services.pdf_ingestor import pdf_to_text
+            text = pdf_to_text(content, engine="auto")
+        except ImportError as exc:
+            raise HTTPException(
+                400,
+                f"PDF 功能需安裝 pymupdf：pip install pymupdf\n詳情：{exc}",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(500, f"PDF 解析失敗：{exc}") from exc
+
+        # PDF 轉存為同名 txt 供後續分析流程使用
+        txt_filename = Path(file.filename).stem + ".txt"
+    else:
+        raise HTTPException(400, "不支援的格式")
+
+    if not text or not text.strip():
+        raise HTTPException(400, "無法解碼檔案內容，請確認格式與編碼")
 
     digest = hashlib.sha1(content).hexdigest()[:12]
     book_id = f"book-{digest}"
 
-    save_name = f"{uuid.uuid4().hex[:8]}_{file.filename}"
+    # 儲存檔名（pdf → 轉存 txt）
+    orig_stem = Path(file.filename or "novel").stem
+    save_ext = ".txt"  # 統一儲存為 txt
+    save_name = f"{uuid.uuid4().hex[:8]}_{orig_stem}{save_ext}"
     save_path = UPLOAD_DIR / save_name
     save_path.write_text(text, encoding="utf-8")
 
-    # 偵測章節數
-    import re
-    chapters = re.findall(r"第[零一二三四五六七八九十百千\d]+章", text)
+    # 使用 split_chapters 精確偵測章節數
+    from backend.app.services.scene_splitter import split_chapters
+    detected_ch = split_chapters(text, book_id=book_id, auto_normalize=False)
+    # 過濾掉特殊章節（序章/後記等）讓計數更準確
+    real_chapters = [c for c in detected_ch if c.chapter_number < 9000]
 
+    display_name = Path(file.filename or "novel").stem
     registry = load_book_registry()
     registry[book_id] = {
         "book_id": book_id,
-        "display_name": Path(file.filename).stem,
+        "display_name": display_name,
         "filename": save_name,
         "path": str(save_path),
-        "detected_chapters": len(chapters),
+        "detected_chapters": len(real_chapters),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "source_format": "pdf" if (file.filename or "").lower().endswith(".pdf") else "txt",
     }
     save_book_registry(registry)
 
@@ -613,11 +640,11 @@ async def api_upload(file: UploadFile = File(...)):
 
     return {
         "book_id": book_id,
-        "display_name": Path(file.filename).stem,
+        "display_name": display_name,
         "filename": save_name,
         "path": str(save_path),
         "size_chars": len(text),
-        "detected_chapters": len(chapters),
+        "detected_chapters": len(real_chapters),
         "analyzed_scenes": analyzed,
         "max_analyzed_chapter": max_ch,
         "preview": text[:200],
