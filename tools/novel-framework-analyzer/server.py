@@ -454,6 +454,10 @@ def api_books():
             "is_completed": bool(detected and max_ch >= detected),
             "uploaded_at": meta.get("uploaded_at"),
             "last_analyzed_at": r["last_analyzed_at"],
+            # 書架擴充欄位
+            "book_type": meta.get("book_type", ""),
+            "notes": meta.get("notes", ""),
+            "tags": meta.get("tags", []),
         })
         known.add(row_book_id)
 
@@ -473,6 +477,9 @@ def api_books():
             "is_completed": False,
             "uploaded_at": meta.get("uploaded_at"),
             "last_analyzed_at": None,
+            "book_type": meta.get("book_type", ""),
+            "notes": meta.get("notes", ""),
+            "tags": meta.get("tags", []),
         })
 
     return {"items": items}
@@ -865,6 +872,31 @@ def api_update_negotiation(chapter: int, scene: int, body: dict):
     conn.commit()
     conn.close()
     return {"ok": True}
+
+
+# ─────────────────────────────────────────────
+# Book meta（備注 / 標籤 / book_type）
+# ─────────────────────────────────────────────
+
+@app.patch("/api/book/{book_id}/meta")
+def api_update_book_meta(book_id: str, body: dict):
+    """更新書籍的備注、標籤、book_type（存 book_registry.json）"""
+    registry = load_book_registry()
+    if book_id not in registry:
+        raise HTTPException(status_code=404, detail="book_id 不存在")
+    entry = registry[book_id]
+    if "notes" in body:
+        entry["notes"] = str(body["notes"])
+    if "tags" in body:
+        raw = body["tags"]
+        entry["tags"] = raw if isinstance(raw, list) else []
+    if "book_type" in body:
+        if body["book_type"] in ("novel", "non_fiction"):
+            entry["book_type"] = body["book_type"]
+    if "display_name" in body and body["display_name"].strip():
+        entry["display_name"] = body["display_name"].strip()
+    save_book_registry(registry)
+    return {"ok": True, "book_id": book_id, "entry": entry}
 
 
 # ─────────────────────────────────────────────

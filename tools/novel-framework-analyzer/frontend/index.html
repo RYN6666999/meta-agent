@@ -1607,34 +1607,121 @@ function getInitialPage() {
 
 // ── Bookshelf ──
 // book_type 分類：registry 裡有 book_type 欄位就用，否則依書名啟發式判斷
-function guessBookType(book) {
-  if (book.book_type) return book.book_type;
-  // 尚未標記時：有 path 且書名含常見非小說關鍵字 → non_fiction
-  const name = (book.display_name || '').toLowerCase();
-  const nfKeywords = ['引爆', '點', '理論', '科學', '心理', '經濟', '思考', '原則', '策略', '管理', '社會'];
-  return nfKeywords.some(k => name.includes(k)) ? 'non_fiction' : 'novel';
+// ── 預設標籤建議
+const PRESET_TAGS = ['小說', '科普', '理論', '商業', '心理學', '社會學', '傳記', '哲學', '談判', '博弈', '策略', '人性'];
+
+// 標籤驅動分類：有「小說」→ novel；有「科普/理論/商業/心理學...」→ non_fiction
+function getShelfCategory(book) {
+  const tags = book.tags || [];
+  if (tags.includes('小說')) return 'novel';
+  if (tags.some(t => ['科普','理論','商業','心理學','社會學','傳記','哲學'].includes(t))) return 'non_fiction';
+  return 'uncategorized';
 }
 
 function renderBookCard(b) {
   const pct = b.detected_chapters > 0
-    ? Math.round((b.max_analyzed_chapter || 0) / b.detected_chapters * 100)
-    : 0;
+    ? Math.round((b.max_analyzed_chapter || 0) / b.detected_chapters * 100) : 0;
+  const tags = b.tags || [];
+  const notes = b.notes || '';
+  const bid = b.book_id;
+
+  const tagsHtml = tags.map(t =>
+    `<span class="tag" style="cursor:pointer;background:var(--surface)" onclick="event.stopPropagation();removeBookTag('${bid}','${t}')">${t} ✕</span>`
+  ).join('');
+
   return `
-    <div class="card" style="cursor:pointer;padding:14px" onclick="pickBook('${b.book_id}')">
-      <div style="font-weight:700;font-size:14px;margin-bottom:6px">${b.display_name || b.book_id}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-        ${b.analyzed_scenes} 場景 ·
-        第 ${b.max_analyzed_chapter||0}${b.detected_chapters ? '/'+b.detected_chapters : ''} 章
+    <div class="card" id="bcard-${bid}" style="padding:14px">
+      <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px">
+        <div style="font-weight:700;font-size:14px;cursor:pointer;flex:1" onclick="pickBook('${bid}')">${b.display_name || bid}</div>
+        <button class="btn btn-secondary" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="event.stopPropagation();toggleBookEdit('${bid}')">編輯</button>
       </div>
-      <div style="background:var(--border);border-radius:4px;height:4px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+        ${b.analyzed_scenes} 場景 · 第 ${b.max_analyzed_chapter||0}${b.detected_chapters ? '/'+b.detected_chapters : ''} 章
+      </div>
+      <div style="background:var(--border);border-radius:4px;height:3px;margin-bottom:4px">
         <div style="width:${pct}%;background:var(--accent);border-radius:4px;height:100%"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">${pct}% 已分析</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${pct}% 已分析</div>
+
+      <!-- 標籤列 -->
+      <div id="btags-${bid}" style="display:flex;flex-wrap:wrap;gap:4px;min-height:20px">
+        ${tagsHtml || '<span style="font-size:11px;color:var(--muted)">尚無標籤</span>'}
+      </div>
+
+      ${notes ? `<div style="margin-top:6px;font-size:11px;color:var(--muted);font-style:italic">${notes}</div>` : ''}
+
+      <!-- 編輯面板（預設隱藏）-->
+      <div id="bedit-${bid}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">常用標籤（點選切換）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+          ${PRESET_TAGS.map(t => `
+            <span class="tag" style="cursor:pointer;${tags.includes(t)?'background:var(--accent);color:#fff':''}"
+              onclick="toggleBookTag('${bid}','${t}')">${t}</span>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input id="btagin-${bid}" type="text" placeholder="自訂標籤…" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px">
+          <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="addCustomBookTag('${bid}')">加入</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">備注</div>
+        <textarea id="bnotes-${bid}" placeholder="輸入備注…" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;resize:vertical;min-height:60px;box-sizing:border-box">${notes}</textarea>
+        <button class="btn btn-primary" style="margin-top:6px;width:100%;font-size:12px" onclick="saveBookMeta('${bid}')">儲存</button>
+      </div>
     </div>`;
 }
 
+function toggleBookEdit(bid) {
+  const el = document.getElementById('bedit-' + bid);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleBookTag(bid, tag) {
+  const b = _books.find(x => x.book_id === bid);
+  if (!b) return;
+  b.tags = b.tags || [];
+  if (b.tags.includes(tag)) b.tags = b.tags.filter(t => t !== tag);
+  else b.tags.push(tag);
+  // 重繪預設標籤按鈕（active 狀態）
+  document.getElementById('bcard-' + bid).outerHTML = renderBookCard(b);
+  // 重新綁定（innerHTML 已替換，需重開 edit panel）
+  setTimeout(() => toggleBookEdit(bid), 0);
+}
+
+function removeBookTag(bid, tag) {
+  const b = _books.find(x => x.book_id === bid);
+  if (!b) return;
+  b.tags = (b.tags || []).filter(t => t !== tag);
+  document.getElementById('bcard-' + bid).outerHTML = renderBookCard(b);
+}
+
+function addCustomBookTag(bid) {
+  const input = document.getElementById('btagin-' + bid);
+  const tag = (input.value || '').trim();
+  if (!tag) return;
+  const b = _books.find(x => x.book_id === bid);
+  if (!b) return;
+  b.tags = b.tags || [];
+  if (!b.tags.includes(tag)) b.tags.push(tag);
+  document.getElementById('bcard-' + bid).outerHTML = renderBookCard(b);
+  setTimeout(() => toggleBookEdit(bid), 0);
+}
+
+async function saveBookMeta(bid) {
+  const b = _books.find(x => x.book_id === bid);
+  if (!b) return;
+  const notes = (document.getElementById('bnotes-' + bid)?.value || '').trim();
+  b.notes = notes;
+  await fetch(API + `/api/book/${bid}/meta`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tags: b.tags, notes })
+  });
+  // 重新整理書架
+  await loadBooks(true);
+  loadBookshelf();
+}
+
 function pickBook(bookId) {
-  // 選書並跳轉到總覽
   const topSel = document.getElementById('topbarBookSelect');
   if (topSel) topSel.value = bookId;
   _dataScope = 'book';
@@ -1644,23 +1731,46 @@ function pickBook(bookId) {
 }
 
 async function loadBookshelf() {
-  if (!_books.length) {
-    const d = await fetch(API + '/api/books').then(r => r.json());
-    _books = d.items || [];
+  const d = await fetch(API + '/api/books').then(r => r.json());
+  _books = d.items || [];
+
+  // topbar 同步
+  const topSel = document.getElementById('topbarBookSelect');
+  if (topSel) {
+    const prev = topSel.value;
+    topSel.innerHTML =
+      '<option value="__all__">📚 全部書籍</option>' +
+      _books.map(b => `<option value="${b.book_id}">${b.display_name||b.book_id}</option>`).join('');
+    if (prev) topSel.value = prev;
   }
-  const novels     = _books.filter(b => guessBookType(b) === 'novel');
-  const nonfiction = _books.filter(b => guessBookType(b) === 'non_fiction');
 
-  const shelfNovel = document.getElementById('shelf-novel');
-  const shelfNf    = document.getElementById('shelf-nonfiction');
+  const novels        = _books.filter(b => getShelfCategory(b) === 'novel');
+  const nonfiction    = _books.filter(b => getShelfCategory(b) === 'non_fiction');
+  const uncategorized = _books.filter(b => getShelfCategory(b) === 'uncategorized');
 
-  shelfNovel.innerHTML = novels.length
-    ? novels.map(renderBookCard).join('')
-    : '<div style="color:var(--muted);font-size:13px">尚無小說</div>';
+  document.getElementById('shelf-novel').innerHTML = novels.length
+    ? novels.map(renderBookCard).join('') : '<div style="color:var(--muted);font-size:13px">尚無小說（加上「小說」標籤即可歸類）</div>';
 
-  shelfNf.innerHTML = nonfiction.length
-    ? nonfiction.map(renderBookCard).join('')
-    : '<div style="color:var(--muted);font-size:13px">尚無科普/理論書籍</div>';
+  document.getElementById('shelf-nonfiction').innerHTML = nonfiction.length
+    ? nonfiction.map(renderBookCard).join('') : '<div style="color:var(--muted);font-size:13px">尚無科普/理論書籍（加上「科普」「理論」等標籤即可歸類）</div>';
+
+  // 未分類區塊（動態顯示）
+  let uncatEl = document.getElementById('shelf-uncategorized');
+  if (!uncatEl) {
+    const shelf = document.getElementById('page-bookshelf');
+    shelf.insertAdjacentHTML('beforeend', `
+      <div id="uncategorized-section" style="margin-top:24px;${uncategorized.length?'':'display:none'}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:18px">📂</span>
+          <h3 style="margin:0;font-size:15px;color:var(--text)">未分類</h3>
+          <span style="font-size:12px;color:var(--muted)">請加上標籤以歸類</span>
+        </div>
+        <div id="shelf-uncategorized" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
+      </div>`);
+    uncatEl = document.getElementById('shelf-uncategorized');
+  }
+  document.getElementById('uncategorized-section').style.display = uncategorized.length ? 'block' : 'none';
+  if (uncatEl) uncatEl.innerHTML = uncategorized.map(renderBookCard).join('');
 }
 
 async function initApp() {
