@@ -276,9 +276,11 @@ class FrameworkAnalyzer:
         llm_client: AbstractLLMClient,
         prompt_config: Optional[PromptConfig] = None,
         prompt_dir: str = "prompts",
+        db_path: Optional[str] = None,
     ) -> None:
         self.llm = llm_client
         self.prompt = prompt_config or PromptConfig.load(prompt_dir)
+        self.db_path = db_path  # 用於載入 golden examples few-shot
         logger.info(
             "FrameworkAnalyzer 初始化完成，"
             f"model={self.llm.model_id}, "
@@ -386,7 +388,7 @@ class FrameworkAnalyzer:
     def _build_messages(
         self, ctx: AnalysisContext, attempt: int
     ) -> list[LLMMessage]:
-        """組裝 LLM messages"""
+        """組裝 LLM messages，第一次嘗試時注入 golden examples few-shot"""
         replacements = {
             "{scene_text}": ctx.scene_text,
             "{focal_character}": ctx.focal_character,
@@ -418,10 +420,113 @@ class FrameworkAnalyzer:
                 + user_content
             )
 
-        return [
+        messages: list[LLMMessage] = [
             LLMMessage(role="system", content=self.prompt.system_prompt),
-            LLMMessage(role="user", content=user_content),
         ]
+
+        # 第一次嘗試時注入 golden examples 作為 few-shot
+        if attempt == 1 and self.db_path:
+            few_shots = self._load_golden_examples(ctx.book_id)
+            for ex in few_shots:
+                messages.append(LLMMessage(role="user", content=ex["user_msg"]))
+                messages.append(LLMMessage(role="assistant", content=ex["assistant_msg"]))
+
+        messages.append(LLMMessage(role="user", content=user_content))
+        return messages
+
+    def _load_golden_examples(
+        self, book_id: Optional[str] = None, max_examples: int = 2
+    ) -> list[dict]:
+        """
+        從 SQLite 讀取 is_golden_example=1 的場景，
+        重建為 few-shot user/assistant 對。
+        優先選同書、再選全域。最多 max_examples 筆。
+        """
+        import sqlite3
+
+        results: list[dict] = []
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+
+            # 優先同書，再補全域
+            candidates: list[sqlite3.Row] = []
+            if book_id:
+                candidates = conn.execute(
+                    """SELECT scene_text, focal_character, situation, desire, mind_shift,
+                              match_level, confidence_score, reviewer_notes,
+                              chapter_number, scene_number
+                       FROM scene_framework_cards
+                       WHERE is_golden_example=1 AND book_id=?
+                       ORDER BY RANDOM() LIMIT ?""",
+                    (book_id, max_examples),
+                ).fetchall()
+
+            if len(candidates) < max_examples:
+                need = max_examples - len(candidates)
+                extra_where = "AND book_id!=?" if (book_id and candidates) else ""
+                extra_params = [book_id] if (book_id and candidates) else []
+                extra = conn.execute(
+                    f"""SELECT scene_text, focal_character, situation, desire, mind_shift,
+                               match_level, confidence_score, reviewer_notes,
+                               chapter_number, scene_number
+                        FROM scene_framework_cards
+                        WHERE is_golden_example=1 {extra_where}
+                        ORDER BY RANDOM() LIMIT ?""",
+                    extra_params + [need],
+                ).fetchall()
+                candidates = list(candidates) + list(extra)
+
+            conn.close()
+
+            for row in candidates:
+                d = dict(row)
+                scene_text = (d.get("scene_text") or "").strip()
+                if not scene_text:
+                    continue
+
+                # 重建 user 問句（簡化版，只帶核心資訊）
+                user_msg = (
+                    f"請分析以下小說場景，核心角色：{d.get('focal_character', '未知')}\n\n"
+                    f"## 場景文字\n{scene_text[:1500]}"  # 限長避免 context 爆炸
+                )
+
+                # 重建 assistant 回答（從 DB 存的 JSON 欄位組合）
+                try:
+                    situation = json.loads(d.get("situation") or "{}")
+                    desire    = json.loads(d.get("desire") or "{}")
+                    mind_shift = json.loads(d.get("mind_shift") or "{}")
+                except json.JSONDecodeError:
+                    continue  # 壞資料跳過
+
+                # 附上 reviewer_notes 作為補充說明（若有）
+                note = d.get("reviewer_notes") or ""
+                annotation = f"\n# 人工標注備注：{note}" if note else ""
+
+                assistant_msg = json.dumps(
+                    {
+                        "focal_character": d.get("focal_character", ""),
+                        "situation": situation,
+                        "desire": desire,
+                        "mind_shift": mind_shift,
+                        "judgment": {
+                            "match_level": d.get("match_level", "partial"),
+                            "matches_framework": d.get("match_level") in ("full", "partial"),
+                            "confidence_score": float(d.get("confidence_score") or 0.7),
+                            "reasoning": "（人工審核確認的 golden example）",
+                            "key_evidence_quotes": situation.get("evidence_quotes", [])[:1],
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ) + annotation
+
+                results.append({"user_msg": user_msg, "assistant_msg": assistant_msg})
+
+        except Exception as e:
+            logger.warning(f"載入 golden examples 失敗，跳過 few-shot：{e}")
+
+        return results
 
     @staticmethod
     def _extract_json(raw: str) -> str:

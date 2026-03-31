@@ -22,7 +22,7 @@ from typing import Optional
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from backend.app.database import init_db, SessionLocal
+from backend.app.database import init_db, SessionLocal, DB_PATH
 from backend.app.models.scene_framework_card import SceneFrameworkCard
 from backend.app.services.scene_splitter import split_chapters, split_scenes
 from backend.app.services.character_extractor import extract_characters, is_valid_character_name
@@ -119,7 +119,8 @@ def build_llm(model_choice: str, env_path: str):
 
 
 def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
-                   priority_chars: list[str] | None = None):
+                   priority_chars: list[str] | None = None,
+                   db_path: str | None = None):
     """
     依 --mode 建立分析器：
 
@@ -136,12 +137,12 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
 
     if mode == "mock":
         print("[模式] Mock（測試）")
-        return FrameworkAnalyzer(llm_client=MockLLMClient(), prompt_dir=prompt_dir)
+        return FrameworkAnalyzer(llm_client=MockLLMClient(), prompt_dir=prompt_dir, db_path=db_path)
 
     if mode == "smart":
         from services.llm.smart_router import SmartRouter
         haiku_llm = OpenRouterClient(api_key=api_key, model="anthropic/claude-haiku-4-5")
-        haiku_az  = FrameworkAnalyzer(llm_client=haiku_llm, prompt_dir=prompt_dir)
+        haiku_az  = FrameworkAnalyzer(llm_client=haiku_llm, prompt_dir=prompt_dir, db_path=db_path)
         chars = priority_chars or ["寧凡"]
 
         # 優先用 Gemini 免費（若有 key），否則退回 OpenRouter 免費
@@ -155,7 +156,7 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
             free_llm   = OpenRouterClient(api_key=api_key, model=free_model)
             free_label = f"OpenRouter {free_model}"
 
-        free_az = FrameworkAnalyzer(llm_client=free_llm, prompt_dir=prompt_dir)
+        free_az = FrameworkAnalyzer(llm_client=free_llm, prompt_dir=prompt_dir, db_path=db_path)
         print(f"[模式] Smart 路由 — {chars} → Haiku，其他角色 → {free_label}")
         print(f"        預估省 30-35%% API 費用")
         return SmartRouter(haiku_analyzer=haiku_az, free_analyzer=free_az, priority_chars=chars)
@@ -168,7 +169,7 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
         g_model = GEMINI_FREE_MODELS.get(model_choice, "gemini-1.5-flash")
         print(f"[模式] Gemini Free — {g_model}（免費額度，1500 req/day）")
         llm = GeminiClient(api_key=gemini_key, model=g_model)
-        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir)
+        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir, db_path=db_path)
 
     if mode == "hybrid":
         # 本地 Stage1 篩選 + 雲端分析
@@ -189,7 +190,7 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
         print(f"[模式] Free — OpenRouter 免費模型 {free_model}")
         print("        無費用，速度快，中文品質比 Haiku 稍差")
         llm = OpenRouterClient(api_key=api_key, model=free_model)
-        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir)
+        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir, db_path=db_path)
 
     if mode == "msa":
         from backend.app.services.msa_analyzer import MSAAnalyzer
@@ -210,7 +211,7 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
     # 預設：haiku 完整分析
     llm = OpenRouterClient(api_key=api_key, model="anthropic/claude-haiku-4-5")
     print("[模式] Haiku 完整分析（最穩定，~3-8 秒/場景）")
-    return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir)
+    return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir, db_path=db_path)
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +284,7 @@ async def run(
     env_path = os.path.join(ROOT, ".env")
     prompt_dir = os.path.join(ROOT, "prompts")
     analyzer = build_analyzer(mode, model_choice, env_path, prompt_dir,
-                              priority_chars=priority_chars)
+                              priority_chars=priority_chars, db_path=DB_PATH)
 
     # 取已存在的 (chapter, scene, focal_character) 組合（用於 skip）
     existing_keys: set[tuple] = set()

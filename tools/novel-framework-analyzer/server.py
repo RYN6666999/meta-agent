@@ -281,29 +281,17 @@ def api_dashboard():
         GROUP BY book_id
     """).fetchall()
 
-    # 垃圾角色名偵測（在 Python 層做，複用已有規則）
-    garbage_chars_sql = """
+    # 垃圾角色名偵測：複用 _is_valid_character() 篩選，Python 層統一規則
+    all_chars_rows = cur.execute("""
         SELECT book_id, focal_character, COUNT(*) n
         FROM scene_framework_cards
-        WHERE (
-            focal_character IN ('未知','法則','條件','因素','環境','機制','原則','現象','系統',
-                '理論','結果','影響','效果','過程','方式','方法','模式','關係','結構',
-                '框架','背景','情況','狀態','階段','程度','問題','答案','原因',
-                '有人','沒有','所有','任何','這個','那個','一個','每個',
-                '同烟','得到','找到','看到','想到','讓人','使人','令人','還有',
-                '也有','只有','件中','其中','之中','心中','自己','他們','我們',
-                '联系员','还有人','让人','自己的轨','得到的回')
-            OR length(focal_character) > 10
-            OR focal_character GLOB '*的*'
-            OR focal_character GLOB '*了*'
-        )
         GROUP BY book_id, focal_character
-    """
-    garbage_rows = cur.execute(garbage_chars_sql).fetchall()
+    """).fetchall()
     garbage_by_book: dict = {}
-    for r in garbage_rows:
-        bid = r["book_id"]
-        garbage_by_book.setdefault(bid, []).append({"name": r["focal_character"], "count": r["n"]})
+    for r in all_chars_rows:
+        if not _is_valid_character(r["focal_character"]):
+            bid = r["book_id"]
+            garbage_by_book.setdefault(bid, []).append({"name": r["focal_character"], "count": r["n"]})
 
     books_list = []
     for r in books_raw:
@@ -681,6 +669,171 @@ def api_scene_detail(chapter: int, scene: int, book_id: Optional[str] = None):
     return d
 
 
+@app.patch("/api/scene/{chapter}/{scene}/focal_character")
+def api_patch_focal_character(
+    chapter: int, scene: int,
+    body: dict,
+    book_id: Optional[str] = None,
+):
+    """手動更正場景的 focal_character 名稱（雙向聯動用）"""
+    new_name = (body.get("focal_character") or "").strip()
+    if not new_name:
+        raise HTTPException(400, "focal_character 不可為空")
+    conn = get_db()
+    if book_id:
+        conn.execute(
+            "UPDATE scene_framework_cards SET focal_character=? WHERE chapter_number=? AND scene_number=? AND book_id=?",
+            (new_name, chapter, scene, book_id)
+        )
+    else:
+        conn.execute(
+            "UPDATE scene_framework_cards SET focal_character=? WHERE chapter_number=? AND scene_number=?",
+            (new_name, chapter, scene)
+        )
+    conn.commit()
+    conn.close()
+    return {"ok": True, "focal_character": new_name}
+
+
+@app.patch("/api/scene/{chapter}/{scene}/annotate")
+def api_annotate_scene(
+    chapter: int, scene: int,
+    body: dict,
+    book_id: Optional[str] = None,
+):
+    """
+    人工標注 API — 儲存修正值並記錄 AI 原值 diff。
+    body 可含任意組合：
+      reviewer_notes, human_focal_character, human_match_level,
+      human_shift_type, human_shift_intensity,
+      is_golden_example (bool), is_human_reviewed (bool)
+    """
+    import json as _json
+    from datetime import datetime, timezone
+
+    conn = get_db()
+    where = "chapter_number=? AND scene_number=?"
+    params_sel = [chapter, scene]
+    if book_id:
+        where += " AND book_id=?"
+        params_sel.append(book_id)
+
+    row = conn.execute(
+        f"SELECT * FROM scene_framework_cards WHERE {where} LIMIT 1", params_sel
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "場景不存在")
+
+    original = dict(row)
+
+    # 收集需要更新的欄位
+    updates: dict = {}
+
+    if "reviewer_notes" in body:
+        updates["reviewer_notes"] = body["reviewer_notes"]
+    if "human_focal_character" in body:
+        hfc = (body["human_focal_character"] or "").strip()
+        updates["human_focal_character"] = hfc
+        # 同步更新主欄位（讓過濾邏輯立即生效）
+        if hfc:
+            updates["focal_character"] = hfc
+    if "human_match_level" in body:
+        updates["human_match_level"] = body["human_match_level"]
+    if "human_shift_type" in body:
+        updates["human_shift_type"] = body["human_shift_type"]
+    if "human_shift_intensity" in body:
+        updates["human_shift_intensity"] = body["human_shift_intensity"]
+    if "is_golden_example" in body:
+        updates["is_golden_example"] = 1 if body["is_golden_example"] else 0
+    if "is_human_reviewed" in body:
+        updates["is_human_reviewed"] = 1 if body["is_human_reviewed"] else 0
+
+    # 記錄 AI 原值（只在第一次標注時快照）
+    if not original.get("ai_original_values"):
+        snapshot = {
+            "focal_character": original.get("focal_character"),
+            "match_level":     original.get("match_level"),
+            "mind_shift_type": original.get("mind_shift_type"),
+            "mind_shift_intensity": original.get("mind_shift_intensity"),
+        }
+        updates["ai_original_values"] = _json.dumps(snapshot, ensure_ascii=False)
+
+    updates["human_annotated_at"] = datetime.now(timezone.utc).isoformat()
+
+    set_clause = ", ".join(f"{k}=?" for k in updates)
+    vals = list(updates.values()) + params_sel
+    conn.execute(
+        f"UPDATE scene_framework_cards SET {set_clause} WHERE {where}", vals
+    )
+    conn.commit()
+
+    # 回傳 diff 摘要（方便前端顯示）
+    ai_snap = _json.loads(updates.get("ai_original_values") or original.get("ai_original_values") or "{}")
+    diff = {}
+    for field in ("focal_character", "match_level", "mind_shift_type", "mind_shift_intensity"):
+        human_key = f"human_{field}" if field != "focal_character" else "human_focal_character"
+        h_val = updates.get(human_key) or body.get(human_key)
+        if h_val is not None and str(h_val) != str(ai_snap.get(field, "")):
+            diff[field] = {"ai": ai_snap.get(field), "human": h_val}
+    conn.close()
+    return {"ok": True, "diff": diff, "fields_updated": list(updates.keys())}
+
+
+@app.get("/api/annotations/export")
+def api_export_annotations(book_id: Optional[str] = None, golden_only: bool = False):
+    """
+    匯出人工標注資料 — 供 AI 學習用。
+    回傳結構包含：AI 原值、人工修正值、diff、reviewer_notes
+    golden_only=true → 只回傳標記為 golden example 的場景
+    """
+    import json as _json
+    conn = get_db()
+    where_parts = ["human_annotated_at IS NOT NULL"]
+    params = []
+    if book_id:
+        where_parts.append("book_id=?")
+        params.append(book_id)
+    if golden_only:
+        where_parts.append("is_golden_example=1")
+
+    rows = conn.execute(
+        f"""SELECT chapter_number, scene_number, book_id, focal_character,
+                   match_level, mind_shift_type, mind_shift_intensity,
+                   situation, desire, mind_shift,
+                   reviewer_notes, human_focal_character, human_match_level,
+                   human_shift_type, human_shift_intensity,
+                   ai_original_values, is_golden_example, human_annotated_at
+            FROM scene_framework_cards
+            WHERE {' AND '.join(where_parts)}
+            ORDER BY human_annotated_at DESC""",
+        params
+    ).fetchall()
+    conn.close()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        ai_orig = _json.loads(d.get("ai_original_values") or "{}")
+        diff = {}
+        for field in ("focal_character", "match_level", "mind_shift_type", "mind_shift_intensity"):
+            h_key = "human_focal_character" if field == "focal_character" else f"human_{field}"
+            h_val = d.get(h_key)
+            if h_val is not None and str(h_val) != str(ai_orig.get(field, "")):
+                diff[field] = {"ai": ai_orig.get(field), "human": h_val}
+        for k in ("situation", "desire", "mind_shift"):
+            d[k] = json_safe(d.get(k))
+        d["diff_summary"] = diff
+        d["has_diff"] = bool(diff)
+        result.append(d)
+
+    return {
+        "total": len(result),
+        "golden_count": sum(1 for r in result if r.get("is_golden_example")),
+        "items": result,
+    }
+
+
 @app.get("/api/decisions")
 def api_decisions(book_id: Optional[str] = None):
     """行動決策場景：scene_labels 含 'decision'"""
@@ -707,6 +860,8 @@ def api_decisions(book_id: Optional[str] = None):
     result = []
     for r in rows:
         d = dict(r)
+        if not _is_valid_character(d.get("focal_character") or ""):
+            continue
         for k in ("scene_labels", "situation", "desire", "mind_shift"):
             d[k] = json_safe(d[k])
         d["scene_text_preview"] = (d.get("scene_text") or "")[:300]
@@ -752,25 +907,50 @@ def api_negotiation(book_id: Optional[str] = None, focal_character: Optional[str
 
 
 
+# 垃圾角色名關鍵字黑名單
+_CHAR_GARBAGE_KEYWORDS = [
+    "未明確", "指定", "敘述者", "讀者", "視角", "narrator", "旁白",
+    "法则", "法則", "无人", "有人",
+]
+
+def _is_valid_character(name: str) -> bool:
+    """判斷角色名是否為有效人名（非垃圾分析結果）"""
+    if not name:
+        return False
+    # 長度：1 字太短，超過 8 字通常是描述句
+    if len(name) < 2 or len(name) > 8:
+        return False
+    # 含空格或斜線通常是描述（敘述者/讀者視角）
+    if "/" in name or "／" in name or " " in name or "　" in name:
+        return False
+    # 黑名單關鍵字
+    for kw in _CHAR_GARBAGE_KEYWORDS:
+        if kw in name:
+            return False
+    return True
+
+
 @app.get("/api/characters")
 def api_characters(book_id: Optional[str] = None):
-    """返回此書籍或全局的所有角色清單"""
+    """返回此書籍或全局的所有角色清單（已過濾垃圾名）"""
     conn = get_db()
     if book_id:
         rows = conn.execute("""
-            SELECT DISTINCT focal_character
+            SELECT focal_character, COUNT(*) as cnt
             FROM scene_framework_cards
             WHERE book_id=?
-            ORDER BY focal_character
+            GROUP BY focal_character
+            ORDER BY cnt DESC
         """, (book_id,)).fetchall()
     else:
         rows = conn.execute("""
-            SELECT DISTINCT focal_character
+            SELECT focal_character, COUNT(*) as cnt
             FROM scene_framework_cards
-            ORDER BY focal_character
+            GROUP BY focal_character
+            ORDER BY cnt DESC
         """).fetchall()
     conn.close()
-    characters = [r[0] for r in rows if r[0]]
+    characters = [r[0] for r in rows if _is_valid_character(r[0])]
     return {"characters": characters}
 
 

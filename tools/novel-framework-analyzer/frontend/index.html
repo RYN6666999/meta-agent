@@ -245,7 +245,7 @@
     <!-- Decisions -->
     <div class="page" id="page-decisions">
       <h2>⚡ 行動決策場景</h2>
-      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">寧凡面臨關鍵抉擇、展現策略思考的場景（不限是否有談判對手）</p>
+      <p style="color:var(--muted);margin-bottom:16px;font-size:13px">主角面臨關鍵抉擇、展現策略思考的場景（不限是否有談判對手）</p>
       <div id="decisionList">載入中...</div>
     </div>
 
@@ -266,10 +266,9 @@
     <div class="page" id="page-arc">
       <h2>角色弧線</h2>
       <div class="arc-controls">
-        <input type="text" id="arcCharInput" placeholder="輸入或選擇角色名..." onkeyup="filterArcCharacters()" oninput="filterArcCharacters()" style="width:200px">
-        <div id="arcCharSuggestions" style="position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:6px;max-height:150px;overflow-y:auto;display:none;z-index:10;min-width:200px;margin-top:2px"></div>
-        <button class="btn btn-secondary" style="margin-left:8px" onclick="loadArc()">查看弧線</button>
-        <span style="color:var(--muted);font-size:12px">輸入或選擇角色名查看心態弧線</span>
+        <select id="arcCharSelect" onchange="loadArc()" style="min-width:180px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">選擇角色...</option>
+        </select>
       </div>
       <div class="arc-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>情緒</div>
@@ -449,7 +448,7 @@
 
       <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <div class="upload-icon">📄</div>
-        <div style="font-size:15px;font-weight:600">拖曳或點擊上傳小說</div>
+        <div style="font-size:15px;font-weight:600">拖曳或點擊上傳文件</div>
         <div style="color:var(--muted);margin-top:6px;font-size:12px">支援 .txt（UTF-8 / GBK / Big5）和 .pdf（數位或掃描件）</div>
         <input type="file" id="fileInput" accept=".txt,.pdf" onchange="handleUpload(this)">
       </div>
@@ -689,7 +688,7 @@ function showPage(name, pushHash = true) {
   if (name === 'scenes') loadScenes();
   if (name === 'decisions') loadDecisions();
   if (name === 'negotiation') { loadNegotiationCharacters(); loadNegotiation(); }
-  if (name === 'arc') { loadArcCharacters(); document.getElementById('arcCharSuggestions').style.display = 'none'; }
+  if (name === 'arc') { loadArcCharacters(); }
   if (name === 'costs') loadCosts();
   if (name === 'progress') loadProgress();
   if (name === 'dashboard') loadDashboard();
@@ -1001,6 +1000,7 @@ async function loadNegotiation() {
     list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>尚未偵測到談判場景<br><span style="font-size:12px">分析更多章節後自動出現</span></div>';
     return;
   }
+  const matchLabels = { full:'完整', partial:'局部', weak:'弱', none:'無' };
   list.innerHTML = data.map(n => `
     <div class="card" style="cursor:pointer" onclick="openSceneModal(${n.chapter_number},${n.scene_number})">
       <div class="card-header">
@@ -1019,7 +1019,7 @@ async function loadNegotiation() {
         <strong style="color:var(--text)">變：</strong>${(n.mind_shift||{}).after_mindset||''}
       </div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">
-        ${n.scene_text_preview.slice(0,200)}...
+        ${(n.scene_text_preview||'').slice(0,200)}...
       </div>
     </div>
   `).join('');
@@ -1029,43 +1029,25 @@ async function loadNegotiation() {
 let _arcData = [];
 let _arcCharacters = [];  // 動態角色清單
 
-// 從 API 讀取此書籍的所有角色
+// 從 API 讀取此書籍的所有角色，填充下拉選單並自動載入第一個角色
 async function loadArcCharacters() {
-  if (requiresSelectedBook()) return;
   const url = apiUrl('/api/characters');
   if (!url) return;
   try {
     const d = await fetch(url).then(r => r.json());
     _arcCharacters = d.characters || [];
+    const sel = document.getElementById('arcCharSelect');
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">選擇角色...</option>' +
+      _arcCharacters.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (prev && _arcCharacters.includes(prev)) {
+      sel.value = prev;
+    } else if (_arcCharacters.length > 0) {
+      sel.value = _arcCharacters[0];
+    }
+    if (sel.value) loadArc();
   } catch(e) { console.error(e); }
-}
-
-// 角色篩選自動完成
-function filterArcCharacters() {
-  const input = document.getElementById('arcCharInput').value.toLowerCase();
-  const suggestions = document.getElementById('arcCharSuggestions');
-  if (!input) {
-    suggestions.style.display = 'none';
-    return;
-  }
-  const matches = _arcCharacters.filter(c => c.toLowerCase().includes(input));
-  if (!matches.length) {
-    suggestions.style.display = 'none';
-    return;
-  }
-  suggestions.innerHTML = matches.slice(0, 8).map(c => `
-    <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border)" onclick="selectArcCharacter('${c}')">
-      ${c}
-    </div>
-  `).join('');
-  suggestions.style.display = 'block';
-}
-
-// 點擊角色建議時執行
-function selectArcCharacter(charName) {
-  document.getElementById('arcCharInput').value = charName;
-  document.getElementById('arcCharSuggestions').style.display = 'none';
-  loadArc();
 }
 
 async function loadArc() {
@@ -1074,9 +1056,9 @@ async function loadArc() {
     if (_arcChart) { _arcChart.destroy(); _arcChart = null; }
     return;
   }
-  const char = document.getElementById('arcCharInput').value.trim();
+  const char = document.getElementById('arcCharSelect').value.trim();
   if (!char) {
-    document.getElementById('arcTable').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>請輸入或選擇角色名</div>';
+    document.getElementById('arcTable').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>請先從下拉選單選擇角色</div>';
     return;
   }
   const url = apiUrl('/api/arc/' + encodeURIComponent(char));
@@ -1143,15 +1125,11 @@ async function loadArc() {
 
 // ── Scene Modal ──
 async function openSceneModal(ch, sc) {
-  if (requiresSelectedBook()) {
-    alert('請先選擇一本書，或切換到「全部書籍」後再查看場景詳情');
-    return;
-  }
-  const url = apiUrl(`/api/scene/${ch}/${sc}`);
+  const url = apiUrl(`/api/scene/${ch}/${sc}`, !!_currentBookId);
   if (!url) {
     alert('目前沒有可查詢的書籍範圍');
     return;
-  }
+  }  
   const d = await fetch(url).then(r => r.json());
   const sit = d.situation || {};
   const des = d.desire || {};
@@ -1166,7 +1144,10 @@ async function openSceneModal(ch, sc) {
   document.getElementById('modalBody').innerHTML = `
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
       <span style="font-size:18px;font-weight:700;color:var(--accent)">ch${ch} s${sc}</span>
-      <span style="font-weight:600;font-size:15px">${d.focal_character}</span>
+      <span id="modalCharName" style="font-weight:600;font-size:15px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid transparent" title="點擊可編輯角色名" onclick="editFocalCharacter(${ch},${sc},'${(d.focal_character||'').replace(/'/g, "\\'")}')"
+        onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='transparent'">
+        ✏️ ${d.focal_character||'未知'}
+      </span>
       <span class="badge badge-${d.match_level}">${d.match_level}</span>
       ${d.is_negotiation_scene ? '<span class="badge badge-nego">🎯 談判</span>' : ''}
       <span style="margin-left:auto;color:var(--muted);font-size:12px">${((d.confidence_score||0)*100).toFixed(0)}% 信心</span>
@@ -1220,18 +1201,142 @@ async function openSceneModal(ch, sc) {
       <div style="font-size:12px;color:var(--muted);line-height:1.9;white-space:pre-wrap">${d.scene_text.slice(0,600).replace(/\u3000/g,'  ')}</div>
     </div>` : ''}
 
-    <div style="margin-top:14px;display:flex;gap:8px">
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-secondary" onclick="toggleNegotiation(${ch},${sc},${d.is_negotiation_scene?'false':'true'})">
         ${d.is_negotiation_scene ? '❌ 移除談判標記' : '✅ 標記為談判'}
       </button>
     </div>
+
+    <!-- ── 人工標注面板 ── -->
+    <div style="margin-top:20px;border:1px solid #7c6ff744;border-radius:10px;padding:16px;background:#7c6ff710">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:13px;font-weight:700;color:#a78bfa">✏️ 人工標注</span>
+        ${d.human_annotated_at ? `<span style="font-size:10px;color:var(--muted)">上次標注：${new Date(d.human_annotated_at).toLocaleString('zh-TW')}</span>` : ''}
+        ${d.is_golden_example ? '<span class="badge" style="background:#f59e0b22;color:#f59e0b">⭐ Golden Example</span>' : ''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">評分層級（AI: ${d.match_level}）</div>
+          <select id="ann-match-${ch}-${sc}" style="width:100%;padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+            <option value="">— 不修改 —</option>
+            <option value="full" ${(d.human_match_level||d.match_level)==='full'?'selected':''}>完整 (full)</option>
+            <option value="partial" ${(d.human_match_level||d.match_level)==='partial'?'selected':''}>局部 (partial)</option>
+            <option value="weak" ${(d.human_match_level||d.match_level)==='weak'?'selected':''}>弱 (weak)</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">轉變類型（AI: ${d.mind_shift_type||'—'}）</div>
+          <select id="ann-shift-${ch}-${sc}" style="width:100%;padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+            <option value="">— 不修改 —</option>
+            <option value="emotion" ${(d.human_shift_type||d.mind_shift_type)==='emotion'?'selected':''}>情緒</option>
+            <option value="stance" ${(d.human_shift_type||d.mind_shift_type)==='stance'?'selected':''}>立場</option>
+            <option value="strategy" ${(d.human_shift_type||d.mind_shift_type)==='strategy'?'selected':''}>策略</option>
+            <option value="values" ${(d.human_shift_type||d.mind_shift_type)==='values'?'selected':''}>價值觀</option>
+            <option value="identity" ${(d.human_shift_type||d.mind_shift_type)==='identity'?'selected':''}>身份認同</option>
+            <option value="none" ${(d.human_shift_type||d.mind_shift_type)==='none'?'selected':''}>無</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">強度（AI: ${d.mind_shift_intensity||'—'}）</div>
+          <select id="ann-intensity-${ch}-${sc}" style="width:100%;padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+            <option value="">— 不修改 —</option>
+            ${[1,2,3,4,5].map(i=>`<option value="${i}" ${(d.human_shift_intensity||d.mind_shift_intensity)==i?'selected':''}>${i}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">
+            <input type="checkbox" id="ann-golden-${ch}-${sc}" ${d.is_golden_example?'checked':''} style="accent-color:#f59e0b">
+            <span style="color:#f59e0b">⭐ 設為 Golden Example</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">備注（給 AI 看的修正說明）</div>
+        <textarea id="ann-notes-${ch}-${sc}" rows="2" placeholder="例：AI 誤認主角為敘述者，實際主角是寧凡..." style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${d.reviewer_notes||''}</textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" style="background:#7c6ff7;color:white;padding:6px 16px" onclick="saveAnnotation(${ch},${sc})">
+          💾 儲存標注
+        </button>
+        ${d.ai_original_values ? `
+        <div style="font-size:11px;color:var(--muted)">
+          AI 原值：${JSON.parse('${JSON.stringify(d.ai_original_values)}' === 'null' ? '{}' : '${(d.ai_original_values||"{}").replace(/'/g,"\\\\'")}' || '{}') && ''}
+          ${d.human_annotated_at ? '已標注 ✓' : ''}
+        </div>` : ''}
+      </div>
+    </div>
   `;
   document.getElementById('modalOverlay').classList.add('open');
+  // 儲存當前 modal 場景資訊（給 saveAnnotation 使用）
+  window._modalScene = { ch, sc, bookId: d.book_id || _currentBookId };
 }
 
 function closeModal(e) {
   if (!e || e.target === document.getElementById('modalOverlay'))
     document.getElementById('modalOverlay').classList.remove('open');
+}
+
+async function saveAnnotation(ch, sc) {
+  const bookId = (window._modalScene?.bookId) || _currentBookId;
+  const body = {};
+
+  const matchEl = document.getElementById(`ann-match-${ch}-${sc}`);
+  const shiftEl = document.getElementById(`ann-shift-${ch}-${sc}`);
+  const intensityEl = document.getElementById(`ann-intensity-${ch}-${sc}`);
+  const goldenEl = document.getElementById(`ann-golden-${ch}-${sc}`);
+  const notesEl = document.getElementById(`ann-notes-${ch}-${sc}`);
+
+  if (matchEl?.value)     body.human_match_level = matchEl.value;
+  if (shiftEl?.value)     body.human_shift_type = shiftEl.value;
+  if (intensityEl?.value) body.human_shift_intensity = parseInt(intensityEl.value);
+  if (goldenEl)           body.is_golden_example = goldenEl.checked;
+  if (notesEl)            body.reviewer_notes = notesEl.value.trim();
+  body.is_human_reviewed = true;
+
+  const params = bookId ? `?book_id=${encodeURIComponent(bookId)}` : '';
+  try {
+    const res = await fetch(API + `/api/scene/${ch}/${sc}/annotate` + params, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+
+    const diffKeys = Object.keys(res.diff || {});
+    const msg = diffKeys.length
+      ? `✅ 已儲存標注\n修正差異：${diffKeys.map(k => `${k}: ${res.diff[k].ai} → ${res.diff[k].human}`).join('、')}`
+      : '✅ 已儲存標注（無字段差異）';
+    // 用 toast 而非 alert
+    showToast(msg, diffKeys.length ? 'warning' : 'success');
+
+    // 雙向聯動：刷新相關頁面
+    if (document.getElementById('page-scenes').classList.contains('active')) loadScenes();
+    if (document.getElementById('page-negotiation').classList.contains('active')) loadNegotiation();
+    if (document.getElementById('page-decisions').classList.contains('active')) loadDecisions();
+  } catch(e) {
+    showToast('儲存失敗：' + e.message, 'error');
+  }
+}
+
+function showToast(msg, type = 'success') {
+  let toast = document.getElementById('globalToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'globalToast';
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;max-width:360px;padding:12px 18px;border-radius:10px;font-size:13px;line-height:1.5;z-index:9999;transition:opacity .3s;white-space:pre-line';
+    document.body.appendChild(toast);
+  }
+  const colors = { success: '#065f46,#d1fae5', warning: '#78350f,#fef3c7', error: '#7f1d1d,#fee2e2' };
+  const [bg, fg] = (colors[type] || colors.success).split(',');
+  toast.style.background = '#' + bg.replace('#','');
+  toast.style.color = '#' + fg.replace('#','');
+  toast.style.border = `1px solid #${fg.replace('#','')}66`;
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 4000);
 }
 
 async function toggleNegotiation(ch, sc, setTo) {
@@ -1243,6 +1348,26 @@ async function toggleNegotiation(ch, sc, setTo) {
   closeModal();
   loadNegotiation();
   if (document.getElementById('page-scenes').classList.contains('active')) loadScenes();
+}
+
+async function editFocalCharacter(ch, sc, currentName) {
+  const newName = window.prompt('輸入新的角色名：', currentName);
+  if (!newName || newName.trim() === currentName) return;
+  const trimmed = newName.trim();
+  const params = _currentBookId ? '?book_id=' + encodeURIComponent(_currentBookId) : '';
+  await fetch(API + `/api/scene/${ch}/${sc}/focal_character` + params, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ focal_character: trimmed })
+  });
+  // 更新 modal 顯示
+  const el = document.getElementById('modalCharName');
+  if (el) el.innerHTML = `✏️ ${trimmed}`;
+  // 雙向聯動：重整所有相關頁面
+  if (document.getElementById('page-scenes').classList.contains('active')) loadScenes();
+  if (document.getElementById('page-negotiation').classList.contains('active')) { loadNegotiationCharacters(); loadNegotiation(); }
+  if (document.getElementById('page-decisions').classList.contains('active')) loadDecisions();
+  if (document.getElementById('page-arc').classList.contains('active')) loadArcCharacters();
 }
 
 // ── Progress ──
@@ -1628,7 +1753,7 @@ async function processFile(file) {
 }
 
 async function startAnalysis() {
-  if (!_uploadedPath || !_currentBookId) { alert('請先上傳小說檔案'); return; }
+  if (!_uploadedPath || !_currentBookId) { alert('請先上傳文件'); return; }
   const fd = new FormData();
   fd.append('filepath', _uploadedPath);
   fd.append('book_id', _currentBookId);
