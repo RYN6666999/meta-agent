@@ -303,7 +303,10 @@ async def run(
     analyzer = build_analyzer(mode, model_choice, env_path, prompt_dir,
                               priority_chars=priority_chars, db_path=DB_PATH)
 
-    # 取已存在的 (chapter, scene, focal_character) 組合（用於 skip）
+    # 取已存在的組合（用於 skip）
+    # 非虛構書：focal_character 由 LLM 生成，每次可能不同 → 只用 (chapter, scene) 作唯一鍵
+    # 小說：以 (chapter, scene, focal_character) 三元組區分不同角色視角
+    _nonfiction = _is_nonfiction_book(book_id)
     existing_keys: set[tuple] = set()
     rows = (
         db.query(SceneFrameworkCard.chapter_number, SceneFrameworkCard.scene_number,
@@ -311,7 +314,10 @@ async def run(
         .filter(SceneFrameworkCard.book_id == book_id)
         .all()
     )
-    existing_keys = {(r[0], r[1], r[2]) for r in rows}
+    if _nonfiction:
+        existing_keys = {(r[0], r[1]) for r in rows}
+    else:
+        existing_keys = {(r[0], r[1], r[2]) for r in rows}
     print(f"DB 中書籍 {book_id} 已有 {len(existing_keys)} 筆場景卡")
 
     # 防重複 lock（防止並發競態插入同一場景）
@@ -350,12 +356,12 @@ async def run(
                 focal = ""   # 留空，讓 LLM 從場景內容自行決定 focal_character
 
             # 非虛構書：不傳入任何角色名提示，完全讓 LLM 從局勢分析推導
-            if _is_nonfiction_book(book_id):
+            if _nonfiction:
                 focal = ""
                 secondary = []
 
-            # 閥門 3：已分析過（含 focal_character 一起判斷，防止競態重複）
-            key = (chapter.chapter_number, scene.scene_number, focal)
+            # 閥門 3：已分析過（非虛構用 (chapter, scene) 2-tuple；小說用 3-tuple 含 focal）
+            key = (chapter.chapter_number, scene.scene_number) if _nonfiction else (chapter.chapter_number, scene.scene_number, focal)
             async with _insert_lock:
                 if key in existing_keys:
                     stats.scenes_skipped += 1

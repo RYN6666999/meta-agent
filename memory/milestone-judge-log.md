@@ -2156,3 +2156,19 @@
   其他變更 tools/novel-framework-analyzer/server.py +10
 
 ---
+
+## 2026-03-31 17:56 | auto-git-score | 分數 80 | 📥 達到閾值（80/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=75），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-31-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-03-31-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/novel-framework-analyzer/frontend/index.html +10
+  其他變更 tools/novel-framework-analyzer/novel_analyzer.db +10
+  其他變更 tools/novel-framework-analyzer/server.py +10
+
+---
