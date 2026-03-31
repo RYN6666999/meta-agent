@@ -219,6 +219,12 @@
     <div class="page" id="page-negotiation">
       <h2>🎯 談判場景</h2>
       <p style="color:var(--muted);margin-bottom:16px;font-size:13px">focal_character 主動參與的談判 / 博弈場景</p>
+      <div class="filter-bar">
+        <span class="form-label">按角色篩選：</span>
+        <select id="negoCharFilter" onchange="loadNegotiation()" style="min-width:150px">
+          <option value="">全部人物</option>
+        </select>
+      </div>
       <div id="negoList">載入中...</div>
     </div>
 
@@ -226,13 +232,10 @@
     <div class="page" id="page-arc">
       <h2>角色弧線</h2>
       <div class="arc-controls">
-        <select id="arcChar" onchange="loadArc()">
-          <option value="寧凡">寧凡</option>
-          <option value="輝子">輝子</option>
-          <option value="林川">林川</option>
-          <option value="喬菲">喬菲</option>
-        </select>
-        <span style="color:var(--muted);font-size:12px">選擇角色查看心態弧線</span>
+        <input type="text" id="arcCharInput" placeholder="輸入或選擇角色名..." onkeyup="filterArcCharacters()" oninput="filterArcCharacters()" style="width:200px">
+        <div id="arcCharSuggestions" style="position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:6px;max-height:150px;overflow-y:auto;display:none;z-index:10;min-width:200px;margin-top:2px"></div>
+        <button class="btn btn-secondary" style="margin-left:8px" onclick="loadArc()">查看弧線</button>
+        <span style="color:var(--muted);font-size:12px">輸入或選擇角色名查看心態弧線</span>
       </div>
       <div class="arc-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>emotion</div>
@@ -251,6 +254,12 @@
     <!-- Progress -->
     <div class="page" id="page-progress">
       <h2>🗺️ 分析進度</h2>
+
+      <!-- 多書籍 Tabs -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0">
+        <button id="prog-tab-all" class="btn" style="background:none;border:none;padding:8px 12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-size:13px" onclick="setProgressTab('all')">全部書籍</button>
+        <div id="progressTabsContainer" style="display:flex;gap:4px"></div>
+      </div>
 
       <!-- 大進度條區 -->
       <div class="card" style="margin-bottom:16px">
@@ -569,8 +578,8 @@ function showPage(name, pushHash = true) {
   if (pushHash) window.location.hash = name;
   if (name === 'scenes') loadScenes();
   if (name === 'decisions') loadDecisions();
-  if (name === 'negotiation') loadNegotiation();
-  if (name === 'arc') loadArc();
+  if (name === 'negotiation') { loadNegotiationCharacters(); loadNegotiation(); }
+  if (name === 'arc') { loadArcCharacters(); document.getElementById('arcCharSuggestions').style.display = 'none'; }
   if (name === 'costs') loadCosts();
   if (name === 'progress') loadProgress();
   if (name === 'dashboard') loadDashboard();
@@ -771,12 +780,31 @@ async function loadDecisions() {
 }
 
 // ── Negotiation ──
+async function loadNegotiationCharacters() {
+  if (requiresSelectedBook()) return;
+  const url = apiUrl('/api/characters');
+  if (!url) return;
+  try {
+    const d = await fetch(url).then(r => r.json());
+    const filter = document.getElementById('negoCharFilter');
+    const chars = d.characters || [];
+    const current = filter.value;
+    filter.innerHTML = '<option value="">全部人物</option>' +
+      chars.map(c => `<option value="${c}">${c}</option>`).join('');
+    filter.value = current;
+  } catch(e) { console.error(e); }
+}
+
 async function loadNegotiation() {
   if (requiresSelectedBook()) {
     renderNeedBookState('negoList');
     return;
   }
-  const url = apiUrl('/api/negotiation');
+  let path = '/api/negotiation';
+  const charFilter = document.getElementById('negoCharFilter').value;
+  if (charFilter) path += '?focal_character=' + encodeURIComponent(charFilter);
+
+  const url = apiUrl(path);
   if (!url) {
     renderNeedBookState('negoList');
     return;
@@ -812,13 +840,58 @@ async function loadNegotiation() {
 
 // ── Arc ──
 let _arcData = [];
+let _arcCharacters = [];  // 動態角色清單
+
+// 從 API 讀取此書籍的所有角色
+async function loadArcCharacters() {
+  if (requiresSelectedBook()) return;
+  const url = apiUrl('/api/characters');
+  if (!url) return;
+  try {
+    const d = await fetch(url).then(r => r.json());
+    _arcCharacters = d.characters || [];
+  } catch(e) { console.error(e); }
+}
+
+// 角色篩選自動完成
+function filterArcCharacters() {
+  const input = document.getElementById('arcCharInput').value.toLowerCase();
+  const suggestions = document.getElementById('arcCharSuggestions');
+  if (!input) {
+    suggestions.style.display = 'none';
+    return;
+  }
+  const matches = _arcCharacters.filter(c => c.toLowerCase().includes(input));
+  if (!matches.length) {
+    suggestions.style.display = 'none';
+    return;
+  }
+  suggestions.innerHTML = matches.slice(0, 8).map(c => `
+    <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border)" onclick="selectArcCharacter('${c}')">
+      ${c}
+    </div>
+  `).join('');
+  suggestions.style.display = 'block';
+}
+
+// 點擊角色建議時執行
+function selectArcCharacter(charName) {
+  document.getElementById('arcCharInput').value = charName;
+  document.getElementById('arcCharSuggestions').style.display = 'none';
+  loadArc();
+}
+
 async function loadArc() {
   if (requiresSelectedBook()) {
     renderNeedBookState('arcTable');
     if (_arcChart) { _arcChart.destroy(); _arcChart = null; }
     return;
   }
-  const char = document.getElementById('arcChar').value;
+  const char = document.getElementById('arcCharInput').value.trim();
+  if (!char) {
+    document.getElementById('arcTable').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>請輸入或選擇角色名</div>';
+    return;
+  }
   const url = apiUrl('/api/arc/' + encodeURIComponent(char));
   if (!url) {
     renderNeedBookState('arcTable');
@@ -984,9 +1057,48 @@ async function toggleNegotiation(ch, sc, setTo) {
 // ── Progress ──
 let _progressData = null;
 let _progressTimer = null;
+let _progressBooks = [];    // 多書籍進度數據
+let _progressCurrentBook = null;  // 當前選擇的書籍
+
+function setProgressTab(bookId) {
+  _progressCurrentBook = bookId === 'all' ? null : bookId;
+  document.querySelectorAll('[id^="prog-tab-"]').forEach(b => {
+    b.style.color = b.id === 'prog-tab-' + bookId ? 'var(--accent)' : 'var(--muted)';
+    b.style.borderBottomColor = b.id === 'prog-tab-' + bookId ? 'var(--accent)' : 'transparent';
+  });
+  loadProgress();
+}
 
 async function loadProgress() {
-  const d = await fetch(API + '/api/progress').then(r => r.json());
+  // 加載多書籍進度
+  let booksData = [];
+  try {
+    booksData = await fetch(API + '/api/progress/books').then(r => r.json());
+    _progressBooks = booksData;
+  } catch(e) {
+    console.warn('無法讀取多書籍進度', e);
+    booksData = [];
+  }
+
+  // 建立 tabs
+  const tabsContainer = document.getElementById('progressTabsContainer');
+  tabsContainer.innerHTML = booksData.map(b => `
+    <button id="prog-tab-${b.book_id}" class="btn" style="background:none;border:none;padding:8px 12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-size:13px" onclick="setProgressTab('${b.book_id}')">
+      ${b.book_id.split('-')[0]}
+    </button>
+  `).join('');
+
+  // 選擇書籍進度或全局進度
+  let displayData = null;
+  if (_progressCurrentBook && booksData.length) {
+    const bookData = booksData.find(b => b.book_id === _progressCurrentBook);
+    displayData = bookData || booksData[0];
+  } else {
+    // 讀全局進度
+    displayData = await fetch(API + '/api/progress').then(r => r.json());
+  }
+
+  const d = displayData;
   _progressData = d;
 
   // 大進度條

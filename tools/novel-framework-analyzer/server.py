@@ -306,6 +306,56 @@ def api_summary(book_id: Optional[str] = None):
     }
 
 
+@app.get("/api/progress/books")
+def api_progress_books():
+    """多書籍進度：按書籍分離的進度統計"""
+    conn = get_db()
+
+    # 讀進度 log
+    books = conn.execute("""
+        SELECT book_id, chapter_analyzed, total_chapters
+        FROM progress_log
+        ORDER BY last_updated DESC
+    """).fetchall()
+
+    result = []
+    for book_id, ch_analyzed, total_ch in books:
+        # 如果進度 log 沒有 total_chapters，則重新計算
+        if not total_ch:
+            total_ch = conn.execute(
+                "SELECT MAX(chapter_number) FROM scene_framework_cards WHERE book_id=?",
+                (book_id,)
+            ).fetchone()[0] or 0
+
+        scenes_count = conn.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE book_id=?",
+            (book_id,)
+        ).fetchone()[0]
+
+        nego_count = conn.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE book_id=? AND is_negotiation_scene=1",
+            (book_id,)
+        ).fetchone()[0]
+
+        decision_count = conn.execute(
+            "SELECT COUNT(*) FROM scene_framework_cards WHERE book_id=? AND scene_labels LIKE '%decision%'",
+            (book_id,)
+        ).fetchone()[0]
+
+        result.append({
+            "book_id": book_id,
+            "chapter_analyzed": ch_analyzed,
+            "total_chapters": total_ch,
+            "progress_pct": round(ch_analyzed / total_ch * 100, 1) if total_ch > 0 else 0,
+            "total_scenes": scenes_count,
+            "negotiation_scenes": nego_count,
+            "decision_scenes": decision_count,
+        })
+
+    conn.close()
+    return result
+
+
 @app.get("/api/progress")
 def api_progress():
     """逐章進度：每章的場景數、信心分數、決策/談判數，用於視覺化進度牆"""
@@ -506,26 +556,29 @@ def api_decisions(book_id: Optional[str] = None):
 
 
 @app.get("/api/negotiation")
-def api_negotiation(book_id: Optional[str] = None):
+def api_negotiation(book_id: Optional[str] = None, focal_character: Optional[str] = None):
     conn = get_db()
+    where_parts = ["is_negotiation_scene=1"]
+    params = []
+
     if book_id:
-        rows = conn.execute("""
-            SELECT chapter_number, scene_number, focal_character,
-                   confidence_score, mind_shift_type, negotiation_pattern_tags,
-                   situation, desire, mind_shift, scene_text, book_id
-            FROM scene_framework_cards
-            WHERE is_negotiation_scene=1 AND book_id=?
-            ORDER BY chapter_number, scene_number
-        """, (book_id,)).fetchall()
-    else:
-        rows = conn.execute("""
-            SELECT chapter_number, scene_number, focal_character,
-                   confidence_score, mind_shift_type, negotiation_pattern_tags,
-                   situation, desire, mind_shift, scene_text, book_id
-            FROM scene_framework_cards
-            WHERE is_negotiation_scene=1
-            ORDER BY chapter_number, scene_number
-        """).fetchall()
+        where_parts.append("book_id=?")
+        params.append(book_id)
+    if focal_character:
+        where_parts.append("focal_character=?")
+        params.append(focal_character)
+
+    where_clause = " AND ".join(where_parts)
+    query = f"""
+        SELECT chapter_number, scene_number, focal_character,
+               confidence_score, mind_shift_type, match_level, negotiation_pattern_tags,
+               situation, desire, mind_shift, scene_text, book_id
+        FROM scene_framework_cards
+        WHERE {where_clause}
+        ORDER BY chapter_number, scene_number
+    """
+
+    rows = conn.execute(query, params).fetchall()
     conn.close()
     result = []
     for r in rows:
@@ -536,6 +589,29 @@ def api_negotiation(book_id: Optional[str] = None):
         d.pop("scene_text", None)
         result.append(d)
     return result
+
+
+
+@app.get("/api/characters")
+def api_characters(book_id: Optional[str] = None):
+    """返回此書籍或全局的所有角色清單"""
+    conn = get_db()
+    if book_id:
+        rows = conn.execute("""
+            SELECT DISTINCT focal_character
+            FROM scene_framework_cards
+            WHERE book_id=?
+            ORDER BY focal_character
+        """, (book_id,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT DISTINCT focal_character
+            FROM scene_framework_cards
+            ORDER BY focal_character
+        """).fetchall()
+    conn.close()
+    characters = [r[0] for r in rows if r[0]]
+    return {"characters": characters}
 
 
 @app.get("/api/arc/{character}")
