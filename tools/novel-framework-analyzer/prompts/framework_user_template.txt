@@ -1,13 +1,12 @@
-# version: 2.0.0
+# version: 3.0.0 (mvp-flat)
 請分析以下場景，按照「局心欲變」框架輸出 JSON 分析卡。
-（**分析起點是局，不是角色。** 先定義局勢結構，再從局的角度推導心、欲、變。）
-（場景可能來自小說或非虛構書籍，請先判斷 scene_type 再分析）
+分析順序固定：**局 → 心 → 欲 → 變**。分析起點是局（外部賽局結構），不是角色。
 
 ## 場景資訊
 - 書名：{book_title}
 - 章節：第 {chapter_number} 章
 - 場景序號：{scene_number}
-- 核心分析角色：{focal_character}（若此欄位為空，請先分析局，再從局中推導關鍵節點行動者）
+- 核心分析角色：{focal_character}（若為空，請從局中推導關鍵行動者）
 - 其他出現角色：{known_characters}
 
 ## 場景原文
@@ -17,87 +16,35 @@
 {preceding_context}
 
 ## 輸出規則
-1. 只輸出 JSON，不加任何說明文字或 markdown
-2. evidence_quotes 中的 text 必須直接複製原文，不得改寫
-3. 每個維度的 evidence_quotes 至少一條
-4. confidence_score 介於 0.0 到 1.0
-5. 分析順序遵循：局 → 心 → 欲 → 變
+1. 只輸出 JSON，不加任何說明文字或 markdown code fence
+2. quotes 中的字串必須直接複製原文，不得改寫或虛構
+3. quotes 至少一條，建議 2–4 條覆蓋四個維度的關鍵觸發點
+4. situation / mind / desire / change 均為純文字，請用 1–3 句話清楚描述
+5. change_intensity 為 1（微弱）至 5（劇烈相變）的整數
+6. is_negotiation 為 true 的條件：focal_character 是談判/博弈的主動方，有明確的條件交換、試探、借勢、施壓、讓步行為
+7. negotiation_pattern_tags 只填 focal_character 本人的行為模式
+   可選標籤：borrowed_pressure / let_opponent_speak_first / exchange_probe / condition_redefinition / risk_transfer / fake_concession / weakness_to_initiative / information_for_space / bluff_detection / tempo_control
 
-請輸出以下結構的 JSON：
+請輸出以下 JSON 結構：
 
 {
-  "scene_type": "fiction_narrative",
-  "focal_character": "此局關鍵節點上的行動者（最能揭示局勢結構的那個）——不一定是主角，而是在這個局裡誰的行動最能說明局的機制",
-  "secondary_characters": ["角色A", "角色B"],
-  "insufficient_context": false,
-  "name_unresolved": false,
-  "is_negotiation_scene": false,
+  "summary": "場景摘要，100字以內，說明場景的核心事件與局勢背景",
+  "characters": ["核心分析角色", "其他角色A", "其他角色B"],
+  "is_negotiation": false,
   "negotiation_pattern_tags": [],
-  "scene_labels": [],
-  "situation": {
-    "macro_context": "（僅 nonfiction_case/nonfiction_argument 填寫：作者用此段要論證什麼局勢機制）",
-    "external_situation": "此局的客觀結構：誰握有籌碼、誰有退路、哪些約束是結構性而非個人性的",
-    "power_dynamics": "局勢中的不對稱：誰處於強勢位、誰被迫應對、不對稱的來源是什麼",
-    "risks_and_constraints": "局的邊界：不可見的天花板、退出成本、資訊不對稱",
-    "active_party": "主動推動局勢的一方",
-    "passive_party": "被局勢逼迫應對的一方",
-    "resource_holders": "誰握有哪種決定性資源（籌碼、資訊、時間、人脈）",
-    "evidence_quotes": [
-      {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
-    ]
-  },
-  "mind_shift": {
-    "shift_subject_level": "individual / system / epistemic",
-    "before_mindset": "此局在行動者身上形成的初始認知框架——是局造成的心理條件，而非單純的個人性格",
-    "trigger_event": "改變局勢均衡的具體事件或對話（必須能引原文）",
-    "after_mindset": "局勢相變後，行動者的認知框架如何重組",
-    "shift_type": "emotion",
-    "shift_intensity": 3,
-    "shift_description": "局從X狀態轉向Y狀態，行動者的心態/策略/身份認知因此從A轉向B（因局而變，不是因個人頓悟而變）",
-    "is_reversible": true,
-    "evidence_quotes": [
-      {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
-    ]
-  },
-  "desire": {
-    "explicit_desire": "此局讓行動者顯性表達/行動的欲望（局勢壓力召喚出的）",
-    "implicit_desire": "此局讓行動者未說出口的欲望（局勢結構決定他不能或不敢明說的）",
-    "true_objective": "剝去局勢偽裝後，行動者的真正目標",
-    "desire_conflicts": "此局讓哪些欲望必然相撞（局勢結構性的衝突，非性格衝突）",
-    "obstacles": "局的哪些部分阻擋了欲望的實現",
-    "evidence_quotes": [
-      {"text": "原文引用句", "chapter_hint": "位置提示", "relevance": "支持分析的理由"}
-    ]
-  },
-  "judgment": {
-    "match_level": "full",
-    "matches_framework": true,
-    "reasoning": "以局為基礎的判定：局是否有清晰的結構性特徵？心/欲是否能從局推導？變是否能用局的相變解釋？",
-    "confidence_score": 0.85,
-    "missing_dimensions": [],
-    "key_evidence_quotes": [
-      {"text": "最關鍵原文引用", "chapter_hint": "位置提示", "relevance": "支持判定的理由"}
-    ]
+  "situation": "局：描述此場景的客觀賽局結構。誰握有籌碼、誰有退路、誰被迫應對。結構性約束是什麼（不是情節複述）。",
+  "mind": "心：此局在核心角色身上形成的認知條件與盲區。他相信什麼前提？他看不見什麼？System 1 vs System 2 的張力在哪？",
+  "desire": "欲：此局激活了哪些顯性與隱性欲望？什麼欲望在此局中必然相撞？",
+  "change": "變：觸發事件是什麼（必須能引原文）？局勢從 X 狀態如何轉向 Y 狀態？角色認知或策略如何因此重組？",
+  "change_intensity": 3,
+  "quotes": [
+    "直接複製原文的關鍵句子一",
+    "直接複製原文的關鍵句子二"
+  ]
+}
+
+【核心原則】situation 必須能回答「換一個人在同樣的位置，他面對的結構性壓力是什麼」，而非只是複述情節。
   }
 }
 
-【最高原則】分析起點永遠是局。先問「這個局的結構是什麼」，再問「這個局在行動者身上造成了什麼心理條件」，再問「這個局召喚了什麼欲望」，最後問「這個局如何從一個狀態轉向另一個狀態」。
-若 situation 只是在複述情節（「A對B說了X」），不是在描述結構，請重寫直到能回答「換一個人在同樣的局裡，他面對的結構性壓力是什麼」。
-
-注意：shift_type 只能是 emotion / values / strategy / identity / stance / none 之一。
-注意：shift_intensity 是強度 1-5，與 shift_type 完全分離，不能混為一個欄位。
-注意：match_level 只能是 full / partial / weak / none 之一。
-注意：mind_shift 欄位同時承載「心」（before_mindset：此局造成的認知條件）與「變」（trigger_event + after_mindset：局的相變如何重寫認知）兩個維度。
-注意：is_negotiation_scene=true 的條件必須同時滿足：
-  (1) focal_character 是談判或博弈的主動方或共同參與方（不能只是旁觀者或被動接受方）
-  (2) focal_character 本人有明確的條件交換、試探、借勢、施壓、讓步等行為或對話
-  若 focal_character 只是在旁觀別人談判，或只是說了一句話、被試探，則 is_negotiation_scene=false。
-negotiation_pattern_tags 只填 focal_character 本人的行為模式，不填對手對他做了什麼。
-可選標籤：low_posture_control / borrowed_pressure / let_opponent_speak_first / exchange_probe / condition_redefinition / risk_transfer / fake_concession / weakness_to_initiative / information_for_space / rule_rewrite / bluff_detection / tempo_control
-
-注意：scene_labels 是場景分類，可多選，填入 JSON 陣列：
-  "negotiation" — 寧凡主動與他人進行條件交換、價格博弈、施壓談判（必須有來回互動）
-  "decision"    — 寧凡面臨重要的行動抉擇，展現策略思考（可獨自決策，不需對手）
-  "confrontation" — 直接衝突對抗（肢體或言語）
-  "revelation"  — 關鍵資訊揭露或認知轉變的節點
-場景無特殊標記則填 []。negotiation 和 decision 可同時存在。
+【核心原則】situation 必須能回答「換一個人在同樣的位置，他面對的結構性壓力是什麼」，而非只是複述情節。

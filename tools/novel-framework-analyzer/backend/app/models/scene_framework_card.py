@@ -38,9 +38,51 @@ class SceneType(str, enum.Enum):
     NONFICTION_CASE      = "nonfiction_case"
     NONFICTION_ARGUMENT  = "nonfiction_argument"
 
+class LlmStatus(str, enum.Enum):
+    PENDING = "pending"
+    DONE    = "done"
+    FAILED  = "failed"
+
 
 # ---------------------------------------------------------------------------
-# Pydantic schemas
+# MVP 最小 Pydantic schema（LLM 輸出 → 儲存的正式合約）
+# ---------------------------------------------------------------------------
+
+class MvpSceneCard(BaseModel):
+    """
+    MVP 場景分析卡。LLM 輸出這個結構，analyzer 驗證後存 DB。
+
+    四個維度（局/心/欲/變）為純文字；引用為字串陣列。
+    延後欄位（confidence_score、match_level、mind_shift_type 等）不在此 schema 中。
+    """
+    book_id: str
+    chapter_index: int
+    scene_index: int
+
+    summary: str
+    characters: List[str] = Field(..., min_length=1)
+
+    is_negotiation: bool = False
+    negotiation_pattern_tags: List[str] = Field(default_factory=list)
+
+    # 局心欲變四維（純文字）
+    situation: str
+    mind: str
+    desire: str
+    change: str
+
+    change_intensity: int = Field(default=3, ge=1, le=5)
+    quotes: List[str] = Field(default_factory=list)  # 原文引用（至少一條）
+
+    reviewed: bool = False
+    llm_status: LlmStatus = LlmStatus.DONE
+
+    class Config:
+        use_enum_values = True
+
+
+# ---------------------------------------------------------------------------
+# DEFERRED (Phase 2) — 以下 Pydantic schemas 在第一本書驗證後才啟用
 # ---------------------------------------------------------------------------
 
 class EvidenceQuote(BaseModel):
@@ -148,6 +190,10 @@ class SceneFrameworkCard(Base):
     insufficient_context: Mapped[bool] = mapped_column(Boolean, default=False)
     name_unresolved: Mapped[bool]      = mapped_column(Boolean, default=False)
     is_negotiation_scene: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+
+    # MVP 欄位（2026-04 新增）
+    summary:    Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    llm_status: Mapped[str]           = mapped_column(String(20), default="done", nullable=False)
     negotiation_pattern_tags: Mapped[list] = mapped_column(JSON, default=list)
     scene_labels: Mapped[list] = mapped_column(JSON, default=list)
 
@@ -201,6 +247,65 @@ class SceneFrameworkCard(Base):
             analysis_version=card.analysis_version,
             raw_llm_response=card.raw_llm_response,
         )
+
+    @classmethod
+    def from_mvp_card(cls, card: MvpSceneCard, raw_text: str = "") -> "SceneFrameworkCard":
+        """從 MVP schema 建立 ORM 物件。"""
+        focal = card.characters[0] if card.characters else ""
+        secondary = card.characters[1:] if len(card.characters) > 1 else []
+        return cls(
+            id=str(uuid.uuid4()),
+            scene_id=f"{card.book_id}_ch{card.chapter_index}_s{card.scene_index}",
+            book_id=card.book_id,
+            chapter_number=card.chapter_index,
+            scene_number=card.scene_index,
+            scene_text=raw_text,
+            summary=card.summary,
+            focal_character=focal,
+            secondary_characters=secondary,
+            scene_type="fiction_narrative",
+            is_negotiation_scene=card.is_negotiation,
+            negotiation_pattern_tags=card.negotiation_pattern_tags,
+            scene_labels=[],
+            situation={"text": card.situation},
+            desire={"text": card.desire},
+            mind_shift={"text": card.mind, "change": card.change,
+                        "change_intensity": card.change_intensity},
+            judgment={"quotes": card.quotes},
+            match_level="none",          # deferred
+            confidence_score=0.0,        # deferred
+            mind_shift_type="none",      # deferred
+            mind_shift_intensity=card.change_intensity,
+            model_used="",
+            prompt_version="mvp-1",
+            llm_status=card.llm_status if isinstance(card.llm_status, str)
+                        else card.llm_status.value,
+        )
+
+    def to_mvp(self) -> dict:
+        """返回 MVP 視角的欄位字典（供 API 序列化使用）。"""
+        def _text(blob) -> str:
+            if isinstance(blob, dict):
+                return blob.get("text") or blob.get("external_situation") or ""
+            return ""
+        ms = self.mind_shift or {}
+        return {
+            "book_id": self.book_id,
+            "chapter_index": self.chapter_number,
+            "scene_index": self.scene_number,
+            "summary": self.summary or "",
+            "characters": ([self.focal_character] + (self.secondary_characters or [])),
+            "is_negotiation": bool(self.is_negotiation_scene),
+            "negotiation_pattern_tags": self.negotiation_pattern_tags or [],
+            "situation": _text(self.situation),
+            "mind": _text(ms) if not ms.get("change") else ms.get("text", ""),
+            "desire": _text(self.desire),
+            "change": ms.get("change", ""),
+            "change_intensity": ms.get("change_intensity", self.mind_shift_intensity or 3),
+            "quotes": (self.judgment or {}).get("quotes", []),
+            "reviewed": bool(self.is_human_reviewed),
+            "llm_status": self.llm_status or "done",
+        }
 
     def __repr__(self):
         return (f"<Card ch={self.chapter_number} s={self.scene_number} "

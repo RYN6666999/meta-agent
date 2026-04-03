@@ -346,8 +346,7 @@ async def run(
     # ── 閥門 1：場景最小長度（太短的碎片不送 LLM）
     MIN_SCENE_CHARS = 150
 
-    # ── 閥門 2：信心分最低門檻（低於此值不存 DB）
-    MIN_CONFIDENCE = 0.45
+    # MIN_CONFIDENCE 已移除（deferred to Phase 2）
 
     async def analyze_one(chapter, scene) -> Optional[SceneFrameworkCard]:
         async with sem:
@@ -399,18 +398,9 @@ async def run(
                 card = result.card
                 stats.tokens_used += result.total_tokens
 
-                conf = card.judgment.confidence_score
-
-                # 閥門 4：信心分太低，不存 DB
-                if conf < MIN_CONFIDENCE:
-                    stats.scenes_skipped += 1
-                    print(f"  [SKIP-CONF] ch{chapter.chapter_number} s{scene.scene_number} "
-                          f"| conf={conf:.2f} < {MIN_CONFIDENCE} | 主角:{focal}")
-                    return None
-
                 # 存 DB（UNIQUE constraint 會擋掉任何漏網的重複）
                 try:
-                    orm = SceneFrameworkCard.from_schema(card, scene_text=scene.raw_text)
+                    orm = SceneFrameworkCard.from_mvp_card(card, raw_text=scene.raw_text)
                     db.add(orm)
                     db.commit()
                 except Exception:
@@ -418,14 +408,14 @@ async def run(
                     stats.scenes_skipped += 1
                     return None
 
-                level = card.judgment.match_level
-                level_str = level.value if hasattr(level, "value") else level
-                stats.match_counts[level_str] = stats.match_counts.get(level_str, 0) + 1
+                status = card.llm_status if isinstance(card.llm_status, str) else card.llm_status.value
+                negs = "🤝" if card.is_negotiation else " "
+                stats.match_counts[status] = stats.match_counts.get(status, 0) + 1
                 stats.scenes_analyzed += 1
 
-                conf_icon = "🟢" if conf >= 0.8 else "🟡" if conf >= 0.5 else "🔴"
-                print(f"  {conf_icon} ch{chapter.chapter_number:3d} s{scene.scene_number} "
-                      f"| {level_str:7s} | conf={conf:.2f} | 主角:{focal[:6]:6s} "
+                print(f"  ✅ ch{chapter.chapter_number:3d} s{scene.scene_number} "
+                      f"| {negs} intensity={card.change_intensity} "
+                      f"| 角色:{card.characters[0][:6]:6s} "
                       f"| retry={result.retry_count}")
                 return orm
 

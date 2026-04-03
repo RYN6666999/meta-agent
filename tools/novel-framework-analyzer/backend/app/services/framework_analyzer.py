@@ -27,6 +27,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from backend.app.models.scene_framework_card import (
+    LlmStatus,
+    MvpSceneCard,
+    # DEFERRED (Phase 2) — complex sub-schemas kept for backward compat
     DesireAnalysis,
     EvidenceQuote,
     FrameworkJudgment,
@@ -253,7 +256,7 @@ class AnalysisContext:
 @dataclass
 class AnalysisResult:
     """分析成功結果"""
-    card: SceneFrameworkCardSchema
+    card: MvpSceneCard
     retry_count: int
     total_tokens: int
 
@@ -620,63 +623,47 @@ class FrameworkAnalyzer:
         raw_json: str,
         ctx: AnalysisContext,
         response: LLMResponse,
-    ) -> SceneFrameworkCardSchema:
-        """解析 JSON 並構建 SceneFrameworkCardSchema"""
+    ) -> MvpSceneCard:
+        """解析 JSON 並構建 MvpSceneCard"""
         try:
             data = json.loads(raw_json)
         except json.JSONDecodeError as e:
             raise LLMResponseParseError(f"JSON 解析失敗：{e}\n原始：{raw_json[:300]}") from e
 
-        # 驗證各維度的 evidence_quotes 存在且非空
-        for dim in ("situation", "desire", "mind_shift"):
-            quotes = data.get(dim, {}).get("evidence_quotes", [])
-            if not quotes:
-                raise InsufficientEvidenceError(
-                    f"維度 '{dim}' 缺少 evidence_quotes，"
-                    f"場景 {ctx.scene_id}"
-                )
-
-        judgment_quotes = data.get("judgment", {}).get("key_evidence_quotes", [])
-        if not judgment_quotes:
+        # 驗證 quotes 存在且非空
+        if not data.get("quotes"):
             raise InsufficientEvidenceError(
-                f"judgment 缺少 key_evidence_quotes，場景 {ctx.scene_id}"
+                f"缺少 quotes（原文引用），場景 {ctx.scene_id}"
             )
 
-        # Coerce LLM 可能輸出的「合理但不在 enum 的」shift_type 值
-        _SHIFT_TYPE_COERCE = {
-            "epistemic": "values",
-            "cognitive":  "values",
-            "belief":     "values",
-            "behavioral": "strategy",
-            "relational": "stance",
-        }
-        ms_data = data.get("mind_shift", {})
-        raw_st = ms_data.get("shift_type", "none")
-        if raw_st not in {e.value for e in MindShiftType}:
-            ms_data["shift_type"] = _SHIFT_TYPE_COERCE.get(raw_st, "none")
-            data["mind_shift"] = ms_data
+        # 驗證四個核心維度都有內容
+        for dim in ("situation", "mind", "desire", "change"):
+            if not data.get(dim, "").strip():
+                raise LLMResponseParseError(
+                    f"維度 '{dim}' 為空，場景 {ctx.scene_id}"
+                )
 
         try:
-            card = SceneFrameworkCardSchema(
-                scene_id=ctx.scene_id,
+            # characters: 若 LLM 沒給，退回 focal_character
+            chars = data.get("characters", [])
+            if not chars:
+                chars = [ctx.focal_character]
+
+            card = MvpSceneCard(
                 book_id=ctx.book_id,
-                chapter_number=ctx.chapter_number,
-                scene_number=ctx.scene_number,
-                focal_character=data.get("focal_character", ctx.focal_character),
-                secondary_characters=data.get("secondary_characters", []),
-                scene_type=data.get("scene_type", "fiction_narrative"),
-                insufficient_context=data.get("insufficient_context", False),
-                name_unresolved=data.get("name_unresolved", False),
-                is_negotiation_scene=data.get("is_negotiation_scene", False),
+                chapter_index=ctx.chapter_number,
+                scene_index=ctx.scene_number,
+                summary=data.get("summary", ""),
+                characters=chars,
+                is_negotiation=data.get("is_negotiation", False),
                 negotiation_pattern_tags=data.get("negotiation_pattern_tags", []),
-                scene_labels=data.get("scene_labels", []),
-                situation=SituationAnalysis(**data["situation"]),
-                desire=DesireAnalysis(**data["desire"]),
-                mind_shift=MindShiftAnalysis(**data["mind_shift"]),
-                judgment=FrameworkJudgment(**data["judgment"]),
-                model_used=response.model,
-                prompt_version=self.prompt.version,
-                raw_llm_response=response.content,
+                situation=data["situation"],
+                mind=data["mind"],
+                desire=data["desire"],
+                change=data["change"],
+                change_intensity=int(data.get("change_intensity", 3)),
+                quotes=data.get("quotes", []),
+                llm_status=LlmStatus.DONE,
             )
         except (KeyError, TypeError, ValueError) as e:
             raise LLMResponseParseError(
@@ -735,66 +722,16 @@ class MockLLMClient(AbstractLLMClient):
         response_format: Optional[Dict] = None,
     ) -> LLMResponse:
         mock_card = {
-            "focal_character": "主角",
-            "secondary_characters": ["配角A"],
-            "situation": {
-                "external_situation": "[Mock] 場景外部局勢",
-                "power_dynamics": "[Mock] 權力關係",
-                "risks_and_constraints": "[Mock] 風險限制",
-                "active_party": "[Mock] 主動方",
-                "passive_party": "[Mock] 被動方",
-                "resource_holders": "[Mock] 資源持有者",
-                "evidence_quotes": [
-                    {
-                        "text": "[Mock 原文引用]",
-                        "chapter_hint": "第一章",
-                        "relevance": "[Mock] 支持局勢分析",
-                    }
-                ],
-            },
-            "desire": {
-                "explicit_desire": "[Mock] 顯性欲望",
-                "implicit_desire": "[Mock] 隱性欲望",
-                "true_objective": "[Mock] 真正目標",
-                "desire_conflicts": "[Mock] 欲望衝突",
-                "obstacles": "[Mock] 阻礙",
-                "evidence_quotes": [
-                    {
-                        "text": "[Mock 原文引用]",
-                        "chapter_hint": "第一章",
-                        "relevance": "[Mock] 支持欲望分析",
-                    }
-                ],
-            },
-            "mind_shift": {
-                "before_mindset": "[Mock] 場景前心態",
-                "trigger_event": "[Mock] 觸發事件",
-                "after_mindset": "[Mock] 場景後心態",
-                "shift_type": "strategy",
-                "shift_description": "[Mock] 從防禦轉為主動",
-                "is_reversible": True,
-                "evidence_quotes": [
-                    {
-                        "text": "[Mock 原文引用]",
-                        "chapter_hint": "第一章",
-                        "relevance": "[Mock] 支持心變分析",
-                    }
-                ],
-            },
-            "judgment": {
-                "match_level": "partial",
-                "matches_framework": True,
-                "reasoning": "[Mock] 判定理由",
-                "confidence_score": 0.72,
-                "missing_dimensions": [],
-                "key_evidence_quotes": [
-                    {
-                        "text": "[Mock 關鍵原文引用]",
-                        "chapter_hint": "第一章",
-                        "relevance": "[Mock] 最關鍵支持",
-                    }
-                ],
-            },
+            "summary": "[Mock] 場景摘要",
+            "characters": ["主角", "配角A"],
+            "is_negotiation": False,
+            "negotiation_pattern_tags": [],
+            "situation": "[Mock] 此局客觀結構：主角處於弱勢位，對方握有資源籌碼。",
+            "mind": "[Mock] 局在主角身上形成的心態：被動應對，初始認知框架保守。",
+            "desire": "[Mock] 局激活的欲望：顯性想要脫困，隱性想要證明自己。",
+            "change": "[Mock] 觸發事件發生後，局勢從被動轉為主動，主角取得資訊優勢。",
+            "change_intensity": 3,
+            "quotes": ["[Mock 原文引用一]", "[Mock 原文引用二]"],
         }
         return LLMResponse(
             content=json.dumps(mock_card, ensure_ascii=False),
