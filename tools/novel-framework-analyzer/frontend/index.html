@@ -160,22 +160,39 @@
   <!-- Sidebar -->
   <nav class="sidebar">
     <div class="nav-section">主功能</div>
-    <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-      <span class="icon">📊</span> 總覽
+    <!-- MVP 4 pages: upload / scenes / negotiation / characters -->
+    <div class="nav-item" onclick="showPage('upload')" id="nav-upload">
+      <span class="icon">📁</span> 上傳 / 分析
     </div>
     <div class="nav-item" onclick="showPage('scenes')" id="nav-scenes">
       <span class="icon">📋</span> 場景列表
     </div>
-    <div class="nav-item" onclick="showPage('decisions')" id="nav-decisions">
-      <span class="icon">⚡</span> 行動決策
-    </div>
     <div class="nav-item" onclick="showPage('negotiation')" id="nav-negotiation">
       <span class="icon">🎯</span> 談判場景
     </div>
-    <div class="nav-item" onclick="showPage('arc')" id="nav-arc">
+    <div class="nav-item" onclick="showPage('characters')" id="nav-characters">
+      <span class="icon">👤</span> 角色清單
+    </div>
+    <!-- Deferred (hidden) -->
+    <div class="nav-item" onclick="showPage('dashboard')" id="nav-dashboard" style="display:none">
+      <span class="icon">📊</span> 總覽
+    </div>
+    <div class="nav-item" onclick="showPage('decisions')" id="nav-decisions" style="display:none">
+      <span class="icon">⚡</span> 行動決策
+    </div>
+    <div class="nav-item" onclick="showPage('arc')" id="nav-arc" style="display:none">
       <span class="icon">📈</span> 角色弧線
     </div>
-    <!-- Nonfiction-only items (hidden for novels) -->
+    <div class="nav-item" onclick="showPage('bookshelf')" id="nav-bookshelf" style="display:none">
+      <span class="icon">📚</span> 書架
+    </div>
+    <div class="nav-item" onclick="showPage('progress')" id="nav-progress" style="display:none">
+      <span class="icon">🗺️</span> 分析進度
+    </div>
+    <div class="nav-item" onclick="showPage('costs')" id="nav-costs" style="display:none">
+      <span class="icon">💰</span> 成本分析
+    </div>
+    <!-- Nonfiction-only items (hidden) -->
     <div class="nav-item" onclick="showPage('cases')" id="nav-cases" style="display:none">
       <span class="icon">📦</span> 案例庫
     </div>
@@ -185,26 +202,13 @@
     <div class="nav-item" onclick="showPage('epistemic')" id="nav-epistemic" style="display:none">
       <span class="icon">🌀</span> 概念演化
     </div>
-    <div class="nav-item" onclick="showPage('bookshelf')" id="nav-bookshelf">
-      <span class="icon">📚</span> 書架
-    </div>
-    <div class="nav-section">工具</div>
-    <div class="nav-item" onclick="showPage('progress')" id="nav-progress">
-      <span class="icon">🗺️</span> 分析進度
-    </div>
-    <div class="nav-item" onclick="showPage('costs')" id="nav-costs">
-      <span class="icon">💰</span> 成本分析
-    </div>
-    <div class="nav-item" onclick="showPage('upload')" id="nav-upload">
-      <span class="icon">📁</span> 上傳 / 分析
-    </div>
   </nav>
 
   <!-- Main -->
   <main class="main">
 
     <!-- Dashboard -->
-    <div class="page active" id="page-dashboard">
+    <div class="page" id="page-dashboard">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
         <h2 style="margin:0">總覽</h2>
         <button class="btn btn-secondary" style="font-size:12px" onclick="loadDashboard()">↻ 重新整理</button>
@@ -510,6 +514,17 @@
       </div>
     </div>
 
+    <!-- Characters -->
+    <div class="page" id="page-characters">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h2 style="margin:0">角色清單</h2>
+        <button class="btn btn-secondary" style="font-size:12px" onclick="loadCharacters()">↻ 重新整理</button>
+      </div>
+      <div id="charactersList">
+        <div style="color:var(--muted);font-size:13px">載入中...</div>
+      </div>
+    </div>
+
     <!-- Bookshelf -->
     <div class="page" id="page-bookshelf">
       <h2>書架</h2>
@@ -707,7 +722,7 @@ function topbarSelectBook() {
     }
   }
   loadStats();
-  const activePage = (window.location.hash || '').replace('#','').trim() || 'dashboard';
+  const activePage = (window.location.hash || '').replace('#','').trim() || 'upload';
   showPage(activePage, false);
 }
 
@@ -728,7 +743,7 @@ function selectBookFromList() {
     document.getElementById('uploadMeta').textContent =
       `已分析 ${current.analyzed_scenes} 場景 · 已到第 ${current.max_analyzed_chapter||0} 章 · 共 ${current.detected_chapters||'?'} 章`;
   }
-  const activePage = (window.location.hash || '').replace('#', '').trim() || 'dashboard';
+  const activePage = (window.location.hash || '').replace('#', '').trim() || 'upload';
   showPage(activePage, false);
 }
 
@@ -754,6 +769,7 @@ function showPage(name, pushHash = true) {
   if (name === 'costs') loadCosts();
   if (name === 'progress') loadProgress();
   if (name === 'dashboard') loadDashboard();
+  if (name === 'characters') loadCharacters();
   if (name === 'bookshelf') loadBookshelf();
   if (name === 'cases') loadCases();
   if (name === 'arguments') loadArguments();
@@ -772,26 +788,15 @@ function updateSidebarForBookType(bookType) {
     if (el) el.style.display = visible ? '' : 'none';
   };
 
-  // novel-only items
-  show('nav-decisions',   isNovel || isAll);
+  // MVP: only negotiation is conditionally shown (novel-only)
   show('nav-negotiation', isNovel || isAll);
-  show('nav-arc',         isNovel || isAll);
 
-  // nonfiction-only items
-  show('nav-cases',     isNonfiction || isAll);
-  show('nav-arguments', isNonfiction || isAll);
-  show('nav-epistemic', isNonfiction || isAll);
-
-  // 如果目前顯示的頁面已被隱藏，跳到 dashboard
+  // 如果目前顯示的頁面已被隱藏，跳到 upload
   const activePage = document.querySelector('.page.active');
   if (activePage) {
     const pageName = activePage.id.replace('page-', '');
-    const novelOnlyPages     = new Set(['decisions', 'negotiation', 'arc']);
-    const nonfictionOnlyPages = new Set(['cases', 'arguments', 'epistemic']);
-    if (isNonfiction && novelOnlyPages.has(pageName)) {
-      showPage('dashboard', false);
-    } else if (isNovel && nonfictionOnlyPages.has(pageName)) {
-      showPage('dashboard', false);
+    if (isNonfiction && pageName === 'negotiation') {
+      showPage('upload', false);
     }
   }
 }
@@ -1079,6 +1084,32 @@ async function loadNegotiationCharacters() {
       chars.map(c => `<option value="${c}">${c}</option>`).join('');
     filter.value = current;
   } catch(e) { console.error(e); }
+}
+
+async function loadCharacters() {
+  const list = document.getElementById('charactersList');
+  if (requiresSelectedBook()) {
+    renderNeedBookState('charactersList');
+    return;
+  }
+  const url = apiUrl('/api/characters');
+  if (!url) { renderNeedBookState('charactersList'); return; }
+  try {
+    const d = await fetch(url).then(r => r.json());
+    const chars = d.characters || [];
+    if (!chars.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">👤</div>尚無角色資料<br><span style="font-size:12px">分析場景後自動出現</span></div>';
+      return;
+    }
+    list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px">' +
+      chars.map(c => `<div class="card" style="padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:8px"
+          title="\u67e5\u770b ${c} \u7684\u8ac7\u5224\u5834\u666f" onclick="showPage('negotiation')">
+          <span style="font-size:20px">\ud83d\udc64</span>
+          <span style="font-weight:600">${c}</span>
+        </div>`).join('') + '</div>';
+  } catch(e) {
+    list.innerHTML = `<div style="color:var(--danger);padding:12px">載入失敗：${e.message}</div>`;
+  }
 }
 
 async function loadNegotiation() {
