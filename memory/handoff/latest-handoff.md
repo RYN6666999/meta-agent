@@ -1,20 +1,20 @@
 ---
 date: 2026-04-04
-session: meta-agent — Session 16
+session: meta-agent — Session 17
 status: 建設中
-generated: 2026-04-04 17:35
+generated: 2026-04-04 23:50
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-04 17:35 自動生成）
+## 系統狀態（2026-04-04 23:50 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(64393) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：155
 
 ---
@@ -30,12 +30,12 @@ generated: 2026-04-04 17:35
 ---
 
 ## 最近 Git 提交
+- `bd67628 auto: [error_fix+misc] score=190 超過閾值 50 自動備份`
 - `fd0901c auto: [misc] score=50 超過閾值 50 自動備份`
 - `fbc5d29 refactor: reduce frontend navigation to 4-page MVP flow`
 - `101d491 feat: lock minimal scene framework card schema for MVP`
 - `2d4c844 docs: define mvp goal, core queries, and success criteria`
 - `8b3c0e6 docs: converge product scope to novel analysis MVP`
-- `0a3f5cb auto: [error_fix+misc] score=180 超過閾值 50 自動備份`
 
 ## 最近 Error Log
 - 2026-04-04-mobile-bridge-api-down.md
