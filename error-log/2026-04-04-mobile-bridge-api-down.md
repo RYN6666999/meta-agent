@@ -1,156 +1,101 @@
 # mobile-bridge-api-down incident log
 
-## 2026-04-03 00:18:21
+## 2026-04-04 00:23:24
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 01:32:19
+## 2026-04-04 01:04:19
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 04:38:44
+## 2026-04-04 01:56:16
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 06:47:48
+## 2026-04-04 02:59:21
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 09:02:14
+## 2026-04-04 06:16:15
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 10:03:10
+## 2026-04-04 08:09:44
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 10:34:11
+## 2026-04-04 09:00:03
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 12:07:21
+## 2026-04-04 09:41:13
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 12:37:59
+## 2026-04-04 11:33:32
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 13:08:42
+## 2026-04-04 12:44:00
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 13:39:23
+## 2026-04-04 13:44:57
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 14:10:03
+## 2026-04-04 14:46:00
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 14:40:43
+## 2026-04-04 15:46:54
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 15:11:22
+## 2026-04-04 16:48:02
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 15:42:03
+## 2026-04-04 17:19:35
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 16:12:22
+## 2026-04-04 17:56:11
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 16:43:03
+## 2026-04-04 18:48:47
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 17:13:53
+## 2026-04-04 19:28:38
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 17:44:33
+## 2026-04-04 20:51:08
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
 
-## 2026-04-03 18:15:09
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 18:45:47
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 19:16:32
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 19:47:09
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 20:17:47
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 20:48:27
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 21:19:07
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 21:49:48
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 22:20:29
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 22:51:19
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 23:22:14
-- root_cause: mobile API endpoint not healthy
-- solution: restart uvicorn via watchdog
-- context: health_code=000
-
-## 2026-04-03 23:52:50
+## 2026-04-04 21:52:32
 - root_cause: mobile API endpoint not healthy
 - solution: restart uvicorn via watchdog
 - context: health_code=000
