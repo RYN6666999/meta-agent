@@ -70,3 +70,7 @@
 [health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
 [health_check] ❌ Groq API: HTTP 000: <body_unavailable: [Errno 2] No such file or directory: '/tmp/groq-health-body.json'>
 [health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-04-04-health-check.md
+[health_check] ✅ LightRAG: HTTP 200 (timeout=5s)
+[health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
+[health_check] ✅ Groq API: HTTP 200
+[health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-04-05-health-check.md
