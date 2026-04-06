@@ -1,21 +1,21 @@
 ---
-date: 2026-04-05
-session: meta-agent — Session 18
+date: 2026-04-06
+session: meta-agent — Session 20
 status: 建設中
-generated: 2026-04-05 09:27
+generated: 2026-04-06 10:26
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-05 09:27 自動生成）
+## 系統狀態（2026-04-06 10:26 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(83924) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：156
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**Turn 計數**：157
 
 ---
 
@@ -30,25 +30,25 @@ generated: 2026-04-05 09:27
 ---
 
 ## 最近 Git 提交
+- `35278d6 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `d271b6a auto: [error_fix+misc] score=130 超過閾值 50 自動備份`
 - `6e5d359 auto: [misc] score=70 超過閾值 50 自動備份`
 - `51e05b0 auto: [error_fix+misc] score=80 超過閾值 50 自動備份`
 - `bd67628 auto: [error_fix+misc] score=190 超過閾值 50 自動備份`
 - `fd0901c auto: [misc] score=50 超過閾值 50 自動備份`
-- `fbc5d29 refactor: reduce frontend navigation to 4-page MVP flow`
-- `101d491 feat: lock minimal scene framework card schema for MVP`
 
 ## 最近 Error Log
+- 2026-04-06-mobile-bridge-tunnel-down.md
+- 2026-04-06-mobile-bridge-api-down.md
+- 2026-04-06-health-check.md
+- 2026-04-05-mobile-bridge-tunnel-down.md
 - 2026-04-05-mobile-bridge-api-down.md
-- 2026-04-05-health-check.md
-- 2026-04-04-mobile-bridge-api-down.md
-- 2026-04-04-health-check.md
-- 2026-04-03-mobile-bridge-api-down.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
 
 ## 最近 Code Intelligence
-- 2026-04-05 08:02:11 | trigger=health_check_failure | unavailable | provider unavailable
+- 2026-04-06 08:15:14 | trigger=health_check_failure | unavailable | provider unavailable
 
 ---
 
