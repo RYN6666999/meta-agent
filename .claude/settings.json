@@ -1,38 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)",
-      "Bash(cp:*)",
-      "Bash(mv:*)",
-      "Bash(touch:*)",
-      "Bash(rm:*)",
-      "Bash(chmod:*)",
-      "Bash(curl:*)",
-      "Bash(launchctl:*)",
-      "Bash(kill:*)",
-      "Bash(lsof:*)",
-      "Bash(sleep:*)",
-      "Bash(cat:*)",
-      "Bash(ls:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)",
-      "Bash(which:*)",
-      "Bash(echo:*)",
-      "Bash(python3:*)",
-      "Bash(node:*)",
-      "Bash(npm:*)",
-      "Bash(npx:*)",
-      "Bash(ts-node:*)",
-      "Bash(git:*)",
-      "Bash(tar:*)",
-      "Bash(unzip:*)",
-      "Bash(sed:*)",
-      "Bash(awk:*)",
-      "Bash(jq:*)",
-      "Bash(tee:*)",
-      "Bash(xargs:*)",
-      "Bash(bash:*)",
-      "Bash(sh:*)"
-    ]
+      "*"
+    ],
+    "deny": [],
+    "defaultMode": "bypassPermissions"
   }
 }

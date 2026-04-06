@@ -3,10 +3,13 @@
   "configurations": [
     {
       "name": "mandala-notes",
-      "runtimeExecutable": "/Users/ryan/.nvm/versions/node/v22.22.0/bin/npm",
-      "runtimeArgs": ["--prefix", "/Users/ryan/Projects/mandala-notes", "run", "dev"],
+      "runtimeExecutable": "/Users/ryan/.nvm/versions/node/v22.22.0/bin/node",
+      "runtimeArgs": ["/Users/ryan/.nvm/versions/node/v22.22.0/bin/npm", "--prefix", "/Users/ryan/Projects/mandala-notes", "run", "dev"],
       "port": 5173,
-      "autoPort": false
+      "autoPort": false,
+      "env": {
+        "PATH": "/Users/ryan/.nvm/versions/node/v22.22.0/bin:/usr/local/bin:/usr/bin:/bin"
+      }
     }
   ]
 }
