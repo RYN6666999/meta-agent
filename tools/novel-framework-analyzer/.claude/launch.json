@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mandala-notes",
+      "runtimeExecutable": "/Users/ryan/.nvm/versions/node/v22.22.0/bin/npm",
+      "runtimeArgs": ["--prefix", "/Users/ryan/Projects/mandala-notes", "run", "dev"],
+      "port": 5173,
+      "autoPort": false
+    }
+  ]
+}
