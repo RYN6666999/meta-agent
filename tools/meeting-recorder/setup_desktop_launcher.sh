@@ -1,7 +1,4 @@
 #!/bin/bash
-# 在桌面建立「會議錄音.command」啟動器
-# Usage: bash setup_desktop_launcher.sh
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LAUNCHER="$HOME/Desktop/會議錄音.command"
 
@@ -13,4 +10,3 @@ EOF
 
 chmod +x "$LAUNCHER"
 echo "✓ 啟動器已建立：$LAUNCHER"
-echo "  雙擊桌面的「會議錄音」即可啟動。"
