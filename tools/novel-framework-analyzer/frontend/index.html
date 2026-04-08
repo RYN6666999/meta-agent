@@ -593,6 +593,8 @@
 
 <script>
 const API = '';
+const shiftLabels = { emotion:'情緒', stance:'立場', strategy:'策略', values:'價值觀', identity:'身份認同', none:'無' };
+const shiftColors = { emotion:'#60a5fa', stance:'#4ade80', strategy:'#facc15', values:'#fb923c', identity:'#c084fc', none:'#475569' };
 let _filters = { match: 'all', nego: false };
 let _uploadedPath = '';
 let _currentBookId = '';
@@ -1073,7 +1075,7 @@ async function loadDecisions() {
 // ── Negotiation ──
 async function loadNegotiationCharacters() {
   if (requiresSelectedBook()) return;
-  const url = apiUrl('/api/characters');
+  const url = apiUrl('/api/negotiation/characters');
   if (!url) return;
   try {
     const d = await fetch(url).then(r => r.json());
@@ -1082,7 +1084,9 @@ async function loadNegotiationCharacters() {
     const current = filter.value;
     filter.innerHTML = '<option value="">全部人物</option>' +
       chars.map(c => `<option value="${c}">${c}</option>`).join('');
-    filter.value = current;
+    if (chars.includes(current)) filter.value = current;
+    // 沒有談判角色就隱藏篩選列
+    filter.closest('.filter-bar').style.display = chars.length ? '' : 'none';
   } catch(e) { console.error(e); }
 }
 
@@ -1393,11 +1397,7 @@ async function openSceneModal(ch, sc) {
         <button class="btn" style="background:#7c6ff7;color:white;padding:6px 16px" onclick="saveAnnotation(${ch},${sc})">
           💾 儲存標注
         </button>
-        ${d.ai_original_values ? `
-        <div style="font-size:11px;color:var(--muted)">
-          AI 原值：${JSON.parse('${JSON.stringify(d.ai_original_values)}' === 'null' ? '{}' : '${(d.ai_original_values||"{}").replace(/'/g,"\\\\'")}' || '{}') && ''}
-          ${d.human_annotated_at ? '已標注 ✓' : ''}
-        </div>` : ''}
+        ${d.human_annotated_at ? `<div style="font-size:11px;color:var(--muted)">已標注 ✓</div>` : ''}
       </div>
     </div>
   `;

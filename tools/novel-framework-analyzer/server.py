@@ -911,6 +911,10 @@ def api_negotiation(book_id: Optional[str] = None, focal_character: Optional[str
 _CHAR_GARBAGE_KEYWORDS = [
     "未明確", "指定", "敘述者", "讀者", "視角", "narrator", "旁白",
     "法则", "法則", "无人", "有人",
+    # 通稱人物
+    "男人", "女人", "老人", "老太", "老頭", "小孩", "男孩", "女孩",
+    "青年", "中年", "少年", "少女", "老婆婆", "老爺爺",
+    "路人", "陌生人", "某人", "眾人", "旁人", "他人",
 ]
 
 def _is_valid_character(name: str) -> bool:
@@ -934,6 +938,29 @@ def _is_valid_character(name: str) -> bool:
         if kw in name:
             return False
     return True
+
+
+@app.get("/api/negotiation/characters")
+def api_negotiation_characters(book_id: Optional[str] = None):
+    """只回有談判場景的角色清單"""
+    conn = get_db()
+    if book_id:
+        rows = conn.execute("""
+            SELECT focal_character, COUNT(*) as cnt
+            FROM scene_framework_cards
+            WHERE is_negotiation_scene=1 AND book_id=?
+            GROUP BY focal_character ORDER BY cnt DESC
+        """, (book_id,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT focal_character, COUNT(*) as cnt
+            FROM scene_framework_cards
+            WHERE is_negotiation_scene=1
+            GROUP BY focal_character ORDER BY cnt DESC
+        """).fetchall()
+    conn.close()
+    characters = [r[0] for r in rows if _is_valid_character(r[0])]
+    return {"characters": characters}
 
 
 @app.get("/api/characters")
