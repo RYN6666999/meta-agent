@@ -64,6 +64,14 @@
       "minItems": 1,
       "items": { "type": "string" },
       "description": "支持分析的關鍵原文引用，必須直接複製原文，不得改寫或虛構"
+    },
+    "model_used": {
+      "type": "string",
+      "description": "產出此卡的 LLM model ID（例如 claude-haiku-4-5-20251001）"
+    },
+    "prompt_version": {
+      "type": "string",
+      "description": "產出此卡時使用的 prompt 版本（例如 mvp-1、1.0.0）"
     }
   },
   "_deferred": {
@@ -72,7 +80,6 @@
       "confidence_score",
       "match_level",
       "mind_shift_type",
-      "prompt_version",
       "schema_version",
       "hidden_goals",
       "fast_thinking",

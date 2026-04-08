@@ -323,12 +323,16 @@ class FrameworkAnalyzer:
                 total_tokens += response.input_tokens + response.output_tokens
 
                 raw_json = self._extract_json(response.content)
-                card = self._parse_and_validate(raw_json, ctx, response)
+                card = self._parse_and_validate(raw_json, ctx, response, self.prompt.version)
 
-                if card.judgment.confidence_score < self.MIN_CONFIDENCE_THRESHOLD:
+                # confidence_score 在 MVP schema 是 deferred 欄位
+                confidence = getattr(
+                    getattr(card, "judgment", None), "confidence_score", None
+                )
+                if confidence is not None and confidence < self.MIN_CONFIDENCE_THRESHOLD:
                     logger.warning(
                         f"場景 {ctx.scene_id} 信心分數 "
-                        f"{card.judgment.confidence_score:.2f} 低於閾值 "
+                        f"{confidence:.2f} 低於閾值 "
                         f"{self.MIN_CONFIDENCE_THRESHOLD}"
                     )
 
@@ -623,6 +627,7 @@ class FrameworkAnalyzer:
         raw_json: str,
         ctx: AnalysisContext,
         response: LLMResponse,
+        prompt_version: str = "mvp-1",
     ) -> MvpSceneCard:
         """解析 JSON 並構建 MvpSceneCard"""
         try:
@@ -663,6 +668,8 @@ class FrameworkAnalyzer:
                 change=data["change"],
                 change_intensity=int(data.get("change_intensity", 3)),
                 quotes=data.get("quotes", []),
+                model_used=response.model,
+                prompt_version=prompt_version,
                 llm_status=LlmStatus.DONE,
             )
         except (KeyError, TypeError, ValueError) as e:

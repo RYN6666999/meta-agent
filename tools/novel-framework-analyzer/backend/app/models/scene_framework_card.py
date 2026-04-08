@@ -74,6 +74,9 @@ class MvpSceneCard(BaseModel):
     change_intensity: int = Field(default=3, ge=1, le=5)
     quotes: List[str] = Field(default_factory=list)  # 原文引用（至少一條）
 
+    model_used: str = ""
+    prompt_version: str = "mvp-1"
+
     reviewed: bool = False
     llm_status: LlmStatus = LlmStatus.DONE
 
@@ -276,8 +279,8 @@ class SceneFrameworkCard(Base):
             confidence_score=0.0,        # deferred
             mind_shift_type="none",      # deferred
             mind_shift_intensity=card.change_intensity,
-            model_used="",
-            prompt_version="mvp-1",
+            model_used=card.model_used,
+            prompt_version=card.prompt_version,
             llm_status=card.llm_status if isinstance(card.llm_status, str)
                         else card.llm_status.value,
         )
@@ -305,6 +308,8 @@ class SceneFrameworkCard(Base):
             "quotes": (self.judgment or {}).get("quotes", []),
             "reviewed": bool(self.is_human_reviewed),
             "llm_status": self.llm_status or "done",
+            "model_used": self.model_used or "",
+            "prompt_version": self.prompt_version or "",
         }
 
     def __repr__(self):
