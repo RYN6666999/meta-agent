@@ -1,4 +1,31 @@
 ---
+date: 2026-04-09
+type: dedup_report
+mode: dry_run
+---
+
+# LightRAG 去重報告 2026-04-09 08:10:23
+
+**模式**：DRY RUN（只分析，未修改）
+**總實體數**：67
+**發現重複對**：0
+**同名重複群組**：5
+
+## 同名重複摘要
+
+- `Error Fix: cloudflared tunnel process not running` x29
+- `對話重點摘要` x21
+- `【Obsidian】大事件` x6
+- `Error Fix: telegram setWebhook failed` x3
+- `【Obsidian】4.6店股東會議` x2
+
+## 重複實體清單
+
+✅ 未發現重複實體
+
+---
+
+---
 date: 2026-04-08
 type: dedup_report
 mode: dry_run
