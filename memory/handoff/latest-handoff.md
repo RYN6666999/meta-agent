@@ -1,20 +1,20 @@
 ---
 date: 2026-04-09
-session: meta-agent — Session 26
+session: meta-agent — Session 27
 status: 建設中
-generated: 2026-04-09 09:45
+generated: 2026-04-09 23:51
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-09 09:45 自動生成）
+## 系統狀態（2026-04-09 23:51 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(13747) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：160
 
 ---
@@ -30,12 +30,12 @@ generated: 2026-04-09 09:45
 ---
 
 ## 最近 Git 提交
+- `a26b02d auto: [misc] score=70 超過閾值 50 自動備份`
+- `718b222 auto: [error_fix+misc] score=200 超過閾值 50 自動備份`
 - `da51def auto: [misc] score=105 超過閾值 50 自動備份`
 - `4c3c2d2 chore: auto swap-monitor log 更新`
 - `4088cf5 chore: auto log 更新（系統自動產生）`
 - `e79ef76 chore(novel-analyzer): 加 guard.py 靜態自檢 + pre-commit hook`
-- `f7ba52a feat(novel-analyzer): 啟用 model_used + prompt_version AI 產出可追溯性`
-- `34643e7 auto: [misc] score=60 超過閾值 50 自動備份`
 
 ## 最近 Error Log
 - 2026-04-09-mobile-bridge-api-down.md

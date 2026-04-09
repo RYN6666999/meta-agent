@@ -38,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 _SUPER_ENGINE_DIR = Path("/Users/ryan/super-engine")
 _DAEMON_SCRIPT    = _SUPER_ENGINE_DIR / "scripts" / "daemon.ts"
+_TSX_BIN          = _SUPER_ENGINE_DIR / "node_modules" / ".bin" / "tsx"
+_NODE_BIN         = Path("/Users/ryan/.nvm/versions/node/v20.18.3/bin/node")
 
 
 class WebGeminiUnavailableError(RuntimeError):
@@ -76,6 +78,15 @@ async def _get_daemon() -> asyncio.subprocess.Process:
             raise WebGeminiUnavailableError(
                 f"找不到 daemon 腳本：{_DAEMON_SCRIPT}"
             )
+        if not _TSX_BIN.exists():
+            raise WebGeminiUnavailableError(
+                f"找不到 tsx：{_TSX_BIN}\n"
+                "請執行：cd /Users/ryan/super-engine && npm install --save-dev tsx"
+            )
+        if not _NODE_BIN.exists():
+            raise WebGeminiUnavailableError(
+                f"找不到 node：{_NODE_BIN}"
+            )
 
         env = {
             **os.environ,
@@ -93,7 +104,7 @@ async def _get_daemon() -> asyncio.subprocess.Process:
         print("[WebGemini] 啟動 browser daemon（首次需 10-30 秒）...")
 
         proc = await asyncio.create_subprocess_exec(
-            "npx", "tsx", str(_DAEMON_SCRIPT),
+            str(_NODE_BIN), str(_TSX_BIN), str(_DAEMON_SCRIPT),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -237,5 +248,8 @@ def make_web_gemini_client() -> Optional[WebGeminiClient]:
         return None
     if not _DAEMON_SCRIPT.exists():
         logger.warning(f"[WebGemini] daemon 腳本不存在：{_DAEMON_SCRIPT}")
+        return None
+    if not _TSX_BIN.exists():
+        logger.warning(f"[WebGemini] tsx 不存在：{_TSX_BIN}，請執行 cd /Users/ryan/super-engine && npm install --save-dev tsx")
         return None
     return WebGeminiClient()
