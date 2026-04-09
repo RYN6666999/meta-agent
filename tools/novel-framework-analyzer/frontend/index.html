@@ -396,9 +396,9 @@
             <div>
               <span style="font-size:11px;color:var(--muted);margin-right:4px">模式：</span>
               <select id="prog-mode-select" style="font-size:12px;padding:4px 8px">
-                <option value="smart">智慧路由（精準角色→高品質，其他→免費）</option>
-                <option value="haiku">高品質模式（全部）</option>
-                <option value="gemini-free">Gemini 免費（全部）</option>
+                <option value="web-gemini">🌐 Web Gemini（免費，無限流）</option>
+                <option value="haiku">Haiku（付費高品質）</option>
+                <option value="smart">智慧路由（省費用）</option>
               </select>
             </div>
             <div>
@@ -499,10 +499,10 @@
           <input type="number" id="chEnd" value="10" min="1" style="width:70px">
           <span class="form-label">模式</span>
           <select id="analyzeMode">
-            <option value="smart">智慧路由（精準角色→高品質，其他→免費，省 30%）</option>
-            <option value="gemini-free">Gemini 免費（全程 $0）</option>
-            <option value="haiku">高品質模式（全程精準）</option>
-            <option value="free">免費模型（OpenRouter）</option>
+            <option value="web-gemini">🌐 Web Gemini（免費，無限流）</option>
+            <option value="haiku" disabled style="color:var(--muted)">── 進階 ──</option>
+            <option value="haiku">Haiku（付費高品質）</option>
+            <option value="smart">智慧路由（省費用）</option>
             <option value="msa">省 token 模式</option>
           </select>
           <button class="btn btn-primary" onclick="startAnalysis()">▶ 開始分析</button>

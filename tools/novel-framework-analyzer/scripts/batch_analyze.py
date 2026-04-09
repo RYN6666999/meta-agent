@@ -66,6 +66,21 @@ FREE_MODELS = {
 }
 
 
+def _load_env_into_os(env_path: str) -> None:
+    """把 .env 所有 KEY=VALUE 載入 os.environ（已存在的不覆蓋）"""
+    if not os.path.exists(env_path):
+        return
+    for line in open(env_path, encoding="utf-8"):
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        key = key.strip()
+        val = val.strip()
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
 def _load_api_key(env_path: str) -> Optional[str]:
     if not os.path.exists(env_path):
         return None
@@ -138,6 +153,8 @@ def build_llm(model_choice: str, env_path: str):
 def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
                    priority_chars: list[str] | None = None,
                    db_path: str | None = None):
+    # 先把 .env 全部載進 os.environ，讓 web_gemini_adapter 等可以讀到
+    _load_env_into_os(env_path)
     """
     依 --mode 建立分析器：
 
@@ -177,6 +194,28 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
         print(f"[模式] Smart 路由 — {chars} → Haiku，其他角色 → {free_label}")
         print(f"        預估省 30-35%% API 費用")
         return SmartRouter(haiku_analyzer=haiku_az, free_analyzer=free_az, priority_chars=chars)
+
+    if mode == "web-gemini":
+        # super-engine：Playwright 驅動真實 Gemini 網頁，完全免費無 API quota
+        from services.llm.web_gemini_adapter import make_web_gemini_client, WebGeminiUnavailableError
+        from services.llm.fallback_router import FallbackRouter
+        web_llm = make_web_gemini_client()
+        if not web_llm:
+            raise WebGeminiUnavailableError(
+                "WebGemini 不可用，請確認：\n"
+                "  1. GEMINI_PROFILE_DIR 已設定（.env）\n"
+                "  2. 該 Chrome profile 已登入 gemini.google.com\n"
+                "  3. /Users/ryan/super-engine 存在"
+            )
+        or_key = _load_api_key(env_path)
+        if or_key:
+            fallback_llm = OpenRouterClient(api_key=or_key, model="anthropic/claude-haiku-4-5")
+            llm = FallbackRouter(primary=web_llm, secondary=fallback_llm, wait_seconds=5)
+            print("[模式] Web Gemini（Playwright 免費）→ Fallback Haiku")
+        else:
+            llm = web_llm
+            print("[模式] Web Gemini（Playwright 免費，無 fallback）")
+        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir, db_path=db_path)
 
     if mode == "gemini-free":
         gemini_key = _load_gemini_key(env_path)
@@ -470,14 +509,15 @@ def main():
     )
     parser.add_argument("--chapters", default="1-5",
                         help="章節範圍，如 1-5 或 10-20")
-    parser.add_argument("--mode", default="haiku",
-                        choices=["haiku", "free", "smart", "gemini-free", "hybrid", "msa", "local", "mock"],
+    parser.add_argument("--mode", default="web-gemini",
+                        choices=["web-gemini", "haiku", "free", "smart", "gemini-free", "hybrid", "msa", "local", "mock"],
                         help=(
                             "分析模式：\n"
-                            "  haiku       : OpenRouter Haiku（最穩，~$0.011/場景）  ← 品質優先\n"
-                            "  smart       : 寧凡→Haiku，其他→Gemini免費（省30-35%%）← 推薦\n"
-                            "  gemini-free : 全程 Gemini 免費（需 GEMINI_API_KEY，$0）\n"
-                            "  free        : OpenRouter 免費模型（需帳戶餘額才能啟用）\n"
+                            "  web-gemini  : Playwright 驅動真實 Gemini 網頁（免費，無 API quota）← 主力\n"
+                            "  haiku       : OpenRouter Haiku（最穩，~$0.011/場景）\n"
+                            "  smart       : 寧凡→Haiku，其他→Gemini免費（省30-35%%）\n"
+                            "  gemini-free : 全程 Gemini API 免費（需 GEMINI_API_KEY，$0）\n"
+                            "  free        : OpenRouter 免費模型\n"
                             "  hybrid      : 本地Stage1篩選 → Haiku分析（省15-25%%費用）\n"
                             "  msa         : Haiku + 多階段省token（省45%% tokens）\n"
                             "  local       : 全本地Ollama（免費但極慢，不建議8GB RAM）\n"

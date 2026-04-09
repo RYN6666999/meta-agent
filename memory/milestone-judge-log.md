@@ -2828,3 +2828,24 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-04-09 10:19 | auto-git-score | 分數 210 | 📥 達到閾值（210/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=200），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-04-09-health-check.md +50
+  error-log 新增根因 error-log/2026-04-09-mobile-bridge-api-down.md +50
+  其他變更 memory/checkpoints/checkpoint-de4773ad-20260409_094547.md +10
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/dedup-log.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/health-check.log +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/persona-tech-radar-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/truth-xval.log +10
+  其他變更 memory/turn-count.txt +10
+
+---

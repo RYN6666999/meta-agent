@@ -9,6 +9,7 @@ gemini_adapter.py — Google Gemini 直連 Adapter（免費額度）
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Dict, List, Optional
 
