@@ -198,7 +198,6 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
     if mode == "web-gemini":
         # super-engine：Playwright 驅動真實 Gemini 網頁，完全免費無 API quota
         from services.llm.web_gemini_adapter import make_web_gemini_client, WebGeminiUnavailableError
-        from services.llm.fallback_router import FallbackRouter
         web_llm = make_web_gemini_client()
         if not web_llm:
             raise WebGeminiUnavailableError(
@@ -207,15 +206,8 @@ def build_analyzer(mode: str, model_choice: str, env_path: str, prompt_dir: str,
                 "  2. 該 Chrome profile 已登入 gemini.google.com\n"
                 "  3. /Users/ryan/super-engine 存在"
             )
-        or_key = _load_api_key(env_path)
-        if or_key:
-            fallback_llm = OpenRouterClient(api_key=or_key, model="anthropic/claude-haiku-4-5")
-            llm = FallbackRouter(primary=web_llm, secondary=fallback_llm, wait_seconds=5)
-            print("[模式] Web Gemini（Playwright 免費）→ Fallback Haiku")
-        else:
-            llm = web_llm
-            print("[模式] Web Gemini（Playwright 免費，無 fallback）")
-        return FrameworkAnalyzer(llm_client=llm, prompt_dir=prompt_dir, db_path=db_path)
+        print("[模式] Web Gemini（Playwright 免費，daemon 持久 session，內建 retry）")
+        return FrameworkAnalyzer(llm_client=web_llm, prompt_dir=prompt_dir, db_path=db_path)
 
     if mode == "gemini-free":
         gemini_key = _load_gemini_key(env_path)
