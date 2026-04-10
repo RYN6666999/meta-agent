@@ -2849,3 +2849,18 @@
   其他變更 memory/turn-count.txt +10
 
 ---
+
+## 2026-04-10 02:05 | auto-git-score | 分數 110 | 📥 達到閾值（110/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=65），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-04-10-mobile-bridge-api-down.md +50
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/novel-framework-analyzer/.server.log +10
+  其他變更 tools/novel-framework-analyzer/.server.pid +10
+  其他變更 tools/novel-framework-analyzer/scripts/batch_analyze.py +10
+
+---
