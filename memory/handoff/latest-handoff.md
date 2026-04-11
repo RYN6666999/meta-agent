@@ -1,20 +1,20 @@
 ---
-date: 2026-04-10
-session: meta-agent — Session 28
+date: 2026-04-11
+session: meta-agent — Session 29
 status: 建設中
-generated: 2026-04-10 23:50
+generated: 2026-04-11 23:52
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-10 23:50 自動生成）
+## 系統狀態（2026-04-11 23:52 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(93002) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(7578) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：160
 
 ---
@@ -30,19 +30,19 @@ generated: 2026-04-10 23:50
 ---
 
 ## 最近 Git 提交
-- `a6218e7 auto: [misc] score=60 超過閾值 50 自動備份`
-- `803cc3c auto: [misc] score=60 超過閾值 50 自動備份`
-- `d217ffd auto: [error_fix+misc] score=160 超過閾值 50 自動備份`
-- `ff8614b auto: [error_fix+misc] score=65 超過閾值 50 自動備份`
-- `6e728e0 auto: [misc] score=90 超過閾值 50 自動備份`
-- `a26b02d auto: [misc] score=70 超過閾值 50 自動備份`
+- `bccad2d auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+- `039eee4 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+- `063d497 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+- `3bf0e82 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+- `c1d5048 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+- `a7a009b auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
 
 ## 最近 Error Log
+- 2026-04-11-mobile-bridge-tunnel-down.md
+- 2026-04-11-mobile-bridge-api-down.md
 - 2026-04-10-mobile-bridge-api-down.md
 - 2026-04-10-health-check.md
 - 2026-04-09-mobile-bridge-api-down.md
-- 2026-04-09-health-check.md
-- 2026-04-08-mobile-bridge-api-down.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
