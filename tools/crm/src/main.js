@@ -94,18 +94,26 @@ let _currentPage = 'canvas';
 
 export function navigate(page) {
   _currentPage = page;
-  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-  const section = document.getElementById(`page-${page}`);
-  if (section) section.classList.add('active');
-  const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+  // Normalise aliases → canonical page ID
+  const pageId = page === 'canvas' ? 'crm'
+               : page === 'calendar' ? 'events'
+               : page;
+
+  // Show / hide pages using inline style (overrides CSS specificity)
+  document.querySelectorAll('.page').forEach(s => { s.style.display = 'none'; });
+  const section = document.getElementById(`page-${pageId}`);
+  if (section) section.style.display = 'flex';
+
+  // Highlight active tab button
+  document.querySelectorAll('.tab-btn').forEach(n => n.classList.remove('active'));
+  // Match by onclick content or data-page
+  const navEl = document.querySelector(`.tab-btn[onclick*="'${page}'"]`)
+             || document.querySelector(`.tab-btn[data-page="${page}"]`);
   if (navEl) navEl.classList.add('active');
 
-  switch (page) {
-    case 'canvas':
+  switch (pageId) {
     case 'crm':      setCrmView('tree'); break;
-    case 'calendar':
     case 'events':   renderCalendar(); break;
     case 'daily':    renderDailyPage(); renderMonthlyTargetInput(); break;
     case 'docs':     renderDocsPage(); break;
@@ -417,15 +425,14 @@ export async function init() {
   updateStats();
 
   // Restore last page
-  const lastPage = localStorage.getItem('crm-last-page') || 'canvas';
+  const lastPage = localStorage.getItem('crm-last-page') || 'crm';
   navigate(lastPage);
 
-  // Persist current page on nav clicks
-  document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+  // Persist current page on tab-btn clicks (persist before navigating)
+  document.querySelectorAll('.tab-btn[onclick]').forEach(el => {
     el.addEventListener('click', () => {
-      const p = el.dataset.page;
-      localStorage.setItem('crm-last-page', p);
-      navigate(p);
+      const m = el.getAttribute('onclick')?.match(/switchPage\('([^']+)'\)/);
+      if (m) localStorage.setItem('crm-last-page', m[1]);
     });
   });
 
