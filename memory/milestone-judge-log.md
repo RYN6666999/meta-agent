@@ -3316,3 +3316,55 @@
   其他變更 memory/turn-count.txt +10
 
 ---
+
+## 2026-04-13 17:20 | auto-git-score | 分數 440 | 📥 達到閾值（440/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=85），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-04-13-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-04-13-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/SPEC.md +10
+  其他變更 tools/crm/package.json +10
+  其他變更 tools/crm/src/commands.js +10
+  其他變更 tools/crm/src/contracts/node.js +10
+  其他變更 tools/crm/src/contracts/student.js +10
+  其他變更 tools/crm/src/contracts/types.js +10
+  其他變更 tools/crm/src/core/calc.js +10
+  其他變更 tools/crm/src/core/state.js +10
+  其他變更 tools/crm/src/core/store.js +10
+  其他變更 tools/crm/src/core/toast.js +10
+  其他變更 tools/crm/src/core/uid.js +10
+  其他變更 tools/crm/src/core/undo.js +10
+  其他變更 tools/crm/src/features/ai/chat.js +10
+  其他變更 tools/crm/src/features/ai/personas.js +10
+  其他變更 tools/crm/src/features/ai/providers.js +10
+  其他變更 tools/crm/src/features/ai/tools.js +10
+  其他變更 tools/crm/src/features/canvas/canvasState.js +10
+  其他變更 tools/crm/src/features/canvas/crud.js +10
+  其他變更 tools/crm/src/features/canvas/edges.js +10
+  其他變更 tools/crm/src/features/canvas/interact.js +10
+  其他變更 tools/crm/src/features/canvas/layout.js +10
+  其他變更 tools/crm/src/features/canvas/render.js +10
+  其他變更 tools/crm/src/features/canvas/select.js +10
+  其他變更 tools/crm/src/features/canvas/views.js +10
+  其他變更 tools/crm/src/features/daily/index.js +10
+  其他變更 tools/crm/src/features/docs/index.js +10
+  其他變更 tools/crm/src/features/events/index.js +10
+  其他變更 tools/crm/src/features/panel/index.js +10
+  其他變更 tools/crm/src/features/sales/index.js +10
+  其他變更 tools/crm/src/features/settings/index.js +10
+  其他變更 tools/crm/src/features/students/index.js +10
+  其他變更 tools/crm/src/index.js +10
+  其他變更 tools/crm/src/integrations/gcal.js +10
+  其他變更 tools/crm/src/integrations/gsheets.js +10
+  其他變更 tools/crm/src/integrations/obsidian.js +10
+  其他變更 tools/crm/src/main.js +10
+  其他變更 tools/crm/src/models/node.js +10
+  其他變更 tools/crm/src/models/student.js +10
+
+---
