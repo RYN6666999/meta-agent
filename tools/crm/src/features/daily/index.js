@@ -38,6 +38,16 @@ export function dailyNext() {
   renderDailyPage();
 }
 
+// ── KPI field definitions ─────────────────────────────────────────────────────
+
+const DAILY_KPIS = [
+  { id: 'invite',   label: '邀約' },
+  { id: 'calls',    label: '電訪' },
+  { id: 'forms',    label: '表單' },
+  { id: 'followup', label: '追蹤' },
+  { id: 'close',    label: '成交' },
+];
+
 // ── Daily report render ───────────────────────────────────────────────────────
 
 export function renderDailyPage() {
@@ -48,21 +58,46 @@ export function renderDailyPage() {
   }
   const today       = _viewDate;
   const monthPrefix = today.slice(0, 7);
-  _fillInputs(today);
+  const reports     = getDailyReports();
+  const r           = reports[today] || {};
+
+  const body = document.getElementById('daily-body');
+  if (!body) return;
+
+  body.innerHTML = `
+    <div class="daily-section">
+      <div class="daily-section-header"><span>📞 今日實績</span></div>
+      <div class="daily-section-body">
+        <div class="daily-activity-grid">
+          ${DAILY_KPIS.map(k => `
+            <div class="daily-act-item">
+              <div class="daily-act-label">${k.label}</div>
+              <input class="daily-act-input" id="daily-${k.id}" type="number" min="0"
+                value="${r[k.id] ?? ''}" placeholder="0">
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="daily-section">
+      <div class="daily-section-header"><span>📝 今日筆記</span></div>
+      <div class="daily-section-body">
+        <textarea class="daily-notes-input" id="daily-notes"
+          placeholder="今天做了什麼？有什麼收穫？明天重點是什麼？">${r.notes || ''}</textarea>
+      </div>
+    </div>
+    <div class="daily-section">
+      <div class="daily-section-header">
+        <span>📅 ${monthPrefix.slice(0, 4)}年${parseInt(monthPrefix.slice(5))}月 業績進度</span>
+      </div>
+      <div class="daily-section-body" id="daily-month-summary"></div>
+    </div>
+    <div class="daily-section">
+      <div class="daily-section-header"><span>📋 本月活動量</span></div>
+      <div class="daily-section-body" id="daily-monthly-table"></div>
+    </div>`;
+
   renderDailySummary(today, monthPrefix);
   renderMonthlyTable(monthPrefix);
-}
-
-function _fillInputs(date) {
-  const reports = getDailyReports();
-  const r = reports[date] || {};
-  const fields = ['invite', 'calls', 'forms', 'followup', 'close'];
-  fields.forEach(f => {
-    const el = document.getElementById(`daily-${f}`);
-    if (el) el.value = r[f] ?? '';
-  });
-  const notesEl = document.getElementById('daily-notes');
-  if (notesEl) notesEl.value = r.notes || '';
 }
 
 export function saveDailyReport() {
