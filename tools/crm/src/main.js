@@ -24,7 +24,7 @@ import {
   cycleStatus, toggleCollapse, promptDel, copySelected, cutSelected, pasteClipboard,
   headerAddNode, headerAddNote, setNoteColor, setNoteFontSize, saveNoteContent,
   setOpenPanelFn as crudSetOpenPanel, setClosePanelFn as crudSetClosePanel,
-  setGetPanelNodeIdFn,
+  setPanelNodeIdFn,
 } from './features/canvas/crud.js';
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
@@ -43,19 +43,32 @@ import {
 // ── AI ────────────────────────────────────────────────────────────────────────
 import { renderAiSettingsCard, saveAiSettings, onAiProviderChange, fetchDynamicModels, updateAiModelBadge } from './features/ai/providers.js';
 import { setPersona, renderQuickPrompts, injectPrompt, getCurrentPersona } from './features/ai/personas.js';
-import { sendChat, renderChat, clearChat, extractAndSaveMemories, renderMemoryList, deleteMemory } from './features/ai/chat.js';
+import {
+  sendChat, renderChat, clearChat, extractAndSaveMemories, deleteMemory,
+  toggleMemPanel, switchMemTab, renderMemPanel, addManualMemory,
+  generateDailyBriefing, showTodayReminders,
+} from './features/ai/chat.js';
 
 // ── Daily ─────────────────────────────────────────────────────────────────────
 import { renderDailyPage, saveDailyReport, saveMonthlyTarget, renderMonthlyTargetInput } from './features/daily/index.js';
 
 // ── Docs ──────────────────────────────────────────────────────────────────────
-import { renderDocsPage, openDocModal, closeDocModal, saveDoc, deleteDoc, setDocsSearch } from './features/docs/index.js';
+import {
+  renderDocsPage, openDocModal, closeDocModal, saveDoc, deleteDoc, setDocsSearch,
+  docsOnDragOver, docsOnDragLeave, docsOnDrop,
+  modalFileOver, modalFileLeave, modalFileDrop, modalFileChange, onDocTypeChange,
+} from './features/docs/index.js';
 
 // ── Students ──────────────────────────────────────────────────────────────────
 import { renderStudentsPage, openStudentModal, closeStudentModal, saveStudent, deleteStudent, logStudentContact, setStudentsSearch } from './features/students/index.js';
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-import { initTheme, onThemeChange, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp } from './features/settings/index.js';
+import {
+  initTheme, onThemeChange, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
+  openSkModal, closeSkModal, resetShortcuts, saveShortcut, setCmdMode, resetCmdPolicy, renderCmdList,
+  resetGoogleClientId, startSheetsOAuth, resetSheetsAuth, saveSheetsId,
+  saveObsidianPath, openObsidianVault, renderObsidianPath, OB_BACKUP,
+} from './features/settings/index.js';
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
 import {
@@ -99,7 +112,10 @@ export function navigate(page) {
     case 'sales':    renderSalesPage(); break;
     case 'students': renderStudentsPage(); break;
     case 'ai':       renderChat(); renderQuickPrompts(getCurrentPersona()); updateAiModelBadge(); break;
-    case 'settings': renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp(); break;
+    case 'settings':
+      renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
+      renderObsidianPath(); renderCmdList();
+      break;
   }
 }
 
@@ -122,7 +138,7 @@ function loadData() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function registerWindowBridge() {
-  // Canvas
+  // ── 內部 __crm* 橋接（render.js / panel/index.js 模板用）────────────────
   window.__crmSelectNode      = id => selectNode(id);
   window.__crmOpenPanel       = id => openPanel(id);
   window.__crmClosePanel      = () => closePanel();
@@ -134,27 +150,25 @@ function registerWindowBridge() {
   window.__crmSetNoteColor    = (id, c) => setNoteColor(id, c);
   window.__crmSetNoteFontSize = (id, s) => setNoteFontSize(id, s);
   window.__crmSaveNoteContent = id => saveNoteContent(id);
+  window.__crmRenderNodes     = () => renderNodes();
+  window.__crmDrawEdges       = () => drawEdges();
 
-  // Events
   window.__crmOpenEventModal  = (id, date) => openEventModal(id, date);
   window.__crmCloseEventModal = () => closeEventModal();
   window.__crmSaveEvent       = () => saveEvent();
   window.__crmDeleteEvent     = id => deleteEvent(id);
 
-  // Docs
   window.__crmOpenDocModal    = id => openDocModal(id);
   window.__crmCloseDocModal   = () => closeDocModal();
   window.__crmSaveDoc         = () => saveDoc();
   window.__crmDeleteDoc       = id => deleteDoc(id);
 
-  // Students
   window.__crmOpenStudentModal  = id => openStudentModal(id);
   window.__crmCloseStudentModal = () => closeStudentModal();
   window.__crmSaveStudent       = () => saveStudent();
   window.__crmDeleteStudent     = id => deleteStudent(id);
   window.__crmLogStudentContact = id => logStudentContact(id);
 
-  // Panel
   window.__crmSavePanel         = () => savePanel();
   window.__crmMarkContacted     = () => markContactedToday();
   window.__crmToggleNeed        = el => toggleNeed(el);
@@ -162,19 +176,139 @@ function registerWindowBridge() {
   window.__crmToggleAcc         = h => toggleAcc(h);
   window.__crmCopyCSheet        = () => copyCSheet();
 
-  // AI
   window.__crmInjectPrompt      = idx => injectPrompt(idx);
   window.__crmExtractMemories   = c => extractAndSaveMemories(c);
   window.__crmDeleteMemory      = id => deleteMemory(id);
 
-  // Navigation
-  window.__crmNavigate          = page => navigate(page);
+  window.__crmOpenSaleModal     = id => openSaleModal(id);
+  window.__crmDeleteSale        = id => deleteSale(id);
 
-  // Full refresh (used by import/clear)
-  window.__crmFullRefresh = () => {
-    loadData();
-    navigate(_currentPage);
+  window.__crmNavigate          = page => navigate(page);
+  window.__crmFullRefresh       = () => { loadData(); navigate(_currentPage); };
+
+  // ── A 類：HTML inline onclick 直接呼叫的全域名稱 ────────────────────────
+  // Navigation
+  window.switchPage             = page => navigate(page);
+
+  // Canvas
+  window.fitView                = () => fitView();
+  window.zoomBy                 = v  => zoomBy(v);
+  window.forceLayout            = () => forceLayout(renderNodes, fitView);
+  window.headerAddNode          = () => headerAddNode(CMD);
+  window.headerAddNote          = () => headerAddNote(CMD);
+  window.setCrmView             = v  => setCrmView(v);
+  window.toggleCrmSortDir       = () => toggleCrmSortDir();
+
+  // Events
+  window.calPrev                = () => calPrev();
+  window.calNext                = () => calNext();
+  window.calGoToday             = () => calGoToday();
+  window.openEventModal         = (id, date) => openEventModal(id, date);
+  window.closeEventModal        = () => closeEventModal();
+  window.saveEvent              = () => saveEvent();
+  window.deleteEvent            = id => deleteEvent(id);
+  window.calTodayStr            = () => new Date().toISOString().slice(0, 10);
+
+  // Sales
+  window.salesPrevMonth         = () => salesPrevMonth();
+  window.salesNextMonth         = () => salesNextMonth();
+  window.salesGoToday           = () => salesGoToday();
+  window.openSaleModal          = id => openSaleModal(id);
+  window.closeSaleModal         = () => closeSaleModal();
+  window.saveSale               = () => saveSale();
+  window.onSaleTypeChange       = () => onSaleTypeChange();
+  window.onSaleProductChange    = () => onSaleProductChange();
+  window.onSaleAmountFocus      = () => onSaleAmountFocus();
+  window.onSaleAmountBlur       = () => onSaleAmountBlur();
+  window.onSaleAmountInput      = () => onSaleAmountInput();
+
+  // Daily
+  window.dailyPrev              = () => dailyPrev();
+  window.dailyNext              = () => dailyNext();
+  window.dailyToday             = () => dailyToday();
+  window.saveDailyReport        = () => saveDailyReport();
+  window.renderDailyPage        = () => renderDailyPage();
+
+  // Docs
+  window.openDocModal           = () => openDocModal(null);
+  window.closeDocModal          = () => closeDocModal();
+  window.saveDoc                = () => saveDoc();
+
+  // Students
+  window.addStudentModal        = () => openStudentModal(null);
+  window.closeStudentDrawer     = () => closeStudentModal();
+  window.studentSearch          = q  => setStudentsSearch(q);
+
+  // Panel
+  window.closePanel             = () => closePanel();
+  window.savePanel              = () => savePanel();
+
+  // AI
+  window.sendChat               = () => sendChat();
+  window.clearChat              = () => clearChat();
+  window.setPersona             = (k, el) => setPersona(k, el);
+  window.onAiProviderChange     = () => onAiProviderChange();
+  window.saveAiSettings         = () => saveAiSettings();
+  window.fetchDynamicModels     = () => fetchDynamicModels();
+
+  // Settings
+  window.exportAll              = () => exportData();
+  window.importAll              = () => document.getElementById('import-file-input')?.click();
+  window.clearAllData           = () => clearAllData();
+  window.startGoogleOAuth       = () => startGcalOAuth();
+  window.fetchGcalEvents        = () => fetchGcalEvents();
+  window.disconnectGcal         = () => disconnectGcal();
+  window.renderSettingsPage     = () => {
+    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
   };
+  window.doLogout = () => {
+    if (!confirm('確定要登出？')) return;
+    localStorage.removeItem('crm-login');
+    window.location.replace('./login.html');
+  };
+
+  // Settings — shortcuts / cmd / gcal / sheets / obsidian
+  window.openSkModal            = () => openSkModal();
+  window.closeSkModal           = () => closeSkModal();
+  window.resetShortcuts         = () => resetShortcuts();
+  window.__crmSaveShortcut      = (a, k) => saveShortcut(a, k);
+  window.setCmdMode             = v  => setCmdMode(v);
+  window.resetCmdPolicy         = () => resetCmdPolicy();
+  window.__crmToggleCmd         = (k, on) => {
+    const disabled = new Set(JSON.parse(localStorage.getItem('crm-disabled-commands') || '[]'));
+    on ? disabled.delete(k) : disabled.add(k);
+    localStorage.setItem('crm-disabled-commands', JSON.stringify([...disabled]));
+    renderCmdList();
+  };
+  window.resetGoogleClientId    = () => resetGoogleClientId();
+  window.startSheetsOAuth       = () => startSheetsOAuth();
+  window.resetSheetsAuth        = () => resetSheetsAuth();
+  window.saveSheetsId           = () => saveSheetsId();
+  window.saveObsidianPath       = () => saveObsidianPath();
+  window.openObsidianVault      = () => openObsidianVault();
+  window.OB_BACKUP              = OB_BACKUP;
+
+  // AI memory panel
+  window.toggleMemPanel         = () => toggleMemPanel();
+  window.switchMemTab           = (t, el) => switchMemTab(t, el);
+  window.renderMemPanel         = () => renderMemPanel();
+  window.addManualMemory        = () => addManualMemory();
+  window.generateDailyBriefing  = () => generateDailyBriefing();
+  window.showTodayReminders     = () => showTodayReminders();
+
+  // Chat input (HTML inline handlers, logic already in initChatInput via addEventListener)
+  window.chatKeydown    = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
+  window.autoResizeChat = el => { if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; } };
+
+  // Docs drag-drop
+  window.docsOnDragOver         = e => docsOnDragOver(e);
+  window.docsOnDragLeave        = e => docsOnDragLeave(e);
+  window.docsOnDrop             = e => docsOnDrop(e);
+  window.modalFileOver          = e => modalFileOver(e);
+  window.modalFileLeave         = e => modalFileLeave(e);
+  window.modalFileDrop          = e => modalFileDrop(e);
+  window.modalFileChange        = el => modalFileChange(el);
+  window.onDocTypeChange        = () => onDocTypeChange();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,7 +385,7 @@ function wireDependencies() {
   // canvas/crud needs panel fns
   crudSetOpenPanel(openPanel);
   crudSetClosePanel(closePanel);
-  setGetPanelNodeIdFn(getPanelNodeId);
+  setPanelNodeIdFn(getPanelNodeId);
 
   // panel needs renderNodes for after-save refresh
   panelSetRenderNodes(renderNodes);

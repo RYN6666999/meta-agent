@@ -268,6 +268,89 @@ export async function renderMemoryList(subjectFilter = '') {
 export async function deleteMemory(id) {
   if (!id) return;
   const ok = await memoryService.delete(id);
-  if (ok) { toast('已刪除記憶'); renderMemoryList(); }
+  if (ok) { toast('已刪除記憶'); renderMemPanel(); }
   else    toast('刪除失敗');
+}
+
+// ── Memory panel (HTML-facing) ────────────────────────────────────────────────
+
+let _memPanelOpen = false;
+let _memType      = '';
+
+export function toggleMemPanel() {
+  _memPanelOpen = !_memPanelOpen;
+  const panel = document.getElementById('mem-panel');
+  const btn   = document.getElementById('mem-toggle-btn');
+  if (panel) panel.style.display = _memPanelOpen ? '' : 'none';
+  if (btn)   btn.classList.toggle('active', _memPanelOpen);
+  if (_memPanelOpen) renderMemPanel();
+}
+
+export function switchMemTab(type, el) {
+  _memType = type;
+  document.querySelectorAll('.mem-tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderMemPanel();
+}
+
+export async function renderMemPanel() {
+  const box = document.getElementById('mem-list');
+  if (!box) return;
+  box.innerHTML = '<div class="mem-empty">載入中…</div>';
+  const q = document.getElementById('mem-search')?.value.trim() || '';
+  const params = {};
+  if (_memType) params.type = _memType;
+  if (q)        params.subject = q;
+  const memories = await memoryService.list(params);
+  if (!memories.length) {
+    box.innerHTML = '<div class="mem-empty">尚無記憶</div>';
+    return;
+  }
+  box.innerHTML = memories.map(m => `
+    <div class="mem-item">
+      <div class="mem-item-header">
+        <span class="mem-subject">${m.subject || '—'}</span>
+        <span class="mem-type-badge">${m.type || ''}</span>
+        <button class="mem-del" onclick="window.__crmDeleteMemory?.('${m.id}')">✕</button>
+      </div>
+      <div class="mem-content">${m.content || ''}</div>
+    </div>`).join('');
+}
+
+export async function addManualMemory() {
+  const inp = document.getElementById('mem-add-input');
+  const txt = inp?.value.trim();
+  if (!txt) return;
+  const ok = await memoryService.create({ subject: '手動', type: 'fact', content: txt });
+  if (ok) { toast('已新增記憶'); if (inp) inp.value = ''; renderMemPanel(); }
+  else toast('新增失敗');
+}
+
+// ── Daily briefing ────────────────────────────────────────────────────────────
+
+export async function generateDailyBriefing() {
+  const inp = document.getElementById('chat-input');
+  if (inp) {
+    inp.value = '幫我生成今日工作簡報：列出今天需要跟進的人脈、近期活動、以及業績進度摘要。';
+    inp.dispatchEvent(new Event('input'));
+  }
+  await sendChat();
+}
+
+// ── Today reminders ───────────────────────────────────────────────────────────
+
+export function showTodayReminders() {
+  // Dynamic import to avoid circular dep with state
+  import('../../core/state.js').then(({ getNodes, getStudentsData }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const nodes = getNodes().filter(n => n.parentId && n.info?.nextFollowUp === today);
+    const students = getStudentsData().filter(s => s.nextFollowUp === today);
+    const count = nodes.length + students.length;
+    if (!count) { toast('今日沒有待跟進聯繫人'); return; }
+    const names = [
+      ...nodes.map(n => n.name),
+      ...students.map(s => s.name),
+    ].slice(0, 10).join('、');
+    alert(`📅 今日待跟進（${count} 人）：\n${names}`);
+  });
 }
