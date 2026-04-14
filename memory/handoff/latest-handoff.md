@@ -1,20 +1,20 @@
 ---
-date: 2026-04-13
-session: meta-agent — Session 31
+date: 2026-04-14
+session: meta-agent — Session 32
 status: 建設中
-generated: 2026-04-13 16:07
+generated: 2026-04-14 00:01
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-13 16:07 自動生成）
+## 系統狀態（2026-04-14 00:01 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(10401) | truth-xval(idle) | mobile-watchdog(9504) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：161
 
 ---
@@ -30,12 +30,12 @@ generated: 2026-04-13 16:07
 ---
 
 ## 最近 Git 提交
-- `59cf102 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `691847b auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `7ab813a auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `0ffb299 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `e7f624b auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `63f196d auto: [error_fix+misc] score=220 超過閾值 50 自動備份`
+- `d528af5 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `2d13030 auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
+- `0172098 fix(crm/daily): 日報表內容消失 — renderDailyPage 未渲染表單 HTML`
+- `80e9425 fix(crm): navigate() 無法切換頁面 — 選器與 CSS 策略錯誤`
+- `4ab46a0 auto: [error_fix+misc] score=95 超過閾值 50 自動備份`
+- `8fe015c auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
 
 ## 最近 Error Log
 - 2026-04-13-mobile-bridge-tunnel-down.md
