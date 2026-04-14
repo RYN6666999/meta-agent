@@ -1,20 +1,20 @@
 ---
 date: 2026-04-14
-session: meta-agent — Session 32
+session: meta-agent — Session 33
 status: 建設中
-generated: 2026-04-14 00:01
+generated: 2026-04-14 23:57
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-14 00:01 自動生成）
+## 系統狀態（2026-04-14 23:57 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(10401) | truth-xval(idle) | mobile-watchdog(9504) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(70475) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：161
 
 ---
@@ -30,25 +30,25 @@ generated: 2026-04-14 00:01
 ---
 
 ## 最近 Git 提交
-- `d528af5 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `2d13030 auto: [error_fix+misc] score=60 超過閾值 50 自動備份`
-- `0172098 fix(crm/daily): 日報表內容消失 — renderDailyPage 未渲染表單 HTML`
-- `80e9425 fix(crm): navigate() 無法切換頁面 — 選器與 CSS 策略錯誤`
-- `4ab46a0 auto: [error_fix+misc] score=95 超過閾值 50 自動備份`
-- `8fe015c auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `6951fe8 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `bc6a82b auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `463ac92 auto: [error_fix+misc] score=90 超過閾值 50 自動備份`
+- `eefcd27 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `dc887ef auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `857c6bc auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
 
 ## 最近 Error Log
+- 2026-04-14-mobile-bridge-tunnel-down.md
+- 2026-04-14-mobile-bridge-api-down.md
+- 2026-04-14-health-check.md
 - 2026-04-13-mobile-bridge-tunnel-down.md
 - 2026-04-13-mobile-bridge-api-down.md
-- 2026-04-13-health-check.md
-- 2026-04-12-mobile-bridge-tunnel-down.md
-- 2026-04-12-mobile-bridge-api-down.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
 
 ## 最近 Code Intelligence
-- 2026-04-13 08:02:00 | trigger=health_check_failure | unavailable | provider unavailable
+- 2026-04-14 08:01:01 | trigger=health_check_failure | unavailable | provider unavailable
 
 ---
 
