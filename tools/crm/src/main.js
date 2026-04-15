@@ -50,7 +50,13 @@ import {
 } from './features/ai/chat.js';
 
 // ── Daily ─────────────────────────────────────────────────────────────────────
-import { renderDailyPage, saveDailyReport, saveMonthlyTarget, renderMonthlyTargetInput } from './features/daily/index.js';
+import {
+  renderDailyPage, saveDailyReport, saveMonthlyTarget, renderMonthlyTargetInput,
+  dailyToday, dailyPrev, dailyNext,
+  updateScheduleSlot, updateBigThree, updateDailyConn, addDailyConn, removeDailyConn,
+  updateReflect, saveDailyActInline, loadYestTomorrow,
+  saveMonthSalesTarget, saveMonthlyGoalInputs, updateMonthlyProgressBars, renderMonthlyProgress,
+} from './features/daily/index.js';
 
 // ── Docs ──────────────────────────────────────────────────────────────────────
 import {
@@ -73,7 +79,7 @@ import {
 // ── Sales ─────────────────────────────────────────────────────────────────────
 import {
   renderSalesPage, salesPrevMonth, salesNextMonth, salesGoToday,
-  openSaleModal, closeSaleModal, saveSale, deleteSale,
+  openSaleModal, openSaleEditModal, closeSaleModal, saveSale, deleteSale,
   onSaleTypeChange, onSaleProductChange, onSaleAmountFocus, onSaleAmountBlur, onSaleAmountInput,
 } from './features/sales/index.js';
 
@@ -136,6 +142,7 @@ function loadData() {
   dispatch({ type: 'EVENTS_SET',                payload: STORE.loadEvents() });
   dispatch({ type: 'SALES_SET',                 payload: STORE.loadSales() });
   dispatch({ type: 'DAILY_REPORTS_SET',         payload: STORE.loadDailyReports() });
+  dispatch({ type: 'MONTHLY_GOALS_SET',         payload: STORE.loadMonthlyGoals() });
   dispatch({ type: 'MONTHLY_SALES_TARGETS_SET', payload: STORE.loadMonthlySalesTargets() });
   dispatch({ type: 'DOCS_SET',                  payload: STORE.loadDocs() });
   dispatch({ type: 'STUDENTS_SET',              payload: STORE.loadStudents() });
@@ -190,6 +197,7 @@ function registerWindowBridge() {
 
   window.__crmOpenSaleModal     = id => openSaleModal(id);
   window.__crmDeleteSale        = id => deleteSale(id);
+  window.openSaleEditModal      = id => openSaleEditModal(id);
 
   window.__crmNavigate          = page => navigate(page);
   window.__crmFullRefresh       = () => { loadData(); navigate(_currentPage); };
@@ -236,6 +244,16 @@ function registerWindowBridge() {
   window.dailyToday             = () => dailyToday();
   window.saveDailyReport        = () => saveDailyReport();
   window.renderDailyPage        = () => renderDailyPage();
+  window.updateScheduleSlot     = (i, f, v) => updateScheduleSlot(i, f, v);
+  window.updateBigThree         = (i, f, v) => updateBigThree(i, f, v);
+  window.updateDailyConn        = (i, f, v) => updateDailyConn(i, f, v);
+  window.addDailyConn           = () => addDailyConn();
+  window.removeDailyConn        = i => removeDailyConn(i);
+  window.updateReflect          = (t, i, v) => updateReflect(t, i, v);
+  window.saveDailyActInline     = el => saveDailyActInline(el);
+  window.loadYestTomorrow       = () => loadYestTomorrow();
+  window.saveMonthSalesTarget   = () => saveMonthSalesTarget();
+  window.saveMonthlyGoalInputs  = () => saveMonthlyGoalInputs();
 
   // Docs
   window.openDocModal           = () => openDocModal(null);
