@@ -3725,3 +3725,15 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-04-16 00:58 | auto-git-score | 分數 120 | 📥 達到閾值（120/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=70），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-04-16-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-04-16-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+
+---
