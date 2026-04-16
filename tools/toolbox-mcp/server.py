@@ -34,26 +34,26 @@ def _run(cmd: str, timeout_sec: int = 30) -> dict[str, Any]:
     }
 
 
-@mcp.tool
+@mcp.tool()
 def list_tools() -> dict[str, Any]:
     return {'tools': sorted(list(TOOL_REGISTRY.keys()))}
 
 
-@mcp.tool
+@mcp.tool()
 def check_tool(name: str) -> dict[str, Any]:
     if name not in TOOL_REGISTRY:
         return {'ok': False, 'error': f'unknown tool: {name}'}
     return _run(TOOL_REGISTRY[name]['command'])
 
 
-@mcp.tool
+@mcp.tool()
 def run_tool(name: str) -> dict[str, Any]:
     if name not in TOOL_REGISTRY:
         return {'ok': False, 'error': f'unknown tool: {name}'}
     return _run(TOOL_REGISTRY[name]['command'])
 
 
-@mcp.tool
+@mcp.tool()
 def record_result(name: str, payload: str) -> dict[str, Any]:
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
