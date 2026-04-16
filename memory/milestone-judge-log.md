@@ -3914,3 +3914,36 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-04-16 23:26 | auto-git-score | 分數 70 | 📥 達到閾值（70/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=75），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-04-16-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-04-16-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/toolbox-mcp/server.py +10
+
+---
+
+## 2026-04-17 00:20 | crm-esmodule-refactor | 分數 100 | 📥 達到閾值（100/60）→ 已送決策匣，待人類核准
+
+**描述：** crm.js 5062行拆分為 src/ ES Module 樹，navigate()修復，日報/業績完整移植
+
+**評分明細：**
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 error-log/2026-04-17-crm-esmodule-refactor.md +10
+  其他變更 error-log/2026-04-17-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-04-17-mobile-bridge-tunnel-down.md +10
+  其他變更 truth-source/2026-04-17-crm-esmodule-refactor.md +10
+
+---
