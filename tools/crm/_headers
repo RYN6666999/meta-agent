@@ -1,0 +1,9 @@
+# Cloudflare Pages — HTTP Header Rules
+
+# sw.js 永遠不快取，確保每次開啟都能偵測到新版本
+/sw.js
+  Cache-Control: no-store, no-cache, must-revalidate
+
+# manifest.json 也不快取（避免 PWA 名稱/icon 殘留舊版）
+/manifest.json
+  Cache-Control: no-cache
