@@ -12,6 +12,7 @@
  */
 
 import { STORE } from './store.js';
+import { cloudPush } from './cloud-sync.js';
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
@@ -112,29 +113,33 @@ export function dispatch(action) {
     case 'NODES_SET':
       _state.nodes = action.payload;
       STORE.saveNodes(_state.nodes);
+      if (action.type !== 'NODES_LOAD') cloudPush('nodes', _state.nodes);
       break;
     case 'NODE_ADD':
       _state.nodes.push(action.payload);
       STORE.saveNodes(_state.nodes);
+      cloudPush('nodes', _state.nodes);
       break;
     case 'NODE_UPDATE': {
       const idx = _state.nodes.findIndex(n => n.id === action.payload.id);
       if (idx !== -1) {
         _state.nodes[idx] = { ..._state.nodes[idx], ...action.payload.patch, updatedAt: Date.now() };
         STORE.saveNodes(_state.nodes);
+        cloudPush('nodes', _state.nodes);
       }
       break;
     }
     case 'NODE_DELETE':
       _state.nodes = _state.nodes.filter(n => n.id !== action.payload);
       STORE.saveNodes(_state.nodes);
+      cloudPush('nodes', _state.nodes);
       break;
 
     // ── Events ──
     case 'EVENTS_SET':   _state.events = action.payload; STORE.saveEvents(_state.events); break;
-    case 'EVENT_ADD':    _state.events.push(action.payload); STORE.saveEvents(_state.events); break;
-    case 'EVENT_UPDATE': _updateById(_state.events, action.payload); STORE.saveEvents(_state.events); break;
-    case 'EVENT_DELETE': _state.events = _state.events.filter(e => e.id !== action.payload); STORE.saveEvents(_state.events); break;
+    case 'EVENT_ADD':    _state.events.push(action.payload); STORE.saveEvents(_state.events); cloudPush('events', _state.events); break;
+    case 'EVENT_UPDATE': _updateById(_state.events, action.payload); STORE.saveEvents(_state.events); cloudPush('events', _state.events); break;
+    case 'EVENT_DELETE': _state.events = _state.events.filter(e => e.id !== action.payload); STORE.saveEvents(_state.events); cloudPush('events', _state.events); break;
 
     // ── Tasks ──
     case 'TASKS_SET':   _state.tasks = action.payload; STORE.saveTasks(_state.tasks); break;
@@ -155,9 +160,9 @@ export function dispatch(action) {
 
     // ── Sales ──
     case 'SALES_SET':   _state.salesData = action.payload; STORE.saveSales(_state.salesData); break;
-    case 'SALE_ADD':    _state.salesData.push(action.payload); STORE.saveSales(_state.salesData); break;
-    case 'SALE_UPDATE': _updateById(_state.salesData, action.payload); STORE.saveSales(_state.salesData); break;
-    case 'SALE_DELETE': _state.salesData = _state.salesData.filter(s => s.id !== action.payload); STORE.saveSales(_state.salesData); break;
+    case 'SALE_ADD':    _state.salesData.push(action.payload); STORE.saveSales(_state.salesData); cloudPush('sales', _state.salesData); break;
+    case 'SALE_UPDATE': _updateById(_state.salesData, action.payload); STORE.saveSales(_state.salesData); cloudPush('sales', _state.salesData); break;
+    case 'SALE_DELETE': _state.salesData = _state.salesData.filter(s => s.id !== action.payload); STORE.saveSales(_state.salesData); cloudPush('sales', _state.salesData); break;
 
     // ── Daily ──
     case 'DAILY_REPORTS_SET':
@@ -170,6 +175,7 @@ export function dispatch(action) {
         ...action.payload.patch,
       };
       STORE.saveDailyReports(_state.dailyReports);
+      cloudPush('dailyReports', _state.dailyReports);
       break;
 
     // ── Monthly goals / targets ──

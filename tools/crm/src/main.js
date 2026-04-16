@@ -92,6 +92,9 @@ import { dailyToday, dailyPrev, dailyNext } from './features/daily/index.js';
 // ── Google Calendar ───────────────────────────────────────────────────────────
 import { renderGcalCard, startGcalOAuth, disconnectGcal, fetchGcalEvents } from './integrations/gcal.js';
 
+// ── Cloud Sync ────────────────────────────────────────────────────────────────
+import { cloudLoadAll, cloudPush, setCloudToken, getCloudToken, testCloudConnection } from './core/cloud-sync.js';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,6 +149,31 @@ function loadData() {
   dispatch({ type: 'MONTHLY_SALES_TARGETS_SET', payload: STORE.loadMonthlySalesTargets() });
   dispatch({ type: 'DOCS_SET',                  payload: STORE.loadDocs() });
   dispatch({ type: 'STUDENTS_SET',              payload: STORE.loadStudents() });
+}
+
+/** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行） */
+async function syncFromCloud() {
+  const remote = await cloudLoadAll();
+  if (!remote || !Object.keys(remote).length) return;
+  const TYPE_MAP = {
+    nodes:               'NODES_LOAD',
+    events:              'EVENTS_SET',
+    sales:               'SALES_SET',
+    dailyReports:        'DAILY_REPORTS_SET',
+    monthlyGoals:        'MONTHLY_GOALS_SET',
+    monthlySalesTargets: 'MONTHLY_SALES_TARGETS_SET',
+    docs:                'DOCS_SET',
+    students:            'STUDENTS_SET',
+  };
+  for (const [key, type] of Object.entries(TYPE_MAP)) {
+    if (remote[key] != null) {
+      // 同時寫回 localStorage（讓下次離線載入也是最新）
+      STORE['save' + key.charAt(0).toUpperCase() + key.slice(1)]?.(remote[key]);
+      dispatch({ type, payload: remote[key] });
+    }
+  }
+  console.log('[Cloud] 同步完成，已更新:', Object.keys(remote).join(', '));
+  renderNodes(); drawEdges(); updateStats();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -429,7 +457,7 @@ function wireDependencies() {
 
 export async function init() {
   initTheme();
-  loadData();
+  loadData();           // 先從 localStorage 載（即時可用）
   wireDependencies();
   registerWindowBridge();
   initCanvas();
@@ -453,6 +481,15 @@ export async function init() {
       if (m) localStorage.setItem('crm-last-page', m[1]);
     });
   });
+
+  // 背景從 KV 拉最新（有 token 才跑，不阻塞啟動）
+  syncFromCloud().catch(() => {});
+
+  // 暴露 cloud-sync 給設定頁
+  window.__crmSetCloudToken     = setCloudToken;
+  window.__crmGetCloudToken     = getCloudToken;
+  window.__crmTestCloudConn     = testCloudConnection;
+  window.__crmCloudPush         = cloudPush;
 
   console.log('[CRM] init complete');
 }

@@ -490,6 +490,22 @@
       <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">僅支援 Chrome / Edge。授權後每次開啟頁面會自動申請續期。</div>
     </div>
 
+    <!-- Cloud Sync / MCP -->
+    <div class="settings-card">
+      <div class="settings-card-title">☁️ 雲端同步 &amp; MCP 接入</div>
+      <div class="settings-card-desc">設定 API Token 後，CRM 資料會自動同步到雲端，Hermes 等 AI Agent 可透過 MCP 讀寫資料。</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input class="field-input" id="cloud-token-input" type="password" placeholder="API Token（留空=停用同步）" style="flex:1;min-width:200px">
+        <button class="btn btn-accent" onclick="saveCloudToken()">儲存</button>
+        <button class="btn" onclick="testCloudConn()">測試連線</button>
+      </div>
+      <div id="cloud-sync-status" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
+      <div style="font-size:11px;color:var(--text-subtle);margin-top:6px">
+        MCP 端點：<code style="background:var(--bg-2);padding:2px 6px;border-radius:4px;user-select:all">https://fdd-crm.pages.dev/api/mcp</code>
+        &nbsp;·&nbsp; 首次使用請先呼叫 <code style="background:var(--bg-2);padding:2px 6px;border-radius:4px">crm_set_token</code> 工具初始化 Token
+      </div>
+    </div>
+
     <!-- Backup -->
     <div class="settings-card">
       <div class="settings-card-title">💾 備份與還原</div>
@@ -601,6 +617,28 @@
       }
     }catch(e){}
   })();
+
+  // Cloud sync token helpers
+  function saveCloudToken() {
+    var token = (document.getElementById('cloud-token-input') || {}).value || '';
+    window.__crmSetCloudToken && window.__crmSetCloudToken(token.trim());
+    var el = document.getElementById('cloud-sync-status');
+    if (el) el.textContent = token.trim() ? '✅ Token 已儲存' : '⚠️ 已清除 Token（同步停用）';
+  }
+  function testCloudConn() {
+    var el = document.getElementById('cloud-sync-status');
+    if (el) el.textContent = '⏳ 測試中…';
+    if (!window.__crmTestCloudConn) { if (el) el.textContent = '⚠️ 模組尚未載入'; return; }
+    window.__crmTestCloudConn().then(function(r) {
+      if (el) el.textContent = r.ok ? '✅ 連線成功' : '❌ ' + r.error;
+    });
+  }
+  // 載入時填入已存的 token（遮罩）
+  window.addEventListener('load', function() {
+    var t = window.__crmGetCloudToken && window.__crmGetCloudToken();
+    var inp = document.getElementById('cloud-token-input');
+    if (inp && t) inp.value = t;
+  });
 
   // PWA install prompt
   window._pwaInstallPrompt = null;
