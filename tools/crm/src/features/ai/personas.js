@@ -193,6 +193,25 @@ export const memoryService = {
   },
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Build a short finance summary string from a contact's info object.
+ * @param {object} info
+ * @returns {string}
+ */
+function buildFinanceSummary(info) {
+  if (!info) return '未填';
+  const parts = [];
+  if (info.income)      parts.push(`月收${info.income}`);
+  if (info.hasProperty) parts.push('有房');
+  if (info.hasInvestment) parts.push('有投資');
+  if (info.debt)        parts.push(`負債${info.debt}`);
+  return parts.length ? parts.join(',') : '未填';
+}
+
+const STATUS_EMOJI = { green: '🟢高意願', yellow: '🟡觀察中', red: '🔴冷淡' };
+
 // ── System prompt ─────────────────────────────────────────────────────────────
 
 export async function buildSystemPrompt(personaKey, memSnippet = '') {
@@ -229,6 +248,66 @@ export async function buildSystemPrompt(personaKey, memSnippet = '') {
   const upcoming    = events.filter(ev => ev.date >= today).slice(0, 5).map(ev => `${ev.date} ${ev.title || ev.name || ''}`);
   const rankLabels  = { director: '主任', asst_mgr: '襄理', manager: '經理', shop_partner: '店股東', shop_head: '店長' };
 
+  // ── Top 20 contacts detail block ──────────────────────────────────────────
+  const top20 = [...contactNodes]
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+    .slice(0, 20);
+
+  const contactsDetail = top20.map(n => {
+    const info = n.info || {};
+    const lastC = info.lastContact || '未填';
+    const daysDiff = info.lastContact
+      ? Math.floor((new Date(today) - new Date(info.lastContact)) / 86400000)
+      : null;
+    const daysStr = daysDiff !== null ? `（${daysDiff}天前）` : '';
+    const statusStr = STATUS_EMOJI[n.status] || n.status || '未知';
+    return `- ${n.name}｜${statusStr}｜電話:${info.phone || '未填'}｜最後聯繫:${lastC}${daysStr}｜備注:${info.notes || '無'}｜財務:${buildFinanceSummary(info)}`;
+  }).join('\n');
+
+  // ── This month's sales ────────────────────────────────────────────────────
+  const monthSales = salesData
+    .filter(s => (s.date || '').startsWith(monthPrefix))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  const salesLines = monthSales.map(s =>
+    `- ${s.date || '?'} ${s.name || s.clientName || '?'} ${s.product || s.type || ''} $${(s.amount || 0).toLocaleString()}`
+  ).join('\n');
+
+  // ── Today's daily report ──────────────────────────────────────────────────
+  let dailyRptBlock = '';
+  if (Object.keys(todayRpt).length > 0) {
+    const bigThreeStr = Array.isArray(todayRpt.bigThree)
+      ? todayRpt.bigThree.map((t, i) => `${i + 1}.${t}`).join(' ')
+      : (todayRpt.bigThree || '');
+    const lines = [];
+    if (bigThreeStr)        lines.push(`三件大事: ${bigThreeStr}`);
+    if (todayRpt.schedule)  lines.push(`時間安排: ${todayRpt.schedule}`);
+    const kpiStr = `邀約${todayRpt['act-invite'] ?? todayRpt.invite ?? 0} 電訪${todayRpt['act-calls'] ?? todayRpt.calls ?? 0} 表單${todayRpt['act-forms'] ?? todayRpt.forms ?? 0}`;
+    lines.push(`今日實績: ${kpiStr}`);
+    if (todayRpt.optimize)  lines.push(`復盤: ${todayRpt.optimize}`);
+    if (todayRpt.tomorrow)  lines.push(`明天計劃: ${todayRpt.tomorrow}`);
+    dailyRptBlock = `\n【今日日報】\n${lines.join('\n')}`;
+  }
+
+  // ── Students summary ──────────────────────────────────────────────────────
+  const studentsData = nodes.filter(n => n.type === 'student' || n.isStudent);
+  let studentsBlock = '';
+  if (studentsData.length > 0) {
+    const recentStudents = [...studentsData]
+      .sort((a, b) => {
+        const da = a.info?.lastContact || '';
+        const db = b.info?.lastContact || '';
+        return db.localeCompare(da);
+      })
+      .slice(0, 5)
+      .map(s => {
+        const lc = s.info?.lastContact;
+        const days = lc ? Math.floor((new Date(today) - new Date(lc)) / 86400000) : null;
+        return `${s.name}(${days !== null ? days + '天前' : '未聯繫'})`;
+      });
+    studentsBlock = `\n【學員】共${studentsData.length}人｜最近聯繫: ${recentStudents.join(', ')}`;
+  }
+
   return `${persona.rolePrompt}
 ${memSnippet ? '\n' + memSnippet + '\n' : ''}
 【使用者】${login.name || '業務員'}｜${rankLabels[myRank] || myRank}｜佣金率 ${(myRate * 100).toFixed(0)}%
@@ -236,15 +315,22 @@ ${memSnippet ? '\n' + memSnippet + '\n' : ''}
 【本月業績】$${summary.income.toLocaleString()} / 目標 $${salesTarget.toLocaleString()}（${salesPct}%）稅後 $${summary.net.toLocaleString()}，成交 ${summary.newCount} 件
 【人脈概況】共 ${contactNodes.length} 人｜🟢高意願 ${green.length}（${green.map(n => n.name).join('、') || '無'}）｜🟡觀察中 ${yellow.length}｜🔴冷淡 ${red.length}
 ⚠ 超過7天未聯繫：${stale.join('、') || '無'}
-【今日活動量】邀約${todayRpt.invite || 0} 電訪${todayRpt.calls || 0} 表單${todayRpt.forms || 0} 追蹤${todayRpt.followup || 0} 成交${todayRpt.close || 0}
+【今日活動量】邀約${todayRpt['act-invite'] ?? todayRpt.invite ?? 0} 電訪${todayRpt['act-calls'] ?? todayRpt.calls ?? 0} 表單${todayRpt['act-forms'] ?? todayRpt.forms ?? 0} 追蹤${todayRpt['act-followup'] ?? todayRpt.followup ?? 0} 成交${todayRpt['act-close'] ?? todayRpt.close ?? 0}
 【近期活動】${upcoming.length ? upcoming.join('；') : '無'}
+
+【聯絡人詳情】
+${contactsDetail || '（無聯絡人）'}
+
+【本月成交】
+${salesLines || '（本月尚無成交記錄）'}
+${dailyRptBlock}${studentsBlock}
 
 【知識庫文件】${docsData.length ? docsData.map(d => {
   const icon = { poster: '🖼', form: '📋', link: '🔗', file: '📄' }[d.type] || '📄';
   return `${icon}《${d.name}》${d.url ? '→ ' + d.url : ''}`;
 }).join('　') : '尚無文件'}
 
-【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs / calculate_mortgage / read_calendar_events
+【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs / calculate_mortgage / read_calendar_events / get_contact_detail / list_contacts / add_event / update_daily_kpi / add_sale / patch_daily_report
 
 【海報生成】當用戶要求製作活動海報，請提取時間與地點，直接回覆以下格式：
 👉 [點此預覽並下載海報](https://fdd-crm.pages.dev/poster.html?time=TIME&loc=LOCATION)

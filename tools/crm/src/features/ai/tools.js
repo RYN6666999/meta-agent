@@ -96,6 +96,82 @@ export const CRM_TOOLS = [
       },
     },
   },
+  {
+    name: 'get_contact_detail',
+    description: '取得聯絡人完整資料（財務、背景、所有 info 欄位）',
+    input_schema: {
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'list_contacts',
+    description: '列出所有聯絡人，可按狀態篩選',
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', description: 'green/yellow/red/all' },
+        limit:  { type: 'number' },
+      },
+    },
+  },
+  {
+    name: 'add_event',
+    description: '新增行事曆事件',
+    input_schema: {
+      type: 'object',
+      required: ['title', 'date'],
+      properties: {
+        title: { type: 'string' },
+        date:  { type: 'string', description: 'YYYY-MM-DD' },
+        time:  { type: 'string' },
+        notes: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'update_daily_kpi',
+    description: '更新今日活動量實績（邀約/電訪/表單/追蹤/成交）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        invite:  { type: 'number' },
+        calls:   { type: 'number' },
+        forms:   { type: 'number' },
+        followup:{ type: 'number' },
+        close:   { type: 'number' },
+      },
+    },
+  },
+  {
+    name: 'add_sale',
+    description: '記錄新成交',
+    input_schema: {
+      type: 'object',
+      required: ['name', 'product'],
+      properties: {
+        name:    { type: 'string', description: '客戶姓名' },
+        product: { type: 'string', description: '產品' },
+        amount:  { type: 'number' },
+        date:    { type: 'string', description: 'YYYY-MM-DD' },
+        notes:   { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'patch_daily_report',
+    description: '修改今日日報表任意欄位（三件大事、復盤、明天計劃等）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        bigThree:  { type: 'array', items: { type: 'string' } },
+        optimize:  { type: 'string' },
+        tomorrow:  { type: 'string' },
+        gratitude: { type: 'string' },
+      },
+    },
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -215,6 +291,80 @@ export async function executeToolCall(name, input = {}) {
         .sort((a, b) => a.date.localeCompare(b.date))
         .map(ev => ({ date: ev.date, time: ev.time || '', type: ev.type || '', location: ev.location || '', notes: ev.notes || '' }));
       return { ok: true, count: events.length, events };
+    }
+
+    case 'get_contact_detail': {
+      const n = fuzzyFind(input.name || '');
+      if (!n) return { ok: false, error: `找不到聯絡人：${input.name}` };
+      return { ok: true, contact: n };
+    }
+
+    case 'list_contacts': {
+      const statusFilter = input.status || 'all';
+      const limitN       = Number(input.limit) || 100;
+      let list = getNodes().filter(n => n.parentId !== null && n.name && n.name !== '新聯繫人');
+      if (statusFilter !== 'all') list = list.filter(n => n.status === statusFilter);
+      list = list.slice(0, limitN).map(n => ({
+        id:          n.id,
+        name:        n.name,
+        status:      n.status,
+        phone:       n.info?.phone || '',
+        lastContact: n.info?.lastContact || '',
+        notes:       (n.info?.notes || '').slice(0, 80),
+      }));
+      return { ok: true, count: list.length, list };
+    }
+
+    case 'add_event': {
+      const today = new Date().toISOString().slice(0, 10);
+      const event = {
+        id:        uid(),
+        title:     input.title,
+        date:      input.date,
+        time:      input.time  || '',
+        notes:     input.notes || '',
+        createdAt: Date.now(),
+      };
+      dispatch({ type: 'EVENT_ADD', payload: event });
+      return { ok: true, message: `已新增活動「${event.title}」於 ${event.date}`, event };
+    }
+
+    case 'update_daily_kpi': {
+      const today = new Date().toISOString().slice(0, 10);
+      const patch = {};
+      if (input.invite   != null) patch['act-invite']  = Number(input.invite);
+      if (input.calls    != null) patch['act-calls']   = Number(input.calls);
+      if (input.forms    != null) patch['act-forms']   = Number(input.forms);
+      if (input.followup != null) patch['act-followup']= Number(input.followup);
+      if (input.close    != null) patch['act-close']   = Number(input.close);
+      dispatch({ type: 'DAILY_REPORT_PATCH', payload: { date: today, patch } });
+      return { ok: true, message: '已更新今日活動量', patch };
+    }
+
+    case 'add_sale': {
+      const today = new Date().toISOString().slice(0, 10);
+      const sale = {
+        id:        uid(),
+        name:      input.name,
+        product:   input.product,
+        amount:    Number(input.amount) || 0,
+        date:      input.date || today,
+        notes:     input.notes || '',
+        createdAt: Date.now(),
+      };
+      dispatch({ type: 'SALE_ADD', payload: sale });
+      return { ok: true, message: `已記錄 ${sale.name} 的成交 $${sale.amount.toLocaleString()}`, sale };
+    }
+
+    case 'patch_daily_report': {
+      const today = new Date().toISOString().slice(0, 10);
+      const patch = {};
+      if (input.bigThree  != null) patch.bigThree  = input.bigThree;
+      if (input.optimize  != null) patch.optimize  = input.optimize;
+      if (input.tomorrow  != null) patch.tomorrow  = input.tomorrow;
+      if (input.gratitude != null) patch.gratitude = input.gratitude;
+      dispatch({ type: 'DAILY_REPORT_PATCH', payload: { date: today, patch } });
+      return { ok: true, message: '已更新今日日報', patch };
     }
 
     default:
