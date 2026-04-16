@@ -578,8 +578,33 @@
       var isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
       if('serviceWorker' in navigator && !isLocal && location.protocol==='https:'){
         navigator.serviceWorker.register('./sw.js')
-          .then(function(r){console.log('[SW] 已註冊', r.scope)})
+          .then(function(r){
+            console.log('[SW] 已註冊', r.scope);
+            // 偵測新版 SW 進入 waiting 狀態
+            r.addEventListener('updatefound', function(){
+              var newSW = r.installing;
+              newSW && newSW.addEventListener('statechange', function(){
+                if(newSW.state === 'installed' && navigator.serviceWorker.controller){
+                  console.log('[SW] 新版本已就緒，等待接管');
+                }
+              });
+            });
+          })
           .catch(function(e){console.warn('[SW] 註冊失敗', e)});
+
+        // SW 接管後自動 reload（skipWaiting 已在 sw.js 設定）
+        var _reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function(){
+          if(_reloading) return;
+          _reloading = true;
+          console.log('[SW] 新版本已接管，自動更新頁面');
+          // 顯示 toast 再 reload
+          var t = document.createElement('div');
+          t.textContent = '✅ 偵測到新版本，正在更新…';
+          t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+          document.body && document.body.appendChild(t);
+          setTimeout(function(){ window.location.reload(); }, 1200);
+        });
       }
     }catch(e){}
   })();
