@@ -580,15 +580,8 @@
         navigator.serviceWorker.register('./sw.js')
           .then(function(r){
             console.log('[SW] 已註冊', r.scope);
-            // 偵測新版 SW 進入 waiting 狀態
-            r.addEventListener('updatefound', function(){
-              var newSW = r.installing;
-              newSW && newSW.addEventListener('statechange', function(){
-                if(newSW.state === 'installed' && navigator.serviceWorker.controller){
-                  console.log('[SW] 新版本已就緒，等待接管');
-                }
-              });
-            });
+            // 每次開啟立即主動檢查有無新版本（繞過 24h 快取節流）
+            r.update().catch(function(){});
           })
           .catch(function(e){console.warn('[SW] 註冊失敗', e)});
 
