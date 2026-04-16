@@ -3947,3 +3947,33 @@
   其他變更 truth-source/2026-04-17-crm-esmodule-refactor.md +10
 
 ---
+
+## 2026-04-17 00:21 | auto-git-score | 分數 280 | 📥 達到閾值（280/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=165），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-04-16-mobile-bridge-api-down.md +10
+  error-log 新增根因 error-log/2026-04-17-crm-esmodule-refactor.md +50
+  error-log 新增根因 error-log/2026-04-17-mobile-bridge-api-down.md +50
+  error-log 新增根因 error-log/2026-04-17-mobile-bridge-tunnel-down.md +50
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  truth-source 新增驗證決策 truth-source/2026-04-17-crm-esmodule-refactor.md +60
+
+---
+
+## 2026-04-17 00:21 | crm-esmodule-refactor | 分數 30 | ⏳ 未達閾值（30/60）→ 不建分支
+
+**描述：** tools/crm/src/ 全新模組樹：40個新檔, 6157行新增, crm.js→ES Module, navigate修復, 日報/業績完整移植, PR#2已開 @ 2026-04-17 00:21:34
+
+**評分明細：**
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+
+---
