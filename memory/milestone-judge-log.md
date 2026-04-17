@@ -4017,3 +4017,20 @@
   其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/da883dc491ed7f54bac091bb13f7e2436887f78c9bfd0a83f69090da90e47410.sqlite-wal +10
 
 ---
+
+## 2026-04-17 17:38 | auto-git-score | 分數 90 | 📥 達到閾值（90/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=105），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-04-17-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-04-17-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/36bda5fd0ff4910b2a06334f3b1896da71986208f5f4e23a05a0782cffd69c78.sqlite-shm +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/36bda5fd0ff4910b2a06334f3b1896da71986208f5f4e23a05a0782cffd69c78.sqlite-wal +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/65664bb01adb2125d0e7ee6d0f58c84c3aae0f88ba3efbc3e415ac8734d3c005.sqlite-shm +10
+
+---
