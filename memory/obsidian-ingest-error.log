@@ -2378,3 +2378,23 @@ Traceback (most recent call last):
     return f.read()
            ~~~~~~^^
 OSError: [Errno 11] Resource deadlock avoided
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/obsidian-ingest.py", line 223, in <module>
+    main()
+    ~~~~^^
+  File "/Users/ryan/meta-agent/scripts/obsidian-ingest.py", line 164, in main
+    text = md_file.read_text(encoding="utf-8", errors="ignore")
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py", line 788, in read_text
+    return f.read()
+           ~~~~~~^^
+OSError: [Errno 11] Resource deadlock avoided
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/obsidian-ingest.py", line 223, in <module>
+    main()
+    ~~~~^^
+  File "/Users/ryan/meta-agent/scripts/obsidian-ingest.py", line 164, in main
+    text = md_file.read_text(encoding="utf-8", errors="ignore")
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py", line 788, in read_text
+    return f.read()
+           ~~~~~~^^
+OSError: [Errno 11] Resource deadlock avoided
