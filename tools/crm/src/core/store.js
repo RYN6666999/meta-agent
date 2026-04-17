@@ -25,6 +25,63 @@ export function saveJSON(key, val) {
 
 // ── Typed save helpers（供 state.js / features 呼叫）────────────────────────
 
+// ── Snapshot ring buffer（防資料遺失，保留最近 5 份）───────────────────────
+const SNAP_SIZE = 5;
+const _SNAP_KEY_MAP = () => ({
+  nodes:               K.nodes,
+  events:              K.events,
+  sales:               K.sales,
+  dailyReports:        K.dailyReports,
+  monthlyGoals:        K.monthlyGoals,
+  monthlySalesTargets: K.monthlySalesTargets,
+  docs:                K.docs,
+  students:            K.students,
+});
+
+/** 將目前 localStorage 全量快照寫入環形緩衝 */
+export function autoSnapshot() {
+  try {
+    const ptr = (parseInt(localStorage.getItem('crm-snap-ptr') || '0')) % SNAP_SIZE;
+    const snap = { ts: Date.now(), data: {} };
+    for (const [name, lsKey] of Object.entries(_SNAP_KEY_MAP())) {
+      const raw = localStorage.getItem(lsKey);
+      if (raw && raw !== 'null' && raw !== '[]' && raw !== '{}') snap.data[name] = raw;
+    }
+    if (!snap.data.nodes) return; // 沒有節點資料不值得快照
+    localStorage.setItem('crm-snap-' + ptr, JSON.stringify(snap));
+    localStorage.setItem('crm-snap-ptr', String((ptr + 1) % SNAP_SIZE));
+  } catch (e) {
+    console.warn('[Snapshot]', e);
+  }
+}
+
+/** 列出所有快照（由新到舊） */
+export function listSnapshots() {
+  const snaps = [];
+  for (let i = 0; i < SNAP_SIZE; i++) {
+    const raw = localStorage.getItem('crm-snap-' + i);
+    if (!raw) continue;
+    try {
+      const s = JSON.parse(raw);
+      let nodeCount = 0;
+      try { nodeCount = JSON.parse(s.data?.nodes || '[]')?.length ?? 0; } catch {}
+      snaps.push({ idx: i, ts: s.ts, label: new Date(s.ts).toLocaleString('zh-TW'), nodeCount });
+    } catch {}
+  }
+  return snaps.sort((a, b) => b.ts - a.ts);
+}
+
+/** 還原指定快照到 localStorage（還原後需 reload） */
+export function restoreSnapshot(idx) {
+  const raw = localStorage.getItem('crm-snap-' + idx);
+  if (!raw) return false;
+  const snap = JSON.parse(raw);
+  for (const [name, lsKey] of Object.entries(_SNAP_KEY_MAP())) {
+    if (snap.data?.[name]) localStorage.setItem(lsKey, snap.data[name]);
+  }
+  return true;
+}
+
 export const STORE = {
   K,
 

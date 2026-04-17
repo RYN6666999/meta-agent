@@ -11,8 +11,15 @@
  * FORBIDDEN: no DOM
  */
 
-import { STORE } from './store.js';
+import { STORE, autoSnapshot } from './store.js';
 import { cloudPush } from './cloud-sync.js';
+
+// 每 10 次寫入觸發一次快照
+let _writeCount = 0;
+function _maybeSnapshot() {
+  _writeCount++;
+  if (_writeCount % 10 === 0) autoSnapshot();
+}
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
@@ -114,11 +121,13 @@ export function dispatch(action) {
       _state.nodes = action.payload;
       STORE.saveNodes(_state.nodes);
       if (action.type !== 'NODES_LOAD') cloudPush('nodes', _state.nodes);
+      _maybeSnapshot();
       break;
     case 'NODE_ADD':
       _state.nodes.push(action.payload);
       STORE.saveNodes(_state.nodes);
       cloudPush('nodes', _state.nodes);
+      _maybeSnapshot();
       break;
     case 'NODE_UPDATE': {
       const idx = _state.nodes.findIndex(n => n.id === action.payload.id);
@@ -126,6 +135,7 @@ export function dispatch(action) {
         _state.nodes[idx] = { ..._state.nodes[idx], ...action.payload.patch, updatedAt: Date.now() };
         STORE.saveNodes(_state.nodes);
         cloudPush('nodes', _state.nodes);
+        _maybeSnapshot();
       }
       break;
     }
@@ -133,6 +143,7 @@ export function dispatch(action) {
       _state.nodes = _state.nodes.filter(n => n.id !== action.payload);
       STORE.saveNodes(_state.nodes);
       cloudPush('nodes', _state.nodes);
+      _maybeSnapshot();
       break;
 
     // ── Events ──

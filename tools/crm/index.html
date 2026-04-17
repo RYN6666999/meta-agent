@@ -518,6 +518,27 @@
       </div>
       <div style="font-size:11px;color:var(--text-subtle);margin-top:8px">完整備份：人脈節點、業績記錄、日報表、月份目標、活動、任務。匯入前系統會再次確認。</div>
     </div>
+
+    <!-- Auto Snapshots -->
+    <div class="settings-card">
+      <div class="settings-card-title">🔄 自動快照還原</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">系統每 10 次操作、每 5 分鐘、頁面關閉前自動快照，保留最近 5 份。</div>
+      <button class="btn" onclick="refreshSnapshots()" style="margin-bottom:10px">🔍 查看快照清單</button>
+      <button class="btn btn-accent" onclick="(function(){window.__crmAutoSnapshot&&window.__crmAutoSnapshot();refreshSnapshots();})()" style="margin-bottom:10px;margin-left:6px">📸 立即快照</button>
+      <div id="snapshot-list" style="display:none">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="color:var(--text-muted)">
+              <th style="text-align:left;padding:4px 8px">時間</th>
+              <th style="text-align:center;padding:4px 8px">節點數</th>
+              <th style="text-align:center;padding:4px 8px">還原</th>
+            </tr>
+          </thead>
+          <tbody id="snapshot-tbody"></tbody>
+        </table>
+        <div id="snapshot-empty" style="display:none;font-size:12px;color:var(--text-muted);padding:8px">尚無快照</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -617,6 +638,43 @@
       }
     }catch(e){}
   })();
+
+  // Snapshot helpers
+  function refreshSnapshots() {
+    var list = document.getElementById('snapshot-list');
+    var tbody = document.getElementById('snapshot-tbody');
+    var empty = document.getElementById('snapshot-empty');
+    if (!list || !tbody) return;
+    list.style.display = 'block';
+    if (!window.__crmListSnapshots) { tbody.innerHTML = ''; if(empty) { empty.style.display='block'; empty.textContent='模組尚未載入，請稍後再試'; } return; }
+    var snaps = window.__crmListSnapshots();
+    tbody.innerHTML = '';
+    if (!snaps.length) {
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    snaps.forEach(function(s) {
+      var tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border)';
+      tr.innerHTML =
+        '<td style="padding:6px 8px">' + s.label + '</td>' +
+        '<td style="text-align:center;padding:6px 8px">' + s.nodeCount + '</td>' +
+        '<td style="text-align:center;padding:6px 8px">' +
+          '<button class="btn" style="font-size:11px;padding:2px 10px" onclick="doRestoreSnap(' + s.idx + ')">還原</button>' +
+        '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+  function doRestoreSnap(idx) {
+    if (!confirm('確定還原此快照？目前資料將被覆蓋，頁面會自動重新載入。')) return;
+    if (window.__crmRestoreSnapshot && window.__crmRestoreSnapshot(idx)) {
+      alert('✅ 還原完成，即將重新載入');
+      location.reload();
+    } else {
+      alert('❌ 還原失敗，快照不存在');
+    }
+  }
 
   // Cloud sync token helpers
   function saveCloudToken() {

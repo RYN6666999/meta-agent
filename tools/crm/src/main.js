@@ -94,6 +94,7 @@ import { renderGcalCard, startGcalOAuth, disconnectGcal, fetchGcalEvents } from 
 
 // ── Cloud Sync ────────────────────────────────────────────────────────────────
 import { cloudLoadAll, cloudPush, setCloudToken, getCloudToken, testCloudConnection } from './core/cloud-sync.js';
+import { autoSnapshot, listSnapshots, restoreSnapshot } from './core/store.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation
@@ -485,11 +486,25 @@ export async function init() {
   // 背景從 KV 拉最新（有 token 才跑，不阻塞啟動）
   syncFromCloud().catch(() => {});
 
+  // 頁面關閉前強制快照（確保最後狀態被捕捉）
+  window.addEventListener('beforeunload', () => { autoSnapshot(); });
+
+  // 每 5 分鐘定時快照
+  setInterval(() => { autoSnapshot(); }, 5 * 60 * 1000);
+
+  // 啟動時立即快照一次（捕捉啟動狀態）
+  setTimeout(() => { autoSnapshot(); }, 2000);
+
   // 暴露 cloud-sync 給設定頁
   window.__crmSetCloudToken     = setCloudToken;
   window.__crmGetCloudToken     = getCloudToken;
   window.__crmTestCloudConn     = testCloudConnection;
   window.__crmCloudPush         = cloudPush;
+
+  // 暴露快照工具給設定頁
+  window.__crmListSnapshots     = listSnapshots;
+  window.__crmRestoreSnapshot   = restoreSnapshot;
+  window.__crmAutoSnapshot      = autoSnapshot;
 
   console.log('[CRM] init complete');
 }
