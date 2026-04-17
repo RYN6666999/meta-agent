@@ -94,3 +94,13 @@
 - root_cause: cloudflared tunnel process not running
 - solution: restart cloudflared via watchdog
 - context: pattern=cloudflared tunnel run --token mode=named
+
+## 2026-04-17 19:40:22
+- root_cause: cloudflared tunnel process not running
+- solution: restart cloudflared via watchdog
+- context: pattern=cloudflared tunnel run --token mode=named
+
+## 2026-04-17 20:11:00
+- root_cause: cloudflared tunnel process not running
+- solution: restart cloudflared via watchdog
+- context: pattern=cloudflared tunnel run --token mode=named
