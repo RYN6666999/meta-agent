@@ -3989,3 +3989,31 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-04-17 13:18 | auto-git-score | 分數 240 | 📥 達到閾值（240/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=240），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-04-17-health-check.md +50
+  其他變更 error-log/2026-04-17-mobile-bridge-api-down.md +10
+  其他變更 error-log/2026-04-17-mobile-bridge-tunnel-down.md +10
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/dedup-log.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/health-check.log +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/persona-tech-radar-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/truth-xval.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/65664bb01adb2125d0e7ee6d0f58c84c3aae0f88ba3efbc3e415ac8734d3c005.sqlite +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/65664bb01adb2125d0e7ee6d0f58c84c3aae0f88ba3efbc3e415ac8734d3c005.sqlite-shm +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/65664bb01adb2125d0e7ee6d0f58c84c3aae0f88ba3efbc3e415ac8734d3c005.sqlite-wal +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/da883dc491ed7f54bac091bb13f7e2436887f78c9bfd0a83f69090da90e47410.sqlite +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/da883dc491ed7f54bac091bb13f7e2436887f78c9bfd0a83f69090da90e47410.sqlite-shm +10
+  其他變更 tools/crm/.wrangler/state/v3/kv/miniflare-KVNamespaceObject/da883dc491ed7f54bac091bb13f7e2436887f78c9bfd0a83f69090da90e47410.sqlite-wal +10
+
+---
