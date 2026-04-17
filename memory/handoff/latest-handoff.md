@@ -1,20 +1,20 @@
 ---
 date: 2026-04-17
-session: meta-agent — Session 36
+session: meta-agent — Session 37
 status: 建設中
-generated: 2026-04-17 12:40
+generated: 2026-04-17 23:50
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-17 12:40 自動生成）
+## 系統狀態（2026-04-17 23:50 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(40632) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
 **Turn 計數**：163
 
 ---
@@ -30,12 +30,12 @@ generated: 2026-04-17 12:40
 ---
 
 ## 最近 Git 提交
-- `a423f22 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
-- `cef521b docs(crm): Hermes 對齊提示詞 — 資料模型/API/行為規則/工作流程`
-- `4ed1cb4 feat(crm/ai): 知識庫強化 + 完整工具集 + 外部 Agent 橋接`
-- `0afd09b feat(crm): MCP server + 雲端同步 — Hermes 可操作 CRM`
-- `aad2429 auto: [error_fix+misc] score=80 超過閾值 50 自動備份`
-- `9224010 fix(crm/pwa): 每次開啟強制檢查新版本 — 解決 SW 24h 快取問題`
+- `a190e8e auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `da3c47f auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `ee9131f auto: [error_fix+misc] score=90 超過閾值 50 自動備份`
+- `2cfc8d4 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `4278eee auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `2cab250 auto: [error_fix+misc] score=105 超過閾值 50 自動備份`
 
 ## 最近 Error Log
 - 2026-04-17-mobile-bridge-tunnel-down.md
