@@ -1,21 +1,21 @@
 ---
-date: 2026-04-16
-session: meta-agent — Session 35
+date: 2026-04-17
+session: meta-agent — Session 36
 status: 建設中
-generated: 2026-04-16 23:50
+generated: 2026-04-17 12:40
 ---
 
 # 最新交接文件
 
-## 系統狀態（2026-04-16 23:50 自動生成）
+## 系統狀態（2026-04-17 12:40 自動生成）
 
 | 服務 | 狀態 |
 |------|------|
 | LightRAG | ❌ |
 | n8n | ❌ |
 
-**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(17970) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
-**Turn 計數**：162
+**launchd**：tiered-summary(idle) | persona-tech-radar(idle) | swap-monitor(idle) | dedup-lightrag(idle) | generate-handoff(idle) | truth-xval(idle) | mobile-watchdog(idle) | reactivate-webhooks(idle) | health-check(idle) | git-score(idle) | mobile-bridge(idle) | memory-decay(idle) | obsidian-ingest(idle)
+**Turn 計數**：163
 
 ---
 
@@ -30,25 +30,25 @@ generated: 2026-04-16 23:50
 ---
 
 ## 最近 Git 提交
-- `6a3d41b auto: [error_fix+misc] score=75 超過閾值 50 自動備份`
-- `08de2be auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `06be947 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `cc4c20c auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `d1cf843 auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
-- `af6da8b auto: [error_fix+misc] score=70 超過閾值 50 自動備份`
+- `a423f22 auto: [error_fix+misc] score=50 超過閾值 50 自動備份`
+- `cef521b docs(crm): Hermes 對齊提示詞 — 資料模型/API/行為規則/工作流程`
+- `4ed1cb4 feat(crm/ai): 知識庫強化 + 完整工具集 + 外部 Agent 橋接`
+- `0afd09b feat(crm): MCP server + 雲端同步 — Hermes 可操作 CRM`
+- `aad2429 auto: [error_fix+misc] score=80 超過閾值 50 自動備份`
+- `9224010 fix(crm/pwa): 每次開啟強制檢查新版本 — 解決 SW 24h 快取問題`
 
 ## 最近 Error Log
-- 2026-04-16-mobile-bridge-api-down.md
+- 2026-04-17-mobile-bridge-tunnel-down.md
+- 2026-04-17-mobile-bridge-api-down.md
+- 2026-04-17-health-check.md
+- 2026-04-17-crm-esmodule-refactor.md
 - 2026-04-16-mobile-bridge-tunnel-down.md
-- 2026-04-16-health-check.md
-- 2026-04-15-mobile-bridge-tunnel-down.md
-- 2026-04-15-mobile-bridge-api-down.md
 
 ## 最近驗證
 - E2E memory-extract：✅ 2026-03-18 14:58:08: local-memory-extract
 
 ## 最近 Code Intelligence
-- 2026-04-16 08:02:02 | trigger=health_check_failure | unavailable | provider unavailable
+- 2026-04-17 08:02:04 | trigger=health_check_failure | unavailable | provider unavailable
 
 ---
 
