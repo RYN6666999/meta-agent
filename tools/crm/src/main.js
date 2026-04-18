@@ -149,10 +149,26 @@ function loadData() {
   dispatch({ type: 'STUDENTS_SET',              payload: STORE.loadStudents() });
 }
 
-/** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行） */
+/** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行）
+ *  安全策略：本地有資料時以本地為主（推送到 KV），避免舊 KV 蓋掉本地新資料。
+ *            本地無節點時才從 KV 拉（跨裝置首次安裝場景）。
+ */
 async function syncFromCloud() {
   const remote = await cloudLoadAll();
   if (!remote || !Object.keys(remote).length) return;
+
+  // 判斷本地是否已有節點資料
+  const localNodes = STORE.loadNodes() || [];
+  const remoteNodes = remote.nodes || [];
+
+  if (localNodes.length > 0) {
+    // 本地有資料 → 本地為主，把本地資料推回 KV（確保 KV 是最新的）
+    console.log('[Cloud] 本地有資料，以本地為主，推送至 KV');
+    cloudPush('nodes', localNodes);
+    return;
+  }
+
+  // 本地無資料 → 從 KV 拉（跨裝置 / 清除後還原場景）
   const TYPE_MAP = {
     nodes:               'NODES_LOAD',
     events:              'EVENTS_SET',
@@ -165,12 +181,11 @@ async function syncFromCloud() {
   };
   for (const [key, type] of Object.entries(TYPE_MAP)) {
     if (remote[key] != null) {
-      // 同時寫回 localStorage（讓下次離線載入也是最新）
       STORE['save' + key.charAt(0).toUpperCase() + key.slice(1)]?.(remote[key]);
       dispatch({ type, payload: remote[key] });
     }
   }
-  console.log('[Cloud] 同步完成，已更新:', Object.keys(remote).join(', '));
+  console.log('[Cloud] 本地無資料，從 KV 還原:', Object.keys(remote).join(', '));
   renderNodes(); drawEdges(); updateStats();
 }
 
