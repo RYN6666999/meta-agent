@@ -86,9 +86,6 @@ import {
 // ── Canvas Views ──────────────────────────────────────────────────────────────
 import { setCrmView, toggleCrmSortDir, renderListView } from './features/canvas/views.js';
 
-// ── Daily navigation ──────────────────────────────────────────────────────────
-import { dailyToday, dailyPrev, dailyNext } from './features/daily/index.js';
-
 // ── Google Calendar ───────────────────────────────────────────────────────────
 import { renderGcalCard, startGcalOAuth, disconnectGcal, fetchGcalEvents } from './integrations/gcal.js';
 
