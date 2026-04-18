@@ -197,5 +197,6 @@
 | 2026-04-18 | auto-git-score | git-score 自動 commit（score=70），含重要變更 [commit:HEAD~1..HEAD] | 60 | 其他變更 error-log/2026-04-18-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-04-18-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-04-18 | auto-git-score | git-score 自動 commit（score=160），含重要變更 [commit:HEAD~1..HEAD] | 170 | error-log 新增根因 error-log/2026-04-18-health-check.md +50; 其他變更 error-log/2026-04-18-mobile-bridge-api-down.md +10 | pending |
 | 2026-04-18 | auto-git-score | git-score 自動 commit（score=75），含重要變更 [commit:HEAD~1..HEAD] | 70 | 其他變更 error-log/2026-04-18-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-04-18-mobile-bridge-tunnel-down.md +10 | pending |
+| 2026-04-18 | auto-git-score | git-score 自動 commit（score=100），含重要變更 [commit:HEAD~1..HEAD] | 80 | 其他變更 error-log/2026-04-18-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-04-18-mobile-bridge-tunnel-down.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 
