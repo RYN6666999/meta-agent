@@ -1,4 +1,60 @@
 ---
+date: 2026-04-20
+type: dedup_report
+mode: dry_run
+---
+
+# LightRAG 去重報告 2026-04-20 09:47:50
+
+**模式**：DRY RUN（只分析，未修改）
+**總實體數**：72
+**發現重複對**：0
+**同名重複群組**：6
+
+## 同名重複摘要
+
+- `Error Fix: cloudflared tunnel process not running` x29
+- `對話重點摘要` x21
+- `【Obsidian】大事件` x6
+- `Error Fix: telegram setWebhook failed` x3
+- `【Obsidian】4.6店股東會議` x3
+- `【Obsidian/工作/AI-work/hermes_memories】房多多的潛在客戶長什麼樣子` x3
+
+## 重複實體清單
+
+✅ 未發現重複實體
+
+---
+
+---
+date: 2026-04-20
+type: dedup_report
+mode: executed
+---
+
+# LightRAG 去重報告 2026-04-20 09:47:32
+
+**模式**：已執行合併
+**總實體數**：72
+**發現重複對**：0
+**同名重複群組**：6
+
+## 同名重複摘要
+
+- `Error Fix: cloudflared tunnel process not running` x29
+- `對話重點摘要` x21
+- `【Obsidian】大事件` x6
+- `Error Fix: telegram setWebhook failed` x3
+- `【Obsidian】4.6店股東會議` x3
+- `【Obsidian/工作/AI-work/hermes_memories】房多多的潛在客戶長什麼樣子` x3
+
+## 重複實體清單
+
+✅ 未發現重複實體
+
+---
+
+---
 date: 2026-04-19
 type: dedup_report
 mode: dry_run

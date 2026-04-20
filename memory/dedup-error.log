@@ -13,3 +13,4 @@ ModuleNotFoundError: No module named 'httpx'
 ⚠️  讀取 http://127.0.0.1:9631/graphs 失敗: [Errno 61] Connection refused
 ⚠️  讀取 http://127.0.0.1:9631/entities 失敗: [Errno 61] Connection refused
 ℹ️  使用 compat store 進行去重分析
+ℹ️  使用 compat store 進行去重分析
