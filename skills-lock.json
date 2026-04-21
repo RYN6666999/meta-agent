@@ -10,6 +10,12 @@
       "source": "hotcoffeeshake/tong-jincheng-skill",
       "sourceType": "github",
       "computedHash": "e820a240c1e2e9254bfd28d54d88a1f4cbb2bb3ab0eb299b91a9932b6d12683d"
+    },
+    "huang-zhizhong-persuasion": {
+      "source": "local",
+      "sourceType": "local",
+      "description": "黃執中式說服顧問 skill，整合九格光譜診斷與28個說服工具",
+      "installedAt": "2026-04-21"
     }
   }
 }
