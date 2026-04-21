@@ -65,7 +65,7 @@ export function openStudentModal(id) {
   const s = id ? students.find(x => x.id === id) : null;
 
   const tagCheckboxes = STUDENT_FIXED_TAGS.map(t =>
-    `<label class="tag-checkbox"><input type="checkbox" value="${t}"${(s?.tags || []).includes(t) ? ' checked' : ''}> ${t}</label>`
+    `<label class="tag-checkbox"><input type="checkbox" value="${t.id}"${(s?.tags || []).includes(t.id) ? ' checked' : ''}> ${escHtml(t.label)}</label>`
   ).join('');
 
   const contactRows = (s?.contacts || []).slice(-5).reverse().map(c => `
@@ -76,8 +76,10 @@ export function openStudentModal(id) {
       <td>${escHtml(c.note  || '')}</td>
     </tr>`).join('');
 
-  document.getElementById('student-modal-title').textContent = s ? `${s.name} — 學員資料` : '新增學員';
-  document.getElementById('student-modal-body').innerHTML = `
+  const titleEl = document.querySelector('.student-drawer-title');
+  if (titleEl) titleEl.textContent = s ? `${s.name} — 學員資料` : '新增學員';
+
+  document.getElementById('student-drawer-body').innerHTML = `
     <div class="field-row">
       <div class="field-group"><div class="field-label">姓名</div><input class="field-input" id="st-name" value="${escHtml(s?.name || '')}" placeholder="姓名"></div>
       <div class="field-group"><div class="field-label">電話</div><input class="field-input" id="st-phone" value="${escHtml(s?.phone || '')}" placeholder="手機號碼"></div>
@@ -110,20 +112,26 @@ export function openStudentModal(id) {
       <tbody>${contactRows}</tbody>
     </table>` : ''}
     ` : ''}
-    ${s ? `<div style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="window.__crmDeleteStudent?.('${s.id}');window.__crmCloseStudentModal?.()">🗑 刪除學員</button></div>` : ''}`;
+    ${s ? `<div style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="window.__crmDeleteStudent?.('${s.id}');window.__crmCloseStudentModal?.()">🗑 刪除學員</button></div>` : ''}
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn" onclick="window.__crmCloseStudentModal?.()">取消</button>
+      <button class="btn btn-accent" onclick="window.__crmSaveStudent?.()">儲存</button>
+    </div>`;
 
-  document.getElementById('student-modal')?.classList.add('open');
+  document.getElementById('student-drawer')?.classList.add('open');
+  document.getElementById('student-drawer-overlay')?.classList.add('show');
 }
 
 export function closeStudentModal() {
-  document.getElementById('student-modal')?.classList.remove('open');
+  document.getElementById('student-drawer')?.classList.remove('open');
+  document.getElementById('student-drawer-overlay')?.classList.remove('show');
   _editingStudentId = null;
 }
 
 export function saveStudent() {
   const name = document.getElementById('st-name')?.value.trim();
   if (!name) { toast('請輸入姓名'); return; }
-  const checkedTags = [...document.querySelectorAll('#student-modal-body .tag-checkbox input:checked')].map(el => el.value);
+  const checkedTags = [...document.querySelectorAll('#student-drawer-body .tag-checkbox input:checked')].map(el => el.value);
   const existing = _editingStudentId ? getStudentsData().find(s => s.id === _editingStudentId) : null;
 
   const s = {
