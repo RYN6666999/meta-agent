@@ -102,6 +102,7 @@ function loadData(){
   try{tasks=JSON.parse(localStorage.getItem(STORE.K.tasks)||'[]');}catch(e){tasks=[];}
   try{chatHistory=JSON.parse(localStorage.getItem(STORE.K.chat)||'[]');}catch(e){chatHistory=[];}
   try{studentsData=JSON.parse(localStorage.getItem(STORE.K.students)||'[]');}catch(e){studentsData=[];}
+  studentsData=studentsData.map(normalizeStudent);
 }
 
 function saveData(){ pushUndo(); STORE.saveNodes(); }
@@ -1868,7 +1869,13 @@ function renderAiSettingsCard(){
     }
   }
   const ki=document.getElementById('ai-apikey-input');
-  if(ki){ki.value=s.apiKey;ki.placeholder=p.keyPlaceholder||'API Key…';}
+  if(ki){
+    ki.value=s.apiKey;ki.placeholder=p.keyPlaceholder||'API Key…';
+    if(s.apiKey&&!ki.getAttribute('data-masked')){
+      ki.style.webkitTextSecurity='disc';ki.setAttribute('data-masked','1');
+      const tb=document.getElementById('ai-apikey-toggle');if(tb)tb.textContent='👁';
+    }
+  }
   const st=document.getElementById('ai-settings-status');
   if(st)st.textContent=s.apiKey?'✅ API Key 已設定':'⚠ 尚未設定 API Key';
   updateAiModelBadge();
@@ -4684,6 +4691,18 @@ const STUDENT_FIXED_TAGS=[
 const CONTACT_METHODS=['電話','Line','面談','視訊'];
 const CONTACT_RESULTS=['未接聽','接通無進展','有興趣','約定下次','里程碑推進','其他'];
 
+function normalizeStudent(s){
+  if(!s)return s;
+  if(!Array.isArray(s.tags))s.tags=[];
+  if(!Array.isArray(s.customTags))s.customTags=[];
+  if(!Array.isArray(s.contacts))s.contacts=[];
+  if(!s.suite||typeof s.suite!=='object')s.suite={financialPlan:false,onlineCourse:false,offlineCourse:false,handbook:false,coachGroup:false};
+  if(!s.milestones||typeof s.milestones!=='object')s.milestones={formFilled:false,paymentDone:false,finDataReady:false,internalTraining:false};
+  if(s.goals===undefined)s.goals='';
+  if(s.notes===undefined)s.notes='';
+  return s;
+}
+
 function newStudent(){
   return{
     id:uid(),name:'',phone:'',source:'',sourceNodeId:null,
@@ -4710,8 +4729,8 @@ let _studentFilter={q:'',tags:[]};
 // ── Helpers ──
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function _slugResult(s){const m={'未接聽':'no-answer','接通無進展':'no-progress','有興趣':'interested','約定下次':'scheduled','里程碑推進':'milestone','其他':'other'};return m[s]||'other';}
-function _getNextFollowUp(s){const t=new Date().toISOString().slice(0,10);const f=s.contacts.filter(c=>c.nextDate&&c.nextDate>=t).map(c=>c.nextDate).sort();return f[0]||null;}
-function _getLastContact(s){if(!s.contacts.length)return null;return s.contacts.map(c=>c.date).sort().slice(-1)[0];}
+function _getNextFollowUp(s){const t=new Date().toISOString().slice(0,10);const f=(s.contacts||[]).filter(c=>c.nextDate&&c.nextDate>=t).map(c=>c.nextDate).sort();return f[0]||null;}
+function _getLastContact(s){const c=s.contacts||[];if(!c.length)return null;const d=c.map(x=>x.date).filter(Boolean).sort();return d[d.length-1]||null;}
 
 // ── Render page ──
 function renderStudentsPage(){
@@ -4925,11 +4944,16 @@ function _renderContactEntry(s,c,today){
 
 // ── CRUD ──
 function addStudentModal(){
-  const s=newStudent();
-  studentsData.unshift(s);
-  STORE.saveStudents();
-  renderStudentsPage();
-  openStudentDrawer(s.id);
+  try{
+    const s=newStudent();
+    studentsData.unshift(s);
+    STORE.saveStudents();
+    renderStudentsPage();
+    openStudentDrawer(s.id);
+  }catch(e){
+    toast('新增學員失敗：'+e.message);
+    console.error('addStudentModal error',e);
+  }
 }
 function deleteStudent(id){
   if(!confirm('確定要刪除此學員及所有記錄？'))return;
