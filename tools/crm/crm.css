@@ -1626,13 +1626,17 @@ body.admin-page{background:var(--bg);color:var(--text);font-family:'Inter',-appl
 }
 .student-drawer-overlay.show{display:block;}
 .student-drawer{
-  position:fixed;top:0;right:-600px;width:min(580px,100vw);height:100vh;
+  position:fixed;top:0;right:0;width:min(580px,100vw);height:100vh;
   background:var(--surface);border-left:1px solid var(--border);
   z-index:201;display:flex;flex-direction:column;
-  transition:right .25s cubic-bezier(.4,0,.2,1);
+  transform:translateX(100%);
+  -webkit-transform:translateX(100%);
+  transition:-webkit-transform .25s cubic-bezier(.4,0,.2,1);
+  transition:transform .25s cubic-bezier(.4,0,.2,1);
   box-shadow:-4px 0 24px rgba(0,0,0,.3);
+  -webkit-overflow-scrolling:touch;
 }
-.student-drawer.open{right:0;}
+.student-drawer.open{transform:translateX(0);-webkit-transform:translateX(0);}
 .student-drawer-header{
   display:flex;align-items:center;justify-content:space-between;
   padding:14px 18px;border-bottom:1px solid var(--border);
