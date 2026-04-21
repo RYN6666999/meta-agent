@@ -212,5 +212,6 @@
 | 2026-04-19 | auto-git-score | git-score 自動 commit（score=70），含重要變更 [commit:HEAD~1..HEAD] | 60 | 其他變更 error-log/2026-04-19-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-04-19-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-04-20 | auto-git-score | git-score 自動 commit（score=290），含重要變更 [commit:HEAD~1..HEAD] | 300 | 其他變更 error-log/2026-04-19-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-04-19-mobile-bridge-tunnel-down.md +10 | pending |
 | 2026-04-20 | auto-git-score | git-score 自動 commit（score=70），含重要變更 [commit:HEAD~1..HEAD] | 60 | 其他變更 error-log/2026-04-20-mobile-bridge-api-down.md +10; 其他變更 error-log/2026-04-20-mobile-bridge-tunnel-down.md +10 | pending |
+| 2026-04-21 | auto-git-score | git-score 自動 commit（score=255），含重要變更 [commit:HEAD~1..HEAD] | 380 | 其他變更 .agents/skills/tong-jincheng-perspective/LICENSE +10; 其他變更 .agents/skills/tong-jincheng-perspective/README.md +10 | pending |
 <!-- AI 偵測到重大決策時，自動在此插入列 -->
 
