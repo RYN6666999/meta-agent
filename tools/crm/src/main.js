@@ -64,6 +64,7 @@ import {
   sendChat, renderChat, clearChat, extractAndSaveMemories, deleteMemory,
   toggleMemPanel, switchMemTab, renderMemPanel, addManualMemory,
   generateDailyBriefing, showTodayReminders,
+  toggleAiDiag, runAiDiagnostic,
 } from './features/ai/chat.js';
 
 // ── Daily ─────────────────────────────────────────────────────────────────────
@@ -164,6 +165,7 @@ function loadData() {
   dispatch({ type: 'MONTHLY_SALES_TARGETS_SET', payload: STORE.loadMonthlySalesTargets() });
   dispatch({ type: 'DOCS_SET',                  payload: STORE.loadDocs() });
   dispatch({ type: 'STUDENTS_SET',              payload: STORE.loadStudents() });
+  dispatch({ type: 'CHAT_SET',                  payload: STORE.loadChat() });
 }
 
 /** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行）
@@ -380,6 +382,8 @@ function registerWindowBridge() {
   window.addManualMemory        = () => addManualMemory();
   window.generateDailyBriefing  = () => generateDailyBriefing();
   window.showTodayReminders     = () => showTodayReminders();
+  window.toggleAiDiag          = () => toggleAiDiag();
+  window.runAiDiagnostic        = () => runAiDiagnostic();
 
   // Chat input (HTML inline handlers, logic already in initChatInput via addEventListener)
   window.chatKeydown    = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
@@ -406,12 +410,15 @@ function initKeyboard() {
     const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
     const meta  = e.metaKey || e.ctrlKey;
 
+    if (inInput) {
+      // Allow all native shortcuts inside text fields; only intercept Enter for canvas-free pages
+      return;
+    }
+
     if (meta && e.key === 'z') { e.preventDefault(); undoLast(renderNodes, deselect); return; }
     if (meta && e.key === 'c') { e.preventDefault(); copySelected(); return; }
     if (meta && e.key === 'x') { e.preventDefault(); cutSelected();  return; }
     if (meta && e.key === 'v') { e.preventDefault(); pasteClipboard(); return; }
-
-    if (inInput) return;
 
     switch (e.key) {
       case 'Delete': case 'Backspace': {
@@ -454,7 +461,8 @@ function initChatInput() {
     inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
   });
   inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+    const isEnter = e.key === 'Enter' || e.keyCode === 13;
+    if (isEnter && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });
 }
 

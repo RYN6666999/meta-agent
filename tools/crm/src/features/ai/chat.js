@@ -32,7 +32,7 @@ function mdToHtml(text) {
 // ── Render chat history ───────────────────────────────────────────────────────
 
 export function renderChat() {
-  const box = document.getElementById('chat-messages');
+  const box = document.getElementById('chat-area');
   if (!box) return;
   const history = getChatHistory();
   if (!history.length) {
@@ -69,13 +69,18 @@ function roughTokens(text) { return Math.ceil((text || '').length / 3.5); }
 
 // ── Build API request body ────────────────────────────────────────────────────
 
-function buildRequestBody(provider, model, systemPrompt, messages) {
+function supportsStreaming(provider) {
+  return provider === 'openai' || provider === 'openrouter' || provider === 'grok' || provider === 'custom';
+}
+
+function buildRequestBody(provider, model, systemPrompt, messages, stream = false) {
   if (provider === 'openai' || provider === 'openrouter' || provider === 'custom' || provider === 'grok') {
     return {
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
       max_tokens: 2048,
       temperature: 0.7,
+      ...(stream ? { stream: true } : {}),
     };
   }
   if (provider === 'gemini') {
@@ -146,10 +151,10 @@ export async function sendChat() {
   renderChat();
 
   // Show loading
-  const box = document.getElementById('chat-messages');
+  const box = document.getElementById('chat-area');
   const loading = document.createElement('div');
   loading.className = 'chat-msg assistant loading';
-  loading.innerHTML = '<div class="chat-bubble assistant">⏳ 思考中…</div>';
+  loading.innerHTML = '<div class="chat-bubble assistant chat-thinking"><span></span><span></span><span></span></div>';
   box?.appendChild(loading);
   box && (box.scrollTop = box.scrollHeight);
 
@@ -165,30 +170,66 @@ export async function sendChat() {
     const history = getChatHistory().slice(-20);
     const messages = history.map(m => ({ role: m.role, content: m.content }));
 
-    const url     = getEndpoint(provider, model, customEndpoint);
-    const headers = getHeaders(provider, apiKey);
-    const body    = buildRequestBody(provider, model, systemPrompt, messages);
+    const url      = getEndpoint(provider, model, customEndpoint);
+    const headers  = getHeaders(provider, apiKey);
+    const useStream = supportsStreaming(provider);
+    const body     = buildRequestBody(provider, model, systemPrompt, messages, useStream);
 
-    const res  = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
     if (!res.ok) {
       const errText = await res.text().catch(() => res.statusText);
       throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`);
     }
-    const data = await res.json();
 
-    // Handle tool calls (Claude only)
-    const toolUses = extractToolUses(provider, data);
-    let assistantContent = extractContent(provider, data);
+    let assistantContent = '';
 
-    if (toolUses.length) {
-      const toolResults = [];
+    if (useStream && res.body) {
+      // ── Streaming path ──────────────────────────────────────────────────────
+      loading.remove();
+      // Create live bubble
+      const liveBubble = document.createElement('div');
+      liveBubble.className = 'chat-msg assistant';
+      liveBubble.innerHTML = '<div class="chat-bubble assistant" id="chat-stream-bubble"></div>';
+      box?.appendChild(liveBubble);
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      const bubbleEl = () => document.getElementById('chat-stream-bubble');
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop(); // keep incomplete line
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') break;
+          try {
+            const chunk = JSON.parse(raw);
+            const delta = chunk.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              assistantContent += delta;
+              const el = bubbleEl();
+              if (el) { el.innerHTML = mdToHtml(assistantContent); box && (box.scrollTop = box.scrollHeight); }
+            }
+          } catch { /* ignore malformed chunk */ }
+        }
+      }
+      liveBubble.id = '';
+      const el = bubbleEl();
+      if (el) el.removeAttribute('id');
+    } else {
+      // ── Non-streaming path (Claude / Gemini) ───────────────────────────────
+      const data     = await res.json();
+      const toolUses = extractToolUses(provider, data);
+      assistantContent = extractContent(provider, data);
       for (const tu of toolUses) {
         const result = await executeToolCall(tu.name, tu.input || {});
-        toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) });
         if (result.message) assistantContent += (assistantContent ? '\n\n' : '') + `✅ ${result.message}`;
       }
-      // If tool calls produced a follow-up response, we could do a second round-trip here.
-      // For now, append the tool action descriptions inline.
     }
 
     if (!assistantContent) assistantContent = '（無回應）';
@@ -335,6 +376,89 @@ export async function generateDailyBriefing() {
     inp.dispatchEvent(new Event('input'));
   }
   await sendChat();
+}
+
+// ── AI Diagnostic ─────────────────────────────────────────────────────────────
+
+export function toggleAiDiag() {
+  const panel = document.getElementById('ai-diag-panel');
+  if (!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : '';
+  if (!visible) _renderDiagConfig();
+}
+
+function _renderDiagConfig() {
+  const { provider, model, apiKey, endpoint } = getAiSettings();
+  const keyMask = apiKey
+    ? apiKey.slice(0, 8) + '…' + apiKey.slice(-4)
+    : '⚠ 未設定';
+  const ep = endpoint || (provider === 'openrouter' ? 'https://openrouter.ai/api/v1/chat/completions' : '（預設）');
+  document.getElementById('ai-diag-config').innerHTML = `
+    <div class="diag-row"><span class="diag-label">Provider</span><span class="diag-val">${provider}</span></div>
+    <div class="diag-row"><span class="diag-label">Model</span><span class="diag-val">${model || '⚠ 未選擇'}</span></div>
+    <div class="diag-row"><span class="diag-label">API Key</span><span class="diag-val">${keyMask}</span></div>
+    <div class="diag-row"><span class="diag-label">Endpoint</span><span class="diag-val diag-ep">${ep}</span></div>
+  `;
+  document.getElementById('ai-diag-log').innerHTML = '';
+}
+
+function _diagLog(html) {
+  const box = document.getElementById('ai-diag-log');
+  if (box) box.innerHTML += html + '\n';
+}
+
+export async function runAiDiagnostic() {
+  const btn = document.getElementById('ai-diag-run-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 測試中…'; }
+  const box = document.getElementById('ai-diag-log');
+  if (box) box.innerHTML = '';
+
+  const { provider, model, apiKey, endpoint: customEndpoint } = getAiSettings();
+
+  // Step 1: key
+  if (!apiKey && provider !== 'claude') {
+    _diagLog('❌ <b>API Key 未設定</b> — 請到設定填入 Key');
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 測試連線'; }
+    return;
+  }
+  _diagLog('✅ API Key 已填入');
+
+  // Step 2: model
+  if (!model) {
+    _diagLog('❌ <b>未選擇模型</b> — 請到設定選擇模型（OpenRouter 需先點「載入模型」）');
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 測試連線'; }
+    return;
+  }
+  _diagLog(`✅ 模型：${model}`);
+
+  // Step 3: send minimal request
+  const url     = getEndpoint(provider, model, customEndpoint);
+  const headers = getHeaders(provider, apiKey);
+  const body    = buildRequestBody(provider, model, '你是測試助理，只需回覆「OK」。', [{ role: 'user', content: 'hi' }]);
+  // override max_tokens for speed
+  if (body.max_tokens) body.max_tokens = 30;
+  if (body.generationConfig) body.generationConfig.maxOutputTokens = 30;
+
+  _diagLog(`⏳ 呼叫 <code>${url.replace('https://', '')}</code>…`);
+  const t0 = Date.now();
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      _diagLog(`❌ HTTP ${res.status} (${elapsed}s)<br><code>${errText.slice(0, 300)}</code>`);
+    } else {
+      const data = await res.json();
+      const reply = extractContent(provider, data) || '（空回應）';
+      _diagLog(`✅ <b>連線成功</b>（${elapsed}s）<br>回應：「${reply.slice(0, 80)}」`);
+    }
+  } catch (e) {
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    _diagLog(`❌ 網路錯誤（${elapsed}s）：${e.message}`);
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '🚀 測試連線'; }
 }
 
 // ── Today reminders ───────────────────────────────────────────────────────────

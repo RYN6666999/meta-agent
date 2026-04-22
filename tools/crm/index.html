@@ -133,7 +133,19 @@
       <button class="btn btn-sm" onclick="generateDailyBriefing()" title="生成今日 AI 簡報">🌅 今日簡報</button>
       <button class="btn btn-sm" id="mem-toggle-btn" onclick="toggleMemPanel()" title="記憶庫">🧠 記憶</button>
       <button class="btn btn-sm" onclick="switchPage('settings')">⚙ 設定</button>
+      <button class="btn btn-sm" onclick="toggleAiDiag()" title="診斷 AI 連線">🔍 診斷</button>
       <button class="btn btn-sm" onclick="clearChat()">清除</button>
+    </div>
+
+    <!-- AI Diagnostic Panel -->
+    <div id="ai-diag-panel" style="display:none;border:1px solid var(--border);border-radius:10px;margin:8px 0;padding:12px 14px;background:var(--bg-card);font-size:13px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <strong>🔍 AI 連線診斷</strong>
+        <button class="btn btn-sm" onclick="toggleAiDiag()" style="padding:2px 8px">✕</button>
+      </div>
+      <div id="ai-diag-config" style="margin-bottom:10px"></div>
+      <button class="btn btn-accent btn-sm" id="ai-diag-run-btn" onclick="runAiDiagnostic()" style="width:100%;margin-bottom:8px">🚀 測試連線</button>
+      <pre id="ai-diag-log" style="margin:0;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;min-height:24px"></pre>
     </div>
 
     <!-- Memory Panel (D1-D5) -->
@@ -178,7 +190,7 @@
     <div class="chat-input-area">
       <textarea class="chat-input" id="chat-input" rows="1"
         placeholder="輸入訊息…（Enter 發送，Shift+Enter 換行）"
-        onkeydown="chatKeydown(event)" oninput="autoResizeChat(this)"></textarea>
+        oninput="autoResizeChat(this)"></textarea>
       <button class="btn btn-accent" id="send-btn" onclick="sendChat()">發送</button>
     </div>
 
