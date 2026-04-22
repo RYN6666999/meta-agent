@@ -10,6 +10,16 @@ import { toast } from '../../core/toast.js';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
+export const THEMES = [
+  { id: 'dark',       label: '深色',      icon: '🌑' },
+  { id: 'dark-blue',  label: '深藍',      icon: '🌌' },
+  { id: 'light',      label: '淺色',      icon: '☀️' },
+  { id: 'light-warm', label: '暖色',      icon: '🌤' },
+  { id: 'sage-gold',  label: '清新金綠',  icon: '🛫' },
+  { id: 'impact',     label: 'Impact',   icon: '⚡' },
+  { id: 'neuo',       label: '浮凸 2.5D', icon: '🪨' },
+];
+
 export function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('crm-theme', theme);
@@ -18,13 +28,17 @@ export function applyTheme(theme) {
 export function initTheme() {
   const saved = localStorage.getItem('crm-theme') || 'dark';
   applyTheme(saved);
-  const sel = document.getElementById('theme-select');
-  if (sel) sel.value = saved;
 }
 
-export function onThemeChange() {
-  const sel = document.getElementById('theme-select');
-  if (sel) applyTheme(sel.value);
+export function renderThemeGrid() {
+  const tg = document.getElementById('settings-theme-grid');
+  if (!tg) return;
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  tg.innerHTML = THEMES.map(t => `
+    <div class="theme-tile${cur === t.id ? ' active' : ''}" onclick="window.__crmApplyTheme?.('${t.id}')">
+      <div class="theme-tile-icon">${t.icon}</div>
+      <div class="theme-tile-label">${t.label}</div>
+    </div>`).join('');
 }
 
 // ── Login / account ───────────────────────────────────────────────────────────

@@ -553,7 +553,7 @@
       <button class="stu-reminder-bell" onclick="showTodayReminders()" title="今日待跟進">
         🔔<span id="students-reminder-count" class="reminder-badge"></span>
       </button>
-      <button class="btn btn-accent" onclick="addStudentModal()">＋ 新增學員</button>
+      <button class="btn btn-accent" onclick="window.__crmOpenStudentModal?.()">＋ 新增學員</button>
     </div>
     <div class="students-list" id="students-list"></div>
   </div>
@@ -609,7 +609,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<script type="module" src="src/main.js"></script>
+<script type="module" src="src/main.js?v=4"></script>
 <script>
   (function(){
     try{

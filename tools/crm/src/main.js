@@ -4,6 +4,23 @@
  * 依賴：commands.js + 所有 features/*
  */
 
+// ── Theme grid ────────────────────────────────────────────────────────────────
+const _THEMES = [
+  { id:'dark',       label:'深色',      icon:'🌑' },
+  { id:'dark-blue',  label:'深藍',      icon:'🌌' },
+  { id:'light',      label:'淺色',      icon:'☀️' },
+  { id:'light-warm', label:'暖色',      icon:'🌤' },
+  { id:'sage-gold',  label:'清新金綠',  icon:'🛫' },
+  { id:'impact',     label:'Impact',   icon:'⚡' },
+  { id:'neuo',       label:'浮凸 2.5D', icon:'🪨' },
+];
+function renderThemeGrid() {
+  const tg = document.getElementById('settings-theme-grid');
+  if (!tg) return;
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  tg.innerHTML = _THEMES.map(t => `<div class="theme-tile${cur===t.id?' active':''}" onclick="window.__crmApplyTheme('${t.id}')"><div class="theme-tile-icon">${t.icon}</div><div class="theme-tile-label">${t.label}</div></div>`).join('');
+}
+
 // ── Core ──────────────────────────────────────────────────────────────────────
 import { STORE } from './core/store.js';
 import { dispatch, getNodes, gatherSubtree, isHidden } from './core/state.js';
@@ -70,7 +87,7 @@ import { renderStudentsPage, openStudentModal, closeStudentModal, saveStudent, d
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 import {
-  initTheme, onThemeChange, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
+  initTheme, applyTheme, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
   openSkModal, closeSkModal, resetShortcuts, saveShortcut, setCmdMode, resetCmdPolicy, renderCmdList,
   resetGoogleClientId, startSheetsOAuth, resetSheetsAuth, saveSheetsId,
   saveObsidianPath, openObsidianVault, renderObsidianPath, OB_BACKUP,
@@ -129,7 +146,7 @@ export function navigate(page) {
     case 'ai':       renderChat(); renderQuickPrompts(getCurrentPersona()); updateAiModelBadge(); break;
     case 'settings':
       renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
-      renderObsidianPath(); renderCmdList();
+      renderObsidianPath(); renderCmdList(); renderThemeGrid();
       break;
   }
 }
@@ -325,8 +342,9 @@ function registerWindowBridge() {
   window.startGoogleOAuth       = () => startGcalOAuth();
   window.fetchGcalEvents        = () => fetchGcalEvents();
   window.disconnectGcal         = () => disconnectGcal();
+  window.__crmApplyTheme        = t => { applyTheme(t); renderThemeGrid(); };
   window.renderSettingsPage     = () => {
-    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
+    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp(); renderThemeGrid();
   };
   window.doLogout = () => {
     if (!confirm('確定要登出？')) return;
