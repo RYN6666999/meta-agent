@@ -4,7 +4,7 @@
  * 依賴：core/state.js, core/store.js, core/calc.js
  */
 
-import { getNodes, getEvents, getSalesData, getDailyReports, getDocsData, findNode, dispatch } from '../../core/state.js';
+import { getNodes, getEvents, getSalesData, getDailyReports, getDocsData, findNode, dispatch, getStudentsData } from '../../core/state.js';
 import { CALC } from '../../core/calc.js';
 import { uid } from '../../core/uid.js';
 
@@ -170,6 +170,90 @@ export const CRM_TOOLS = [
         tomorrow:  { type: 'string' },
         gratitude: { type: 'string' },
       },
+    },
+  },
+  {
+    name: 'add_student',
+    description: '新增學員到學員頁面。用於「幫我新增學員 XXX」、「把 XXX 加到學員」等指令。',
+    input_schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name:      { type: 'string', description: '學員姓名' },
+        phone:     { type: 'string', description: '電話' },
+        joinDate:  { type: 'string', description: '加入日期 YYYY-MM-DD，預設今天' },
+        notes:     { type: 'string', description: '備注' },
+      },
+    },
+  },
+  {
+    name: 'list_students',
+    description: '列出所有學員名單',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'diagnose_position',
+    description: '根據客戶行為和語言信號診斷說服光譜位置（P1-P9），建議下一步工具和策略',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name:    { type: 'string', description: '聯繫人姓名（模糊匹配）' },
+        signals: { type: 'string', description: '客戶最近的行為或語言描述' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'generate_script',
+    description: '為指定客戶生成完整銷售劇本（六段+反駁分支），每段標註意圖和工具編號',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name:    { type: 'string', description: '聯繫人姓名（模糊匹配）' },
+        product: { type: 'string', enum: ['course', 'consulting', 'distributor'], description: '目標商品' },
+        context: { type: 'string', description: '額外背景資訊' },
+      },
+      required: ['name', 'product'],
+    },
+  },
+  {
+    name: 'handle_objection',
+    description: '針對客戶特定反駁，生成化解話術和對話分支（診斷格位→選工具→生成對話→設計退路）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name:      { type: 'string', description: '聯繫人姓名（模糊匹配）' },
+        objection: { type: 'string', description: '客戶反駁原文' },
+        product:   { type: 'string', enum: ['course', 'consulting', 'distributor'], description: '目標商品' },
+      },
+      required: ['objection'],
+    },
+  },
+  {
+    name: 'design_hell_heaven',
+    description: '根據客戶個人資料，客製化地獄畫面（時間軸提問腳本）和天堂畫面（渴望引導腳本）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name:    { type: 'string', description: '聯繫人姓名（模糊匹配）' },
+        product: { type: 'string', enum: ['course', 'consulting', 'distributor'], description: '目標商品' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'review_conversation',
+    description: '覆盤銷售對話，分析卡點格位，指出遺漏工具，建議修改後劇本',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name:         { type: 'string', description: '聯繫人姓名（模糊匹配）' },
+        result:       { type: 'string', enum: ['closed', 'follow_up', 'lost'], description: '對話結果' },
+        stuck_stage:  { type: 'string', description: '卡住的階段（如：地獄段、成交、反駁等）' },
+        customer_said:{ type: 'string', description: '客戶最後說的話或反應' },
+        product:      { type: 'string', enum: ['course', 'consulting', 'distributor'], description: '目標商品' },
+      },
+      required: ['name', 'result'],
     },
   },
 ];
@@ -365,6 +449,118 @@ export async function executeToolCall(name, input = {}) {
       if (input.gratitude != null) patch.gratitude = input.gratitude;
       dispatch({ type: 'DAILY_REPORT_PATCH', payload: { date: today, patch } });
       return { ok: true, message: '已更新今日日報', patch };
+    }
+
+    case 'add_student': {
+      const today = new Date().toISOString().slice(0, 10);
+      const student = {
+        id:        uid(),
+        name:      input.name || '未命名',
+        phone:     input.phone    || '',
+        joinDate:  input.joinDate || today,
+        notes:     input.notes    || '',
+        contacts:  [],
+        tags:      [],
+        createdAt: Date.now(),
+      };
+      dispatch({ type: 'STUDENT_ADD', payload: student });
+      return { ok: true, message: `✅ 已新增學員「${student.name}」到學員頁面`, student };
+    }
+
+    case 'list_students': {
+      const students = getStudentsData();
+      const list = students.map(s => ({
+        id: s.id, name: s.name, phone: s.phone || '', joinDate: s.joinDate || '',
+      }));
+      return { ok: true, count: list.length, list };
+    }
+
+    case 'diagnose_position': {
+      const n = fuzzyFind(input.name || '');
+      const contact = n ? {
+        name: n.name, status: n.status,
+        notes: n.info?.notes || '', lastContact: n.info?.lastContact || '',
+        contactHistory: (n.info?.contactHistory || []).slice(-3),
+        income: n.info?.income || '', phone: n.info?.phone || '',
+      } : null;
+      return {
+        ok: true,
+        instruction: '根據客戶資料和 signals，輸出：①判斷格位（P1-P9）及依據 ②目前三腦層次（爬蟲/哺乳/智人） ③下一格目標 ④建議工具（#編號+名稱） ⑤建議的第一句話（附意圖標註）。格位光譜：P1抗拒/P2懷疑/P3冷漠/P4好奇/P5認同/P6順從/P7投入/P8行動/P9持續。',
+        contact,
+        signals: input.signals || '',
+      };
+    }
+
+    case 'generate_script': {
+      const n = fuzzyFind(input.name || '');
+      const contact = n ? {
+        name: n.name, status: n.status,
+        notes: n.info?.notes || '', income: n.info?.income || '',
+        hasProperty: n.info?.hasProperty || false, hasInvestment: n.info?.hasInvestment || false,
+        debt: n.info?.debt || '', lastContact: n.info?.lastContact || '',
+        contactHistory: (n.info?.contactHistory || []).slice(-5),
+      } : null;
+      const productLabels = { course: '房地產財商課程', consulting: '一對一顧問規劃案', distributor: '經銷商合作夥伴' };
+      return {
+        ok: true,
+        instruction: '按六段結構生成完整劇本。每段必須：(1)給出2-3輪對話 (2)每輪標註 💬你說/▸意圖/▸工具/💭客戶可能說/✅通過/✗未通過 (3)地獄段全程提問不陳述，按時間軸推進，MI收尾 (4)天堂段讓客戶自述，找為何，吹大火苗 (5)產品段先連結為何再介紹，先說坦誠缺陷 (6)成交段只處理下一步+預防針。禁忌：不說「你應該/必須」，不替客戶下結論，不暴露業績壓力。',
+        contact,
+        product: input.product,
+        productLabel: productLabels[input.product] || input.product,
+        context: input.context || '',
+      };
+    }
+
+    case 'handle_objection': {
+      const n = input.name ? fuzzyFind(input.name) : null;
+      const contact = n ? {
+        name: n.name, status: n.status, notes: n.info?.notes || '', income: n.info?.income || '',
+      } : null;
+      const productLabels = { course: '房地產財商課程', consulting: '一對一顧問規劃案', distributor: '經銷商合作夥伴' };
+      return {
+        ok: true,
+        instruction: '處理此反駁，輸出：①診斷格位（P1-P9）及判斷依據 ②選用工具（#編號+名稱）及原因 ③化解對話（3-4輪，每輪含💬/▸意圖/▸工具/💭） ④回主幹路徑（化解成功後如何銜接回劇本） ⑤退路設計（客戶仍不買帳時的保底話術）。禁忌：不說「我們不是直銷」不防禦性回應，不逼迫。',
+        contact,
+        objection: input.objection,
+        product: input.product || '',
+        productLabel: productLabels[input.product] || '',
+      };
+    }
+
+    case 'design_hell_heaven': {
+      const n = fuzzyFind(input.name || '');
+      const contact = n ? {
+        name: n.name, status: n.status, notes: n.info?.notes || '',
+        income: n.info?.income || '', hasProperty: n.info?.hasProperty || false,
+        hasInvestment: n.info?.hasInvestment || false, debt: n.info?.debt || '',
+      } : null;
+      const productLabels = { course: '房地產財商課程', consulting: '一對一顧問規劃案', distributor: '經銷商合作夥伴' };
+      return {
+        ok: true,
+        instruction: '根據客戶具體背景（職業/收入/家庭/現況）客製化，禁止使用通用版本。輸出：【地獄段】時間軸提問腳本（半年/一年/三年/最恐怖畫面），每個時間點給1-2個提問句，最後MI收尾。【天堂段】渴望引導腳本（成功後的具體畫面），每個階段給1-2個引導句，找到火苗後給吹大火苗句式。兩段均只用提問，不做陳述。',
+        contact,
+        product: input.product || 'course',
+        productLabel: productLabels[input.product] || '房地產財商課程',
+      };
+    }
+
+    case 'review_conversation': {
+      const n = fuzzyFind(input.name || '');
+      const contact = n ? {
+        name: n.name, status: n.status, notes: n.info?.notes || '',
+        contactHistory: (n.info?.contactHistory || []).slice(-5),
+      } : null;
+      const productLabels = { course: '房地產財商課程', consulting: '一對一顧問規劃案', distributor: '經銷商合作夥伴' };
+      return {
+        ok: true,
+        instruction: '覆盤此次銷售對話，輸出：①格位分析（對話開始/卡住/結束時各在哪格） ②遺漏工具（哪個環節少用了哪個工具） ③冰山分析（客戶最後那句話的底層情緒/信念是什麼） ④建議話術（針對卡點給出2-3輪修改後對話） ⑤劇本修改建議（下次見這個客戶從哪一段重新開始）。語氣：教練式覆盤，不責怪業務，只找可改進點。',
+        contact,
+        result: input.result,
+        stuckStage: input.stuck_stage || '',
+        customerSaid: input.customer_said || '',
+        product: input.product || '',
+        productLabel: productLabels[input.product] || '',
+      };
     }
 
     default:

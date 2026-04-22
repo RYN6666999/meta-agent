@@ -73,6 +73,13 @@ function supportsStreaming(provider) {
   return provider === 'openai' || provider === 'openrouter' || provider === 'grok' || provider === 'custom';
 }
 
+function toOpenAITools(crmTools) {
+  return crmTools.map(t => ({
+    type: 'function',
+    function: { name: t.name, description: t.description, parameters: t.input_schema },
+  }));
+}
+
 function buildRequestBody(provider, model, systemPrompt, messages, stream = false) {
   if (provider === 'openai' || provider === 'openrouter' || provider === 'custom' || provider === 'grok') {
     return {
@@ -80,6 +87,8 @@ function buildRequestBody(provider, model, systemPrompt, messages, stream = fals
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
       max_tokens: 2048,
       temperature: 0.7,
+      tools: toOpenAITools(CRM_TOOLS),
+      tool_choice: 'auto',
       ...(stream ? { stream: true } : {}),
     };
   }
@@ -170,62 +179,90 @@ export async function sendChat() {
     const history = getChatHistory().slice(-20);
     const messages = history.map(m => ({ role: m.role, content: m.content }));
 
-    const url      = getEndpoint(provider, model, customEndpoint);
-    const headers  = getHeaders(provider, apiKey);
-    const useStream = supportsStreaming(provider);
-    const body     = buildRequestBody(provider, model, systemPrompt, messages, useStream);
+    const url     = getEndpoint(provider, model, customEndpoint);
+    const headers = getHeaders(provider, apiKey);
+    const isOAI   = supportsStreaming(provider); // openai-compatible
 
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
-      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`);
+    // ── Round 1: non-streaming to detect tool calls ─────────────────────────
+    const body1 = buildRequestBody(provider, model, systemPrompt, messages, false);
+    const res1  = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body1) });
+    if (!res1.ok) {
+      const errText = await res1.text().catch(() => res1.statusText);
+      throw new Error(`HTTP ${res1.status}: ${errText.slice(0, 200)}`);
     }
+    const data1 = await res1.json();
 
     let assistantContent = '';
+    let toolMessages = []; // for follow-up
 
-    if (useStream && res.body) {
-      // ── Streaming path ──────────────────────────────────────────────────────
-      loading.remove();
-      // Create live bubble
-      const liveBubble = document.createElement('div');
-      liveBubble.className = 'chat-msg assistant';
-      liveBubble.innerHTML = '<div class="chat-bubble assistant" id="chat-stream-bubble"></div>';
-      box?.appendChild(liveBubble);
+    if (isOAI) {
+      // OpenAI / OpenRouter / Grok: check tool_calls
+      const msg       = data1.choices?.[0]?.message || {};
+      const toolCalls = msg.tool_calls || [];
+      assistantContent = msg.content || '';
 
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      const bubbleEl = () => document.getElementById('chat-stream-bubble');
-      let buf = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop(); // keep incomplete line
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (raw === '[DONE]') break;
-          try {
-            const chunk = JSON.parse(raw);
-            const delta = chunk.choices?.[0]?.delta?.content || '';
-            if (delta) {
-              assistantContent += delta;
-              const el = bubbleEl();
-              if (el) { el.innerHTML = mdToHtml(assistantContent); box && (box.scrollTop = box.scrollHeight); }
-            }
-          } catch { /* ignore malformed chunk */ }
+      if (toolCalls.length > 0) {
+        const toolResultMsgs = [];
+        for (const tc of toolCalls) {
+          let args = {};
+          try { args = JSON.parse(tc.function?.arguments || '{}'); } catch { /**/ }
+          const result = await executeToolCall(tc.function?.name, args);
+          toolResultMsgs.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            content: JSON.stringify(result),
+          });
+          if (result.message) assistantContent += (assistantContent ? '\n' : '') + result.message;
         }
+
+        // ── Round 2: streaming follow-up after tool execution ───────────────
+        const followUpMessages = [
+          ...messages,
+          { role: 'assistant', content: msg.content || '', tool_calls: toolCalls },
+          ...toolResultMsgs,
+        ];
+        const body2 = buildRequestBody(provider, model, systemPrompt, followUpMessages, true);
+        const res2  = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body2) });
+
+        if (res2.ok && res2.body) {
+          loading.remove();
+          const liveBubble = document.createElement('div');
+          liveBubble.className = 'chat-msg assistant';
+          liveBubble.innerHTML = '<div class="chat-bubble assistant" id="chat-stream-bubble"></div>';
+          box?.appendChild(liveBubble);
+          const reader  = res2.body.getReader();
+          const decoder = new TextDecoder();
+          let buf2 = '';
+          let streamedContent = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf2 += decoder.decode(value, { stream: true });
+            const lines = buf2.split('\n'); buf2 = lines.pop();
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const raw = line.slice(6).trim();
+              if (raw === '[DONE]') break;
+              try {
+                const chunk = JSON.parse(raw);
+                const delta = chunk.choices?.[0]?.delta?.content || '';
+                if (delta) {
+                  streamedContent += delta;
+                  const el = document.getElementById('chat-stream-bubble');
+                  if (el) { el.innerHTML = mdToHtml(streamedContent); box && (box.scrollTop = box.scrollHeight); }
+                }
+              } catch { /**/ }
+            }
+          }
+          if (streamedContent) assistantContent = (assistantContent ? assistantContent + '\n\n' : '') + streamedContent;
+        }
+      } else {
+        // No tool calls → stream wasn't needed, just use data1 content
       }
-      liveBubble.id = '';
-      const el = bubbleEl();
-      if (el) el.removeAttribute('id');
     } else {
-      // ── Non-streaming path (Claude / Gemini) ───────────────────────────────
-      const data     = await res.json();
-      const toolUses = extractToolUses(provider, data);
-      assistantContent = extractContent(provider, data);
+      // ── Claude / Gemini non-streaming path ─────────────────────────────────
+      const toolUses = extractToolUses(provider, data1);
+      assistantContent = extractContent(provider, data1);
       for (const tu of toolUses) {
         const result = await executeToolCall(tu.name, tu.input || {});
         if (result.message) assistantContent += (assistantContent ? '\n\n' : '') + `✅ ${result.message}`;
