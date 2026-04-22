@@ -23,7 +23,7 @@ function renderThemeGrid() {
 
 // ── Core ──────────────────────────────────────────────────────────────────────
 import { STORE } from './core/store.js';
-import { dispatch, getNodes, gatherSubtree, isHidden } from './core/state.js';
+import { dispatch, getNodes, getChatHistory, gatherSubtree, isHidden } from './core/state.js';
 import { toast } from './core/toast.js';
 import { undoLast, pushUndo } from './core/undo.js';
 
@@ -61,7 +61,8 @@ import {
 import { renderAiSettingsCard, saveAiSettings, onAiProviderChange, fetchDynamicModels, updateAiModelBadge } from './features/ai/providers.js';
 import { setPersona, renderQuickPrompts, injectPrompt, getCurrentPersona } from './features/ai/personas.js';
 import {
-  sendChat, renderChat, clearChat, extractAndSaveMemories, deleteMemory,
+  sendChat, renderChat, clearChat, smartClearChat, setCurrentContact,
+  extractAndSaveMemories, deleteMemory,
   toggleMemPanel, switchMemTab, renderMemPanel, addManualMemory,
   generateDailyBriefing, showTodayReminders,
   toggleAiDiag, runAiDiagnostic,
@@ -214,7 +215,20 @@ async function syncFromCloud() {
 
 function registerWindowBridge() {
   // ── 內部 __crm* 橋接（render.js / panel/index.js 模板用）────────────────
-  window.__crmSelectNode      = id => selectNode(id);
+  let _chatContactId = null;
+  window.__crmSelectNode = id => {
+    const node = getNodes().find(n => n.id === id);
+    const isContact = node && node.parentId !== null;
+    if (isContact) {
+      if (_chatContactId && _chatContactId !== id && getChatHistory().length > 0) {
+        smartClearChat();
+        toast(`已切換對象：${node.name}，對話摘要存入記憶`);
+      }
+      setCurrentContact(node);
+      _chatContactId = id;
+    }
+    selectNode(id);
+  };
   window.__crmOpenPanel       = id => openPanel(id);
   window.__crmClosePanel      = () => closePanel();
   window.__crmCycleStatus     = id => cycleStatus(id);
@@ -332,6 +346,7 @@ function registerWindowBridge() {
   // AI
   window.sendChat               = () => sendChat();
   window.clearChat              = () => clearChat();
+  window.smartClearChat         = () => smartClearChat();
   window.setPersona             = (k, el) => setPersona(k, el);
   window.onAiProviderChange     = () => onAiProviderChange();
   window.saveAiSettings         = () => saveAiSettings();
@@ -386,7 +401,7 @@ function registerWindowBridge() {
   window.runAiDiagnostic        = () => runAiDiagnostic();
 
   // Chat input (HTML inline handlers, logic already in initChatInput via addEventListener)
-  window.chatKeydown    = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
+  window.chatKeydown    = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); } };
   window.autoResizeChat = el => { if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; } };
 
   // Docs drag-drop
@@ -410,10 +425,10 @@ function initKeyboard() {
     const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
     const meta  = e.metaKey || e.ctrlKey;
 
-    if (inInput) {
-      // Allow all native shortcuts inside text fields; only intercept Enter for canvas-free pages
-      return;
-    }
+    // Cmd+K: clear chat（全域，在任何輸入框都有效）
+    if (meta && e.key === 'k') { e.preventDefault(); window.smartClearChat?.(); return; }
+
+    if (inInput) return;
 
     if (meta && e.key === 'z') { e.preventDefault(); undoLast(renderNodes, deselect); return; }
     if (meta && e.key === 'c') { e.preventDefault(); copySelected(); return; }
@@ -462,7 +477,7 @@ function initChatInput() {
   });
   inp.addEventListener('keydown', e => {
     const isEnter = e.key === 'Enter' || e.keyCode === 13;
-    if (isEnter && !e.shiftKey) { e.preventDefault(); sendChat(); }
+    if (isEnter && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
   });
 }
 

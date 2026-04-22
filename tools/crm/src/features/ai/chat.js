@@ -15,7 +15,13 @@ import { CRM_TOOLS, executeToolCall } from './tools.js';
 
 function mdToHtml(text) {
   if (!text) return '';
-  return text
+  // Extract <meta-timing> before HTML escaping
+  let timingHtml = '';
+  text = text.replace(/<meta-timing>([\s\S]*?)<\/meta-timing>/g, (_, t) => {
+    timingHtml = `<div class="chat-timing">${t}</div>`;
+    return '';
+  }).trim();
+  const body = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,     '<em>$1</em>')
@@ -27,6 +33,7 @@ function mdToHtml(text) {
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/👉 (https?:\/\/\S+)/g, '👉 <a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/\n/g, '<br>');
+  return timingHtml ? body + timingHtml : body;
 }
 
 // ── Render chat history ───────────────────────────────────────────────────────
@@ -56,16 +63,82 @@ export function renderChat() {
   box.scrollTop = box.scrollHeight;
 }
 
-// ── Clear chat ────────────────────────────────────────────────────────────────
+// ── Current contact context ───────────────────────────────────────────────────
+
+let _currentContact = null;
+export function setCurrentContact(node) { _currentContact = node; }
+export function getCurrentContact()     { return _currentContact; }
+
+// ── Token estimation ──────────────────────────────────────────────────────────
+
+function roughTokens(text) { return Math.ceil((text || '').length / 1.5); }
+
+function trimToTokenBudget(history, maxTokens = 3000) {
+  const out = [];
+  let total = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const t = roughTokens(history[i].content);
+    if (total + t > maxTokens) break;
+    out.unshift(history[i]);
+    total += t;
+  }
+  return out;
+}
+
+function renderContextWarning() {
+  const box = document.getElementById('chat-area');
+  if (!box) return;
+  box.querySelector('.chat-ctx-warn')?.remove();
+  const total = getChatHistory().reduce((s, m) => s + roughTokens(m.content), 0);
+  if (total > 2500) {
+    const el = document.createElement('div');
+    el.className = 'chat-ctx-warn';
+    el.textContent = '⚠ 對話脈絡快滿，清空時自動摘要存入記憶';
+    box.prepend(el);
+  }
+}
+
+// ── Smart clear（摘要→記憶→清空）────────────────────────────────────────────
+
+export async function smartClearChat() {
+  const history = getChatHistory();
+  if (!history.length) { renderChat(); return; }
+
+  const { provider, model, apiKey } = getAiSettings();
+  if (apiKey || provider === 'claude') {
+    toast('摘要對話中…');
+    const convText = history.slice(-10)
+      .map(m => `${m.role === 'user' ? '業務' : 'AI'}：${m.content.slice(0, 400)}`)
+      .join('\n');
+    const prompt = `從以下業務對話找出值得長期記住的客戶資訊或洞察（最多3條）。
+格式：[{"subject":"對象姓名","type":"insight|preference|fact","content":"具體內容"}]
+只輸出 JSON array，無其他文字。\n\n${convText}`;
+    try {
+      const url     = getEndpoint(provider, model, '');
+      const headers = getHeaders(provider, apiKey);
+      const body    = provider === 'claude'
+        ? { model, system: '你是記憶萃取助理', messages: [{ role: 'user', content: prompt }], max_tokens: 400 }
+        : { model, messages: [{ role: 'system', content: '你是記憶萃取助理' }, { role: 'user', content: prompt }], max_tokens: 400 };
+      const res  = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      const data = await res.json();
+      const raw  = extractContent(provider, data).trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      const arr  = JSON.parse(raw);
+      let saved  = 0;
+      for (const m of (Array.isArray(arr) ? arr : []).slice(0, 3)) {
+        if (m.subject && m.content) { await memoryService.create({ subject: m.subject, type: m.type || 'insight', content: m.content }); saved++; }
+      }
+      toast(saved ? `已摘要 ${saved} 條記憶，對話清空` : '對話已清空');
+    } catch { toast('對話已清空'); }
+  }
+  dispatch({ type: 'CHAT_CLEAR' });
+  _currentContact = null;
+  renderChat();
+}
 
 export function clearChat() {
   dispatch({ type: 'CHAT_CLEAR' });
   renderChat();
 }
-
-// ── Token / cost estimate (rough) ────────────────────────────────────────────
-
-function roughTokens(text) { return Math.ceil((text || '').length / 3.5); }
 
 // ── Build API request body ────────────────────────────────────────────────────
 
@@ -159,24 +232,35 @@ export async function sendChat() {
   dispatch({ type: 'CHAT_PUSH', payload: { role: 'user', content: userMsg } });
   renderChat();
 
-  // Show loading
+  // Show loading with live timer
   const box = document.getElementById('chat-area');
   const loading = document.createElement('div');
   loading.className = 'chat-msg assistant loading';
-  loading.innerHTML = '<div class="chat-bubble assistant chat-thinking"><span></span><span></span><span></span></div>';
+  loading.innerHTML = '<div class="chat-bubble assistant chat-thinking"><span class="chat-timer-count">0s</span></div>';
   box?.appendChild(loading);
   box && (box.scrollTop = box.scrollHeight);
 
   const sendBtn = document.getElementById('chat-send-btn');
   if (sendBtn) sendBtn.disabled = true;
 
+  const _t0 = Date.now();
+  const _timerEl = () => loading.querySelector('.chat-timer-count');
+  const _fmtElapsed = ms => {
+    const s = Math.floor(ms / 1000);
+    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+  };
+  const _timerId = setInterval(() => {
+    const el = _timerEl();
+    if (el) el.textContent = _fmtElapsed(Date.now() - _t0);
+  }, 500);
+
   try {
     const personaKey  = getCurrentPersona();
     const { memories: _m, promptSnippet } = await memoryService.retrieve(userMsg, { persona: personaKey });
-    const systemPrompt = await buildSystemPrompt(personaKey, promptSnippet);
+    const systemPrompt = await buildSystemPrompt(personaKey, promptSnippet, _currentContact);
 
-    // Build messages array (trim to last 20 to stay under context)
-    const history = getChatHistory().slice(-20);
+    // Build messages array — trim by token budget (not fixed count)
+    const history  = trimToTokenBudget(getChatHistory());
     const messages = history.map(m => ({ role: m.role, content: m.content }));
 
     const url     = getEndpoint(provider, model, customEndpoint);
@@ -270,16 +354,23 @@ export async function sendChat() {
     }
 
     if (!assistantContent) assistantContent = '（無回應）';
+    const elapsed = _fmtElapsed(Date.now() - _t0);
+    const tokEst  = Math.round(assistantContent.length / 1.5);
+    const tokStr  = tokEst >= 1000 ? `${(tokEst / 1000).toFixed(1)}k` : `${tokEst}`;
+    assistantContent += `\n\n<meta-timing>${elapsed} · ↓ ${tokStr} tokens</meta-timing>`;
     dispatch({ type: 'CHAT_PUSH', payload: { role: 'assistant', content: assistantContent } });
 
   } catch (e) {
+
     const errMsg = `❌ 錯誤：${e.message}`;
     dispatch({ type: 'CHAT_PUSH', payload: { role: 'assistant', content: errMsg } });
     toast(e.message.slice(0, 80));
   } finally {
+    clearInterval(_timerId);
     loading.remove();
     if (sendBtn) sendBtn.disabled = false;
     renderChat();
+    renderContextWarning();
   }
 }
 

@@ -14,6 +14,11 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg">
 <link rel="stylesheet" href="crm.css?v=8">
+<style>
+.chat-ctx-warn{margin:8px 12px;padding:8px 12px;background:rgba(210,120,0,.15);border:1px solid rgba(210,120,0,.4);border-radius:8px;font-size:12px;color:#f0a040;text-align:center}
+.chat-timing{margin-top:6px;font-size:11px;color:var(--text-muted,#888);opacity:.75}
+.chat-timer-count{font-size:13px;color:var(--text-muted,#999);font-variant-numeric:tabular-nums}
+</style>
 <!-- 登入守衛：未登入則跳轉 login.html -->
 <script>
   (function(){
@@ -134,7 +139,7 @@
       <button class="btn btn-sm" id="mem-toggle-btn" onclick="toggleMemPanel()" title="記憶庫">🧠 記憶</button>
       <button class="btn btn-sm" onclick="switchPage('settings')">⚙ 設定</button>
       <button class="btn btn-sm" onclick="toggleAiDiag()" title="診斷 AI 連線">🔍 診斷</button>
-      <button class="btn btn-sm" onclick="clearChat()">清除</button>
+      <button class="btn btn-sm" onclick="smartClearChat()">清除</button>
     </div>
 
     <!-- AI Diagnostic Panel -->
@@ -172,13 +177,9 @@
     <div class="ai-persona-bar" id="ai-persona-bar">
       <span class="ai-persona-label">角色：</span>
       <button class="persona-pill active" data-persona="assistant" onclick="setPersona('assistant',this)">🤖 通用助理</button>
-      <button class="persona-pill" data-persona="coach" onclick="setPersona('coach',this)">🎯 跟進教練</button>
       <button class="persona-pill" data-persona="analyst" onclick="setPersona('analyst',this)">📊 業績分析師</button>
-      <button class="persona-pill" data-persona="strategist" onclick="setPersona('strategist',this)">🌳 人脈策略師</button>
       <button class="persona-pill" data-persona="secretary" onclick="setPersona('secretary',this)">📝 日報小秘書</button>
-      <button class="persona-pill" data-persona="closer" onclick="setPersona('closer',this)">🔥 成交專家</button>
-      <button class="persona-pill" data-persona="docfinder" onclick="setPersona('docfinder',this)">📚 知識庫助理</button>
-      <button class="persona-pill" data-persona="scriptforge" onclick="setPersona('scriptforge',this)">🎭 劇本推演師</button>
+      <button class="persona-pill" data-persona="scriptforge" onclick="setPersona('scriptforge',this)">🎯 沙盤推演</button>
     </div>
 
     <!-- Quick prompts -->
