@@ -4671,3 +4671,22 @@
   其他變更 memory/status/swap-monitor.log +10
 
 ---
+
+## 2026-04-23 00:52 | auto-git-score | 分數 150 | 📥 達到閾值（150/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=110），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-04-22-mobile-bridge-api-down.md +10
+  error-log 新增根因 error-log/2026-04-23-mobile-bridge-api-down.md +50
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 tools/crm/index.html +10
+  其他變更 tools/crm/src/features/ai/chat.js +10
+  其他變更 tools/crm/src/features/ai/personas.js +10
+  其他變更 tools/crm/src/features/ai/personas.json +10
+  其他變更 tools/crm/src/main.js +10
+  其他變更 tools/crm/sw.js +10
+
+---
