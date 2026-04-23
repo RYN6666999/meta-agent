@@ -17,7 +17,7 @@ export async function onRequestOptions() {
 export async function onRequestPost(context) {
   const { request, env } = context;
   const SUPA_URL  = env.SUPABASE_URL;
-  const SUPA_KEY  = env.SUPABASE_ANON_KEY;
+  const SUPA_KEY  = env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!SUPA_URL || !SUPA_KEY) return json({ error: 'Supabase not configured' }, 503);
 
@@ -28,7 +28,7 @@ export async function onRequestPost(context) {
 
   const { action, query, slug, limit = 5 } = body;
 
-  const supaFetch = (path, opts = {}) => fetch(`${SUPA_URL}/rest/v1${path}`, {
+  const supaFetch = (path, opts = {}) => fetch(new URL(`/rest/v1${path}`, SUPA_URL).href, {
     ...opts,
     headers: {
       'apikey': SUPA_KEY,
@@ -43,26 +43,38 @@ export async function onRequestPost(context) {
   if (action === 'search') {
     if (!query) return json({ error: 'query required' }, 400);
 
-    // Full-text search via PostgREST fts operator + title ilike fallback
-    const encoded = encodeURIComponent(query.replace(/\s+/g, ' & '));
-    const r = await supaFetch(
-      `/pages?select=slug,title,compiled_truth&or=(title.ilike.*${encodeURIComponent(query)}*,compiled_truth.ilike.*${encodeURIComponent(query)}*)&limit=${limit}`
-    );
+    // Search title + compiled_truth separately, merge and deduplicate
+    const q = query.trim();
+    const mkParams = (col) => {
+      const p = new URLSearchParams();
+      p.set('select', 'slug,title,compiled_truth');
+      p.set(col, `ilike.*${q}*`);
+      p.set('limit', String(limit));
+      return p.toString();
+    };
+    const [rTitle, rBody] = await Promise.all([
+      supaFetch(`/pages?${mkParams('title')}`),
+      supaFetch(`/pages?${mkParams('compiled_truth')}`),
+    ]);
 
-    if (!r.ok) {
-      const err = await r.text();
-      return json({ error: err }, 502);
+    const titleRows = rTitle.ok ? await rTitle.json() : [];
+    const bodyRows  = rBody.ok  ? await rBody.json()  : [];
+
+    const titleSlugs = new Set(titleRows.map(r => r.slug));
+    const seen = new Set();
+    const results = [];
+    for (const row of [...titleRows, ...bodyRows]) {
+      if (seen.has(row.slug)) continue;
+      seen.add(row.slug);
+      results.push({
+        slug:    row.slug,
+        title:   row.title,
+        excerpt: (row.compiled_truth || '').slice(0, 400),
+        score:   titleSlugs.has(row.slug) ? 2 : 1,
+      });
     }
 
-    const rows = await r.json();
-    const results = rows.map(row => ({
-      slug: row.slug,
-      title: row.title,
-      excerpt: (row.compiled_truth || '').slice(0, 400),
-      score: 1,
-    }));
-
-    return json({ results });
+    return json({ results: results.slice(0, limit) });
   }
 
   if (action === 'get') {

@@ -4690,3 +4690,48 @@
   其他變更 tools/crm/sw.js +10
 
 ---
+
+## 2026-04-23 11:41 | auto-git-score | 分數 190 | 📥 達到閾值（190/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=185），含重要變更
+
+**評分明細：**
+  error-log 新增根因 error-log/2026-04-23-health-check.md +50
+  其他變更 error-log/2026-04-23-mobile-bridge-api-down.md +10
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/dedup-log.md +10
+  其他變更 memory/health-check.log +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/persona-tech-radar-error.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/truth-xval.log +10
+  其他變更 tools/crm/functions/api/brain.js +10
+  其他變更 tools/crm/src/features/ai/personas.js +10
+  其他變更 tools/crm/sw.js +10
+
+---
+
+## 2026-04-23 12:55 | mobile-bridge-root-cause | 分數 200 | 📥 達到閾值（200/60）→ 已送決策匣，待人類核准
+
+**描述：** uvicorn 36天無法啟動，每日產生69個假陽性error-log
+
+**評分明細：**
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+  其他變更 tools/crm/functions/api/brain.js +10
+  其他變更 tools/crm/sw.js +10
+  其他變更 error-log/2026-04-23-mobile-bridge-root-cause.md +10
+  其他變更 memory-mcp +10
+  其他變更 memory/archive/pending-decisions-archive-2026-04-23.md +10
+  其他變更 memory/brain/ +10
+  核心腳本變更 scripts/com.meta-agent.dream-cycle.plist +40
+  核心腳本變更 scripts/dream-cycle.sh +40
+  其他變更 truth-source/2026-04-23-mobile-bridge-root-cause.md +10
+
+---
