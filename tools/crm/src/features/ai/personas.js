@@ -109,22 +109,26 @@ export const memoryService = {
 
   async retrieve(message, context = {}) {
     // Run KV memories + GBrain knowledge search in parallel
+    // Brain fetch has 250ms timeout to avoid blocking on cold start
+    const brainTimeout = new Promise(r => setTimeout(() => r({ results: [] }), 250));
+    const brainFetch   = fetch('/api/brain', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'search', query: message, limit: 3 }),
+    }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }));
+
     const [kvResult, brainResults] = await Promise.all([
       fetch(`${this.base}/retrieve`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, context, topK: 5 }),
       }).then(r => r.ok ? r.json() : { memories: [], promptSnippet: '' }).catch(() => ({ memories: [], promptSnippet: '' })),
-      fetch('/api/brain', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'search', query: message, limit: 4 }),
-      }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] })),
+      Promise.race([brainFetch, brainTimeout]),
     ]);
 
-    // Merge: KV snippet first, then brain excerpts
+    // Merge: KV snippet first, then brain excerpts (200 chars each)
     let promptSnippet = kvResult.promptSnippet || '';
     const brainHits = (brainResults.results || []).filter(r => r.score > 0.01);
     if (brainHits.length) {
-      const brainBlock = brainHits.map(r => `【知識庫：${r.title}】\n${r.excerpt}`).join('\n\n');
+      const brainBlock = brainHits.map(r => `【知識庫：${r.title}】\n${(r.excerpt || '').slice(0, 200)}`).join('\n\n');
       promptSnippet = promptSnippet
         ? `${promptSnippet}\n\n【相關知識庫段落】\n${brainBlock}`
         : `【相關知識庫段落】\n${brainBlock}`;

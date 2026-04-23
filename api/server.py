@@ -818,6 +818,12 @@ async def usage_counter_middleware(request: Request, call_next):
     return response
 
 
+@app.get("/health")
+async def health_probe() -> dict[str, str]:
+    """Unauthenticated liveness probe for Cloudflare / load-balancer health checks."""
+    return {"status": "ok"}
+
+
 @app.get("/api/v1/health")
 @limiter.limit("60/minute")
 async def health(request: Request, _: None = Depends(require_auth)) -> dict[str, Any]:

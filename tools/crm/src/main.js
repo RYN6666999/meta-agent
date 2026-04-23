@@ -67,6 +67,7 @@ import {
   generateDailyBriefing, showTodayReminders,
   toggleAiDiag, runAiDiagnostic,
 } from './features/ai/chat.js';
+import { initSessionPicker, loadSession, switchContact, switchThread, saveSession, renderSessionBar } from './features/ai/session.js';
 
 // ── Daily ─────────────────────────────────────────────────────────────────────
 import {
@@ -216,19 +217,49 @@ async function syncFromCloud() {
 function registerWindowBridge() {
   // ── 內部 __crm* 橋接（render.js / panel/index.js 模板用）────────────────
   let _chatContactId = null;
+
+  function loadContactSession(node, threadName) {
+    const msgs = loadSession(node.id, threadName);
+    dispatch({ type: 'CHAT_CLEAR' });
+    msgs.forEach(m => dispatch({ type: 'CHAT_PUSH', payload: m }));
+    renderChat();
+    return msgs.length;
+  }
+
   window.__crmSelectNode = id => {
     const node = getNodes().find(n => n.id === id);
     const isContact = node && node.parentId !== null;
     if (isContact) {
-      if (_chatContactId && _chatContactId !== id && getChatHistory().length > 0) {
-        smartClearChat();
-        toast(`已切換對象：${node.name}，對話摘要存入記憶`);
+      if (_chatContactId && _chatContactId !== id) {
+        // Save + clear current session
+        if (getChatHistory().length > 0) smartClearChat();
       }
+      // Switch contact in session store
+      const thread = switchContact(id, node.name);
+      // Load that contact's last active thread
+      const count = loadContactSession(node, thread);
+      if (count) toast(`📂 ${node.name} › ${thread}（${count} 則）`);
+
       setCurrentContact(node);
       _chatContactId = id;
+      renderSessionBar(id, node.name);
     }
     selectNode(id);
   };
+
+  // Session picker callbacks
+  initSessionPicker({
+    onThreadSwitch: (threadName, msgs) => {
+      // Thread changed — load messages for new thread
+      dispatch({ type: 'CHAT_CLEAR' });
+      msgs.forEach(m => dispatch({ type: 'CHAT_PUSH', payload: m }));
+      renderChat();
+      toast(`切換場景：${threadName}${msgs.length ? `（${msgs.length} 則）` : '（新場景）'}`);
+    },
+    onContactSwitch: (contactId) => {
+      window.__crmSelectNode?.(contactId);
+    },
+  });
   window.__crmOpenPanel       = id => openPanel(id);
   window.__crmClosePanel      = () => closePanel();
   window.__crmCycleStatus     = id => cycleStatus(id);

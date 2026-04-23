@@ -4,66 +4,64 @@
 
 ---
 
-## ✅ 目前最佳已知事實（最後更新：2026-04-23）
+## ✅ 目前最佳已知事實（最後更新：2026-04-23 ✅ 已解決）
 
-### 根本問題（未解決）
-**cloudflared tunnel 持續崩潰，但 watchdog 修的是 uvicorn（錯誤目標）。**
-這是 36 天無法根治的原因：每次都重啟了錯的服務。
+### 根本問題（已解決 2026-04-23）
+**路徑不符：`memory-mcp/` 移至 `tools/memory-mcp/` 後，4 個腳本未更新路徑。**
+uvicorn 啟動時 `load_backend()` 找不到 `memory-mcp/server.py` → `FileNotFoundError` → 崩潰。
+cloudflared **全程正常**（從未是問題所在，是假陽性誤導）。
 
-### 已確認的三個根因
-
-| # | 根因 | 頻率 | 修法 |
-|---|------|------|------|
-| RC-1 | `cloudflared tunnel process not running` | 每日多次 | 重啟 cloudflared（不是 uvicorn）|
-| RC-2 | `mobile API endpoint not healthy (health_code=000)` | 每日多次 | RC-1 的症狀，cloudflared 死了 API 就不可達 |
-| RC-3 | `cloudflared did not emit quick tunnel url` | 偶發 | 等待或重新啟動 cloudflared |
-| RC-4 | `telegram setWebhook failed` | RC-1 引發 | cloudflared 重啟後 URL 改變，需重新 bind |
-
-### 關鍵診斷：為何重啟 uvicorn 沒用
+### 崩潰鏈（36 天的真相）
 ```
-cloudflared 死掉 → 外部無法連到 port 9901 → health_code=000
-watchdog 誤判為 uvicorn 問題 → 重啟 uvicorn
-uvicorn 根本沒死，重啟無效 → 5 分鐘後再度 health_code=000
-→ 無限循環
+uvicorn 啟動
+→ load_backend() → FileNotFoundError: memory-mcp/server.py 不存在
+→ uvicorn 崩潰，port 9901 無服務
+→ health check = 000
+→ watchdog 記錄「mobile API endpoint not healthy」（假陽性）
+→ 重啟 uvicorn → 再次 FileNotFoundError → 無限循環 × 69 次
+cloudflared 全程 ALIVE，被誤認為元兇
 ```
 
-### 正確修法
+### 修法（已執行，2026-04-23）
 ```bash
-# 1. 確認誰真的死了
-pgrep -f cloudflared   # 如果沒輸出 → cloudflared 死了
-pgrep -f uvicorn       # 如果沒輸出 → uvicorn 死了（少見）
+ln -sf /Users/ryan/meta-agent/tools/memory-mcp /Users/ryan/meta-agent/memory-mcp
+# 驗收：acceptance 7/7 passed，uvicorn PID 存活
+```
 
-# 2. 重啟 mobile bridge（含 cloudflared）
+### 受影響的 4 個腳本（全部透過 symlink 修復）
+| 腳本 | 行號 | 舊路徑（錯誤）|
+|------|------|--------|
+| `api/server.py` | 32 | `BASE_DIR / "memory-mcp" / "server.py"` |
+| `scripts/replay_degraded_queue.py` | 21 | 同上 |
+| `scripts/local_memory_extract.py` | 27 | 同上 |
+| `scripts/benchmark_debug_capability.py` | 9 | `sys.path.insert(0, REPO / "memory-mcp")` |
+
+### 未來防範
+- 若再移動 `tools/memory-mcp/`，symlink 需同步更新
+- 考慮在 `common/config.py` 統一定義 `BACKEND_FILE`，避免各腳本各自寫死路徑
+
+### 正確操作指令
+```bash
+# 重啟
 launchctl kickstart -k gui/$(id -u)/com.meta-agent.mobile-bridge
 
-# 3. 驗收
+# 查日誌（正確路徑）
+tail -f /private/tmp/meta-agent-api.log
+
+# 診斷
+pgrep -f "uvicorn.*9901" && echo "uvicorn OK" || echo "uvicorn DEAD"
+pgrep -f cloudflared && echo "cloudflared OK" || echo "cloudflared DEAD"
+
+# 驗收
 python3 /Users/ryan/meta-agent/scripts/mobile_bridge_acceptance.py
 ```
-
-### 關鍵路徑
-| 項目 | 值 |
-|------|-----|
-| API port | 9901 |
-| 正確日誌路徑 | `/private/tmp/meta-agent-api.log` |
-| **錯誤路徑（永遠 0 bytes）** | `/tmp/com.meta-agent.mobile-bridge.out.log` |
-| Telegram webhook | `https://bot.3141919ryanfeofjpewfp.uk/api/v1/telegram/webhook/papa-bridge-20260317` |
-| 日誌監控 | `tail -n 20 -F /private/tmp/meta-agent-api.log` |
-| 查 log 路徑 | `lsof -p $(pgrep -f 'uvicorn.*9901') -a -d 1,2` |
-
-### 待查（尚未有答案）
-- [ ] cloudflared 為什麼會死？是 macOS 的 launchd timeout？網路問題？還是記憶體？
-- [ ] 換成 named tunnel（不用 quick tunnel）是否能解決 URL 每次改變的問題？
-- [ ] watchdog 的修復邏輯是否需要改為先查 cloudflared，再查 uvicorn？
 
 ---
 
 ## 📅 事件時間線（只 append）
 
-- 2026-03-17: 首次記錄。多種根因同日出現：tunnel-down、webhook-bind-failed、url-missing
-- 2026-03-18: api-down + tunnel-down + webhook-bind-failed 持續
-- 2026-03-19 ~ 2026-03-20: 每日 api-down + tunnel-down
-- 2026-03-21: 確認 root_cause = "cloudflared tunnel process not running"（首次明確記錄）
-- 2026-03-22 ~ 2026-04-16: 每日 api-down + tunnel-down，同樣根因，無根本修復
-- 2026-04-17: CRM ES Module refactor 同日發生，tunnel 仍持續崩潰
-- 2026-04-19 ~ 2026-04-23: 持續崩潰，今日（2026-04-23）已記錄 12 次崩潰
-- **累計：69 個 error-log 文件，0 個根本修復**
+- 2026-03-17: 首次記錄。多種症狀：tunnel-down、webhook-bind-failed、url-missing（全為假陽性）
+- 2026-03-21: 確認 root_cause = "cloudflared tunnel process not running"（仍為誤判）
+- 2026-03-22 ~ 2026-04-22: 每日 api-down + tunnel-down，69 個 error-log，無根本修復
+- **2026-04-23: 真正根因確認** — `memory-mcp/server.py` FileNotFoundError 導致 uvicorn 無法啟動
+- **2026-04-23: 修復完成** — 建立 symlink，acceptance 7/7 passed

@@ -4735,3 +4735,36 @@
   其他變更 truth-source/2026-04-23-mobile-bridge-root-cause.md +10
 
 ---
+
+## 2026-04-23 12:57 | auto-git-score | 分數 400 | 📥 達到閾值（400/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=140），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-04-23-mobile-bridge-api-down.md +10
+  error-log 新增根因 error-log/2026-04-23-mobile-bridge-root-cause.md +50
+  其他變更 memory-mcp +10
+  其他變更 memory/archive/pending-decisions-archive-2026-04-23.md +10
+  其他變更 memory/brain/RESOLVER.md +10
+  其他變更 memory/brain/bugs/README.md +10
+  其他變更 memory/brain/bugs/mobile-bridge.md +10
+  其他變更 memory/brain/decisions/README.md +10
+  其他變更 memory/brain/inbox/README.md +10
+  其他變更 memory/brain/ops/README.md +10
+  其他變更 memory/brain/ops/dream-cycle.md +10
+  其他變更 memory/brain/ops/mobile-bridge.md +10
+  其他變更 memory/brain/rules/README.md +10
+  其他變更 memory/brain/rules/memory-rules.md +10
+  其他變更 memory/brain/rules/n8n-rules.md +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/milestone-judge-log.md +10
+  其他變更 memory/pending-decisions.md +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/turn-count.txt +10
+  核心腳本變更 scripts/com.meta-agent.dream-cycle.plist +40
+  核心腳本變更 scripts/dream-cycle.sh +40
+  其他變更 tools/crm/functions/api/brain.js +10
+  其他變更 tools/crm/sw.js +10
+  truth-source 新增驗證決策 truth-source/2026-04-23-mobile-bridge-root-cause.md +60
+
+---
