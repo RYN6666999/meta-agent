@@ -68,6 +68,7 @@ import {
   toggleAiDiag, runAiDiagnostic,
 } from './features/ai/chat.js';
 import { initSessionPicker, loadSession, switchContact, switchThread, saveSession, renderSessionBar } from './features/ai/session.js';
+import { addFiles, initPasteHandler } from './features/ai/attachments.js';
 
 // ── Daily ─────────────────────────────────────────────────────────────────────
 import {
@@ -231,14 +232,17 @@ function registerWindowBridge() {
     const isContact = node && node.parentId !== null;
     if (isContact) {
       if (_chatContactId && _chatContactId !== id) {
-        // Save + clear current session
-        if (getChatHistory().length > 0) smartClearChat();
+        // 只存檔，不清空——切換時不呼叫 smartClearChat（async 會蓋掉新聯絡人的對話）
+        const prevNode = getNodes().find(n => n.id === _chatContactId);
+        const history = getChatHistory();
+        if (prevNode && history.length > 0) saveSession(_chatContactId, prevNode.name, history);
       }
       // Switch contact in session store
       const thread = switchContact(id, node.name);
       // Load that contact's last active thread
       const count = loadContactSession(node, thread);
       if (count) toast(`📂 ${node.name} › ${thread}（${count} 則）`);
+      else toast(`👤 ${node.name}（新對話）`);
 
       setCurrentContact(node);
       _chatContactId = id;
@@ -378,6 +382,8 @@ function registerWindowBridge() {
   window.sendChat               = () => sendChat();
   window.clearChat              = () => clearChat();
   window.smartClearChat         = () => smartClearChat();
+  window.__crmAttachFiles       = (files) => addFiles(files);
+  initPasteHandler();
   window.setPersona             = (k, el) => setPersona(k, el);
   window.onAiProviderChange     = () => onAiProviderChange();
   window.saveAiSettings         = () => saveAiSettings();

@@ -11,6 +11,7 @@ import { getAiSettings } from './providers.js';
 import { getCurrentPersona, buildSystemPrompt, memoryService } from './personas.js';
 import { CRM_TOOLS, executeToolCall } from './tools.js';
 import { saveSession, renderSessionBar } from './session.js';
+import { getAttachments, clearAttachments, buildContent } from './attachments.js';
 
 // ── Markdown → HTML (minimal) ─────────────────────────────────────────────────
 
@@ -49,7 +50,8 @@ export function renderChat() {
   }
   box.innerHTML = history.map(m => {
     if (m.role === 'user') {
-      return `<div class="chat-msg user"><div class="chat-bubble user">${mdToHtml(m.content)}</div></div>`;
+      const imgs = (m.images || []).map(src => `<img src="${src}" alt="附圖">`).join('');
+      return `<div class="chat-msg user"><div class="chat-bubble user">${imgs}${mdToHtml(m.content)}</div></div>`;
     }
     if (m.role === 'assistant') {
       return `<div class="chat-msg assistant">
@@ -220,8 +222,9 @@ function extractToolUses(provider, data) {
 export async function sendChat() {
   const inp = document.getElementById('chat-input');
   if (!inp) return;
-  const userMsg = inp.value.trim();
-  if (!userMsg) return;
+  const userMsg    = inp.value.trim();
+  const attachments = getAttachments();
+  if (!userMsg && !attachments.length) return;
 
   inp.value = '';
   inp.style.height = 'auto';
@@ -229,8 +232,20 @@ export async function sendChat() {
   const { provider, model, apiKey, endpoint: customEndpoint } = getAiSettings();
   if (!apiKey && provider !== 'claude') { toast('請先設定 API Key'); return; }
 
-  // Append user message to state
-  dispatch({ type: 'CHAT_PUSH', payload: { role: 'user', content: userMsg } });
+  // Snapshot attachments then clear (before async ops)
+  const attachSnap = [...attachments];
+  clearAttachments();
+
+  // Build content: plain text or multipart (text + images/files)
+  const userContent = buildContent(userMsg, provider, attachSnap);
+
+  // Store display text + image previews in history
+  const historyPayload = {
+    role: 'user',
+    content: userMsg || '（附件）',
+    images: attachSnap.filter(a => a.type === 'image').map(a => a.preview),
+  };
+  dispatch({ type: 'CHAT_PUSH', payload: historyPayload });
   renderChat();
 
   // Show loading with live timer
@@ -260,9 +275,15 @@ export async function sendChat() {
     const { memories: _m, promptSnippet } = await memoryService.retrieve(userMsg, { persona: personaKey });
     const systemPrompt = await buildSystemPrompt(personaKey, promptSnippet, _currentContact);
 
-    // Build messages array — trim by token budget (not fixed count)
+    // Build messages array — trim by token budget, replace last user msg with rich content
     const history  = trimToTokenBudget(getChatHistory());
-    const messages = history.map(m => ({ role: m.role, content: m.content }));
+    const messages = history.map((m, i) => {
+      // Last message is the one just pushed (has userContent with images)
+      if (m.role === 'user' && i === history.length - 1 && attachSnap.length) {
+        return { role: 'user', content: userContent };
+      }
+      return { role: m.role, content: m.content };
+    });
 
     const url     = getEndpoint(provider, model, customEndpoint);
     const headers = getHeaders(provider, apiKey);
