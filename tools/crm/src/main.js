@@ -70,7 +70,8 @@ import { renderStudentsPage, openStudentModal, closeStudentModal, saveStudent, d
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 import {
-  initTheme, onThemeChange, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
+  initTheme, applyTheme, renderThemeGrid,
+  renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
   openSkModal, closeSkModal, resetShortcuts, saveShortcut, setCmdMode, resetCmdPolicy, renderCmdList,
   resetGoogleClientId, startSheetsOAuth, resetSheetsAuth, saveSheetsId,
   saveObsidianPath, openObsidianVault, renderObsidianPath, OB_BACKUP,
@@ -85,9 +86,6 @@ import {
 
 // ── Canvas Views ──────────────────────────────────────────────────────────────
 import { setCrmView, toggleCrmSortDir, renderListView } from './features/canvas/views.js';
-
-// ── Daily navigation ──────────────────────────────────────────────────────────
-import { dailyToday, dailyPrev, dailyNext } from './features/daily/index.js';
 
 // ── Google Calendar ───────────────────────────────────────────────────────────
 import { renderGcalCard, startGcalOAuth, disconnectGcal, fetchGcalEvents } from './integrations/gcal.js';
@@ -131,7 +129,7 @@ export function navigate(page) {
     case 'ai':       renderChat(); renderQuickPrompts(getCurrentPersona()); updateAiModelBadge(); break;
     case 'settings':
       renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
-      renderObsidianPath(); renderCmdList();
+      renderObsidianPath(); renderCmdList(); renderThemeGrid();
       break;
   }
 }
@@ -319,7 +317,9 @@ function registerWindowBridge() {
   window.disconnectGcal         = () => disconnectGcal();
   window.renderSettingsPage     = () => {
     renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
+    renderObsidianPath(); renderCmdList(); renderThemeGrid();
   };
+  window.__crmApplyTheme        = (t) => { applyTheme(t); renderThemeGrid(); };
   window.doLogout = () => {
     if (!confirm('確定要登出？')) return;
     localStorage.removeItem('crm-login');
@@ -503,8 +503,18 @@ export async function init() {
 // Boot
 // ─────────────────────────────────────────────────────────────────────────────
 
+function bootWithErrorReport() {
+  init().catch(err => {
+    console.error('[CRM BOOT ERROR]', err);
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:60px;left:0;right:0;z-index:99999;background:#3a0000;color:#ff8080;padding:16px;font-size:13px;font-family:monospace;white-space:pre-wrap;overflow:auto;max-height:40vh';
+    div.textContent = '⚠️ 啟動錯誤（請截圖回報）:\n' + (err?.stack || err);
+    document.body?.appendChild(div);
+  });
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', bootWithErrorReport);
 } else {
-  init();
+  bootWithErrorReport();
 }
