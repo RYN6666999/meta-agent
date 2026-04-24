@@ -73,38 +73,50 @@ export function injectPrompt(idx) {
 // ── Memory Service ─────────────────────────────────────────────────────────────
 
 export const memoryService = {
-  base: '/api/memories',
+  getMemories() {
+    try { return JSON.parse(localStorage.getItem('crm-ai-memories')) || []; }
+    catch { return []; }
+  },
+  saveMemories(mems) {
+    localStorage.setItem('crm-ai-memories', JSON.stringify(mems));
+    import('../../core/cloud-sync.js').then(m => m.cloudPush('memories', mems)).catch(()=>{});
+  },
 
   async list(opts = {}) {
-    try {
-      const p = new URLSearchParams();
-      if (opts.subject) p.set('subject', opts.subject);
-      if (opts.type)    p.set('type',    opts.type);
-      if (opts.pinned != null) p.set('pinned', opts.pinned);
-      if (opts.includeArchived) p.set('includeArchived', 'true');
-      const r = await fetch(`${this.base}?${p}`);
-      if (!r.ok) return [];
-      return (await r.json()).memories || [];
-    } catch { return []; }
+    let mems = this.getMemories();
+    if (opts.subject) mems = mems.filter(m => m.subject.includes(opts.subject));
+    if (opts.type)    mems = mems.filter(m => m.type === opts.type);
+    if (opts.pinned != null) mems = mems.filter(m => !!m.pinned === !!opts.pinned);
+    if (!opts.includeArchived) mems = mems.filter(m => !m.archived);
+    return mems;
   },
 
   async create(mem) {
-    try {
-      const r = await fetch(this.base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mem) });
-      return r.ok ? await r.json() : null;
-    } catch { return null; }
+    const mems = this.getMemories();
+    const newMem = { id: Date.now().toString(), createdAt: new Date().toISOString(), ...mem };
+    mems.push(newMem);
+    this.saveMemories(mems);
+    return newMem;
   },
 
   async update(id, patch) {
-    try {
-      const r = await fetch(`${this.base}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
-      return r.ok ? await r.json() : null;
-    } catch { return null; }
+    const mems = this.getMemories();
+    const idx = mems.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    mems[idx] = { ...mems[idx], ...patch, updatedAt: new Date().toISOString() };
+    this.saveMemories(mems);
+    return mems[idx];
   },
 
   async delete(id) {
-    try { return (await fetch(`${this.base}/${id}`, { method: 'DELETE' })).ok; }
-    catch { return false; }
+    const mems = this.getMemories();
+    const initLen = mems.length;
+    const filtered = mems.filter(m => m.id !== id);
+    if (filtered.length !== initLen) {
+      this.saveMemories(filtered);
+      return true;
+    }
+    return false;
   },
 
   async retrieve(message, context = {}) {
@@ -116,16 +128,12 @@ export const memoryService = {
       body: JSON.stringify({ action: 'search', query: message, limit: 3 }),
     }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }));
 
-    const [kvResult, brainResults] = await Promise.all([
-      fetch(`${this.base}/retrieve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, context, topK: 5 }),
-      }).then(r => r.ok ? r.json() : { memories: [], promptSnippet: '' }).catch(() => ({ memories: [], promptSnippet: '' })),
-      Promise.race([brainFetch, brainTimeout]),
-    ]);
+    const mems = this.getMemories().filter(m => !m.archived).slice(-5);
+    let promptSnippet = mems.length ? '【相關記憶】\n' + mems.map(m => `- ${m.subject} (${m.type}): ${m.content}`).join('\n') : '';
+
+    const brainResults = await Promise.race([brainFetch, brainTimeout]);
 
     // Merge: KV snippet first, then brain excerpts (200 chars each)
-    let promptSnippet = kvResult.promptSnippet || '';
     const brainHits = (brainResults.results || []).filter(r => r.score > 0.01);
     if (brainHits.length) {
       const brainBlock = brainHits.map(r => `【知識庫：${r.title}】\n${(r.excerpt || '').slice(0, 200)}`).join('\n\n');
@@ -134,7 +142,7 @@ export const memoryService = {
         : `【相關知識庫段落】\n${brainBlock}`;
     }
 
-    return { memories: kvResult.memories || [], promptSnippet };
+    return { memories: mems, promptSnippet };
   },
 };
 

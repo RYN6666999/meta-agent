@@ -213,8 +213,26 @@ function extractContent(provider, data) {
 }
 
 function extractToolUses(provider, data) {
-  if (provider !== 'claude') return [];
-  return (data.content || []).filter(b => b.type === 'tool_use');
+  if (provider === 'claude') {
+    return (data.content || []).filter(b => b.type === 'tool_use');
+  }
+  if (provider === 'gemini') {
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const calls = [];
+    for (const p of parts) {
+      if (p.functionCall) {
+        calls.push({ name: p.functionCall.name, input: p.functionCall.args });
+      }
+    }
+    return calls;
+  }
+  // openai, openrouter, grok, custom
+  const toolCalls = data.choices?.[0]?.message?.tool_calls || [];
+  return toolCalls.map(tc => {
+    let input = {};
+    try { input = JSON.parse(tc.function.arguments || '{}'); } catch { /**/ }
+    return { name: tc.function.name, input };
+  });
 }
 
 // ── sendChat ──────────────────────────────────────────────────────────────────

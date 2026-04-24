@@ -24,6 +24,7 @@ const KEY_MAP = {
   monthlySalesTargets: 'monthly-sales-targets',
   docs:                'docs',
   students:            'students',
+  memories:            'ai-memories',
 };
 
 function getToken() {

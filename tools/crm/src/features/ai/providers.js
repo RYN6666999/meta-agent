@@ -66,8 +66,8 @@ export const AI_PROVIDERS = {
 /** @returns {{ provider, model, apiKey, endpoint }} */
 export function getAiSettings() {
   return {
-    provider: localStorage.getItem(K.aiProvider)  || 'claude',
-    model:    localStorage.getItem(K.aiModel)     || 'claude-3-5-haiku-20241022',
+    provider: localStorage.getItem(K.aiProvider)  || 'openrouter',
+    model:    localStorage.getItem(K.aiModel)     || 'deepseek/deepseek-chat',
     apiKey:   localStorage.getItem(K.apiKey)      || '',
     endpoint: localStorage.getItem(K.aiEndpoint)  || '',
   };
