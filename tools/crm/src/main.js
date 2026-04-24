@@ -6,19 +6,64 @@
 
 // ── Theme grid ────────────────────────────────────────────────────────────────
 const _THEMES = [
-  { id:'dark',       label:'深色',      icon:'🌑' },
-  { id:'dark-blue',  label:'深藍',      icon:'🌌' },
-  { id:'light',      label:'淺色',      icon:'☀️' },
-  { id:'light-warm', label:'暖色',      icon:'🌤' },
-  { id:'sage-gold',  label:'清新金綠',  icon:'🛫' },
-  { id:'impact',     label:'Impact',   icon:'⚡' },
-  { id:'neuo',       label:'浮凸 2.5D', icon:'🪨' },
+  // ── 新設計系統 ──
+  { id:'muji',       label:'無印',       icon:'📄', group:'新' },
+  { id:'muji-dark',  label:'無印夜',     icon:'🌙', group:'新' },
+  { id:'terminal',   label:'終端機',     icon:'📊', group:'新' },
+  { id:'linear',     label:'Linear',    icon:'🔷', group:'新' },
+  // ── 原有主題 ──
+  { id:'dark',       label:'深色',      icon:'🌑', group:'原' },
+  { id:'dark-blue',  label:'深藍',      icon:'🌌', group:'原' },
+  { id:'light',      label:'淺色',      icon:'☀️', group:'原' },
+  { id:'light-warm', label:'暖色',      icon:'🌤', group:'原' },
+  { id:'sage-gold',  label:'清新金綠',  icon:'🛫', group:'原' },
+  { id:'impact',     label:'Impact',   icon:'⚡', group:'原' },
+  { id:'neuo',       label:'浮凸 2.5D', icon:'🪨', group:'原' },
 ];
+// 主題預覽色（給 tile 用，不依賴目前主題）
+const _THEME_PREVIEW = {
+  'muji':      { bg:'#f5f2ea', accent:'#5e7359', text:'#22201b' },
+  'muji-dark': { bg:'#1a1814', accent:'#8fa88a', text:'#ebe6d8' },
+  'terminal':  { bg:'#060911', accent:'#ffb020', text:'#d4deef' },
+  'linear':    { bg:'#0f1012', accent:'#8b7fff', text:'#e8e9ec' },
+  'dark':      { bg:'#0d1117', accent:'#388bfd', text:'#e6edf3' },
+  'dark-blue': { bg:'#090e1a', accent:'#4a9eff', text:'#d4e4f7' },
+  'light':     { bg:'#f6f8fa', accent:'#388bfd', text:'#1f2328' },
+  'light-warm':{ bg:'#faf8f5', accent:'#c79b2b', text:'#2c2416' },
+  'sage-gold': { bg:'#edf1ef', accent:'#c79b2b', text:'#1e2a25' },
+  'impact':    { bg:'#08090c', accent:'#ff2e63', text:'#f5f7fb' },
+  'neuo':      { bg:'#e0e5ec', accent:'#4a90d9', text:'#2d3748' },
+};
+
 function renderThemeGrid() {
   const tg = document.getElementById('settings-theme-grid');
   if (!tg) return;
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-  tg.innerHTML = _THEMES.map(t => `<div class="theme-tile${cur===t.id?' active':''}" onclick="window.__crmApplyTheme('${t.id}')"><div class="theme-tile-icon">${t.icon}</div><div class="theme-tile-label">${t.label}</div></div>`).join('');
+
+  // Section header — spans all 4 columns
+  const sectionHdr = (txt) =>
+    `<div style="grid-column:1/-1;font-size:10px;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--text-subtle);padding:4px 0 2px;
+      border-bottom:1px solid var(--border);margin-bottom:2px">${txt}</div>`;
+
+  // Tile — direct grid child, compact height
+  const tile = (t) => {
+    const p = _THEME_PREVIEW[t.id] || { bg:'#111', accent:'#888', text:'#eee' };
+    const active = cur === t.id;
+    return `<div onclick="window.__crmApplyTheme('${t.id}')"
+      style="background:${p.bg};border:2px solid ${active ? p.accent : 'rgba(128,128,128,.2)'};
+        border-radius:10px;padding:10px 8px 8px;cursor:pointer;text-align:center;
+        transition:all .15s;box-shadow:${active ? `0 0 0 2px ${p.accent}44` : '0 1px 3px rgba(0,0,0,.2)'}">
+      <div style="font-size:18px;line-height:1.2;margin-bottom:4px">${t.icon}</div>
+      <div style="font-size:11px;font-weight:600;color:${p.text};white-space:nowrap;margin-bottom:5px">${t.label}</div>
+      <div style="height:2px;border-radius:1px;background:${p.accent}"></div>
+    </div>`;
+  };
+
+  const newT  = _THEMES.filter(t => t.group === '新');
+  const origT = _THEMES.filter(t => t.group === '原');
+  tg.innerHTML = sectionHdr('新設計') + newT.map(tile).join('') +
+                 sectionHdr('經典')   + origT.map(tile).join('');
 }
 
 // ── Core ──────────────────────────────────────────────────────────────────────
@@ -95,6 +140,7 @@ import {
   openSkModal, closeSkModal, resetShortcuts, saveShortcut, setCmdMode, resetCmdPolicy, renderCmdList,
   resetGoogleClientId, startSheetsOAuth, resetSheetsAuth, saveSheetsId,
   saveObsidianPath, openObsidianVault, renderObsidianPath, OB_BACKUP,
+  exportAiData, importAiData, renderAiBackupCard,
 } from './features/settings/index.js';
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
@@ -150,7 +196,7 @@ export function navigate(page) {
     case 'ai':       renderChat(); renderQuickPrompts(getCurrentPersona()); updateAiModelBadge(); break;
     case 'settings':
       renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
-      renderObsidianPath(); renderCmdList(); renderThemeGrid();
+      renderObsidianPath(); renderCmdList(); renderThemeGrid(); renderAiBackupCard();
       break;
   }
 }
@@ -391,14 +437,16 @@ function registerWindowBridge() {
 
   // Settings
   window.exportAll              = () => exportData();
-  window.importAll              = () => document.getElementById('import-file-input')?.click();
+  window.importAll              = (e) => { const f = e?.target?.files?.[0]; if (f) importData(f); };
+  window.exportAiData           = () => exportAiData();
+  window.importAiData           = (e) => { const f = e?.target?.files?.[0]; if (f) importAiData(f); };
   window.clearAllData           = () => clearAllData();
   window.startGoogleOAuth       = () => startGcalOAuth();
   window.fetchGcalEvents        = () => fetchGcalEvents();
   window.disconnectGcal         = () => disconnectGcal();
   window.__crmApplyTheme        = t => { applyTheme(t); renderThemeGrid(); };
   window.renderSettingsPage     = () => {
-    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp(); renderThemeGrid();
+    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp(); renderThemeGrid(); renderAiBackupCard();
   };
   window.doLogout = () => {
     if (!confirm('確定要登出？')) return;

@@ -60,6 +60,159 @@ export function saveLogin() {
   toast('帳號資料已儲存');
 }
 
+// ── AI Chat Backup ────────────────────────────────────────────────────────────
+
+/**
+ * 匯出 AI 對話備份：
+ *   - crm-chat-sessions（所有聯絡人 × 所有場景的完整對話）
+ *   - crm-chat（目前活躍對話）
+ *   - CRM_MEMORIES KV（所有記憶條目，含封存）
+ */
+export async function exportAiData() {
+  const btn = document.getElementById('ai-backup-export-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 匯出中…'; }
+
+  try {
+    // 1. localStorage 對話紀錄
+    const chatSessions = JSON.parse(localStorage.getItem('crm-chat-sessions') || '{}');
+    const activeChat   = JSON.parse(localStorage.getItem('crm-chat') || '[]');
+
+    // 2. 記憶庫（KV）
+    let memories = [];
+    try {
+      const res = await fetch('/api/memories?includeArchived=true');
+      if (res.ok) memories = (await res.json()).memories || [];
+    } catch { /* 離線時跳過 */ }
+
+    // 3. 統計數字
+    let totalMsgs = 0;
+    for (const contact of Object.values(chatSessions)) {
+      for (const thread of Object.values(contact.threads || {})) {
+        totalMsgs += thread.messages?.length || 0;
+      }
+    }
+
+    const payload = {
+      version:   2,
+      exportedAt: new Date().toISOString(),
+      stats: {
+        contacts:    Object.keys(chatSessions).length,
+        totalMsgs,
+        memories:    memories.length,
+      },
+      chatSessions,
+      activeChat,
+      memories,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `crm-ai-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast(`AI 對話備份完成：${Object.keys(chatSessions).length} 位聯絡人，${totalMsgs} 則對話，${memories.length} 條記憶`);
+    _renderAiBackupStats(chatSessions, memories.length);
+  } catch (e) {
+    toast('備份失敗：' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ 匯出 AI 對話備份'; }
+  }
+}
+
+/**
+ * 匯入 AI 對話備份（覆寫 chatSessions + activeChat，合併記憶庫）
+ */
+export async function importAiData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.chatSessions && !data.memories) throw new Error('格式不正確（缺少 chatSessions 或 memories）');
+
+      const sessionCount = Object.keys(data.chatSessions || {}).length;
+      const memCount     = (data.memories || []).length;
+      if (!confirm(`確定匯入？\n• ${sessionCount} 位聯絡人的對話紀錄\n• ${memCount} 條記憶\n\n對話紀錄會覆蓋，記憶庫為合併新增。`)) return;
+
+      const btn = document.getElementById('ai-backup-import-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ 匯入中…'; }
+
+      // 還原 localStorage
+      if (data.chatSessions) localStorage.setItem('crm-chat-sessions', JSON.stringify(data.chatSessions));
+      if (data.activeChat)   localStorage.setItem('crm-chat', JSON.stringify(data.activeChat));
+
+      // 合併記憶庫（跳過 summary 超長的）
+      let memImported = 0;
+      let memSkipped  = 0;
+      for (const mem of (data.memories || [])) {
+        if (!mem.type || !mem.subject || !mem.summary) { memSkipped++; continue; }
+        if ((mem.summary || '').length > 120)          { memSkipped++; continue; }
+        try {
+          const res = await fetch('/api/memories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type:     mem.type,
+              subject:  mem.subject,
+              summary:  mem.summary,
+              detail:   mem.detail  || null,
+              keywords: mem.keywords || [],
+              pinned:   mem.pinned   || false,
+              source:   'manual',
+            }),
+          });
+          if (res.ok) memImported++;
+          else        memSkipped++;
+        } catch { memSkipped++; }
+      }
+
+      toast(`匯入完成：${sessionCount} 位聯絡人對話，記憶 ${memImported} 條成功 / ${memSkipped} 條略過`);
+      _renderAiBackupStats(data.chatSessions || {}, memImported);
+      if (btn) { btn.disabled = false; btn.textContent = '⬆ 匯入 AI 對話備份'; }
+    } catch (err) {
+      toast('匯入失敗：' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/** 渲染備份統計摘要 */
+function _renderAiBackupStats(sessions, memCount) {
+  const el = document.getElementById('ai-backup-stats');
+  if (!el) return;
+  const contacts = Object.values(sessions);
+  let totalMsgs = 0, threadList = [];
+  for (const c of contacts) {
+    for (const [tname, t] of Object.entries(c.threads || {})) {
+      const n = t.messages?.length || 0;
+      totalMsgs += n;
+      threadList.push({ name: c.contactName, thread: tname, count: n, ts: t.updatedAt });
+    }
+  }
+  threadList.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const rows = threadList.slice(0, 8).map(r =>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+       <span><b>${r.name}</b> › ${r.thread}</span>
+       <span style="color:var(--text-muted)">${r.count} 則</span>
+     </div>`
+  ).join('');
+  el.innerHTML = `
+    <div style="margin-bottom:6px;font-size:12px;color:var(--text-muted)">
+      共 <b>${contacts.length}</b> 位聯絡人・<b>${totalMsgs}</b> 則對話・<b>${memCount}</b> 條記憶
+    </div>
+    ${rows}
+    ${threadList.length > 8 ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">…還有 ${threadList.length - 8} 個場景</div>` : ''}`;
+}
+
+/** 在設定頁初始化時顯示現有統計 */
+export function renderAiBackupCard() {
+  const sessions = JSON.parse(localStorage.getItem('crm-chat-sessions') || '{}');
+  _renderAiBackupStats(sessions, '—');
+}
+
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export function exportData() {
