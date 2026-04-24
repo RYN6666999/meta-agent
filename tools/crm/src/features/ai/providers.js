@@ -66,10 +66,10 @@ export const AI_PROVIDERS = {
 /** @returns {{ provider, model, apiKey, endpoint }} */
 export function getAiSettings() {
   return {
-    provider: localStorage.getItem(K.aiProvider)  || 'claude',
-    model:    localStorage.getItem(K.aiModel)     || 'claude-3-5-haiku-20241022',
+    provider: localStorage.getItem(K.aiProvider)  || 'openrouter',
+    model:    localStorage.getItem(K.aiModel)     || 'deepseek/deepseek-chat',
     apiKey:   localStorage.getItem(K.apiKey)      || '',
-    endpoint: localStorage.getItem(K.aiEndpoint)  || '',
+    endpoint: localStorage.getItem(K.aiEndpoint)  || 'https://openrouter.ai/api/v1/chat/completions',
   };
 }
 
@@ -88,10 +88,11 @@ export function saveAiSettings() {
 // ── Model select UI ───────────────────────────────────────────────────────────
 
 export function onAiProviderChange() {
-  const provider  = document.getElementById('ai-provider-select')?.value || 'claude';
+  const provider  = document.getElementById('ai-provider-select')?.value || 'openrouter';
   const ms        = document.getElementById('ai-model-select');
   if (!ms) return;
   const p = AI_PROVIDERS[provider];
+  const savedModel = localStorage.getItem(K.aiModel) || '';
 
   if (provider === 'custom') {
     ms.innerHTML = '<option value="">自定義模型名稱</option>';
@@ -104,6 +105,7 @@ export function onAiProviderChange() {
       mi.oninput = saveAiSettings;
       ms.parentNode.insertBefore(mi, ms.nextSibling);
     } else { mi.style.display = ''; }
+    if (savedModel) mi.value = savedModel;
     document.getElementById('ai-custom-endpoint-row').style.display = 'flex';
   } else if (provider === 'openrouter') {
     ms.style.display = '';
@@ -113,9 +115,17 @@ export function onAiProviderChange() {
     const ep = document.getElementById('ai-custom-endpoint');
     if (ep && !ep.value) ep.value = p.endpoint;
     const cached = loadJSON('crm-openrouter-models', []);
-    ms.innerHTML = cached.length
-      ? cached.map(m => `<option value="${m}">${m}</option>`).join('')
-      : '<option value="">— 請點「載入模型」—</option>';
+    if (cached.length) {
+      ms.innerHTML = cached.map(m => `<option value="${m}">${m}</option>`).join('');
+      // Restore saved model before any save, so save doesn't clobber it
+      if (savedModel && cached.includes(savedModel)) ms.value = savedModel;
+    } else {
+      // Keep saved model as an option even without fetched list, so value persists
+      ms.innerHTML = savedModel
+        ? `<option value="${savedModel}">${savedModel}</option>`
+        : '<option value="">— 請點「載入模型」—</option>';
+      if (savedModel) ms.value = savedModel;
+    }
     let fetchBtn = document.getElementById('ai-fetch-models-btn');
     if (!fetchBtn) {
       fetchBtn = document.createElement('button');
@@ -131,6 +141,7 @@ export function onAiProviderChange() {
     const fetchBtn = document.getElementById('ai-fetch-models-btn');
     if (fetchBtn) fetchBtn.style.display = 'none';
     ms.innerHTML = p.models.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (savedModel && p.models.includes(savedModel)) ms.value = savedModel;
     document.getElementById('ai-custom-endpoint-row').style.display = 'none';
   }
   const ki = document.getElementById('ai-apikey-input');
@@ -156,9 +167,11 @@ export async function fetchDynamicModels() {
     localStorage.setItem('crm-openrouter-models', JSON.stringify(ids));
     const ms = document.getElementById('ai-model-select');
     if (ms) {
-      ms.innerHTML = ids.map(m => `<option value="${m}">${m}</option>`).join('');
       const saved = localStorage.getItem(K.aiModel);
-      if (saved && ids.includes(saved)) ms.value = saved;
+      // If saved model is not in fetched list, prepend it so it remains selectable
+      const list = saved && !ids.includes(saved) ? [saved, ...ids] : ids;
+      ms.innerHTML = list.map(m => `<option value="${m}">${m}</option>`).join('');
+      if (saved && list.includes(saved)) ms.value = saved;
     }
     toast(`✅ 已載入 ${ids.length} 個模型`);
   } catch (e) {
@@ -172,7 +185,7 @@ export function renderAiSettingsCard() {
   const s  = getAiSettings();
   const ps = document.getElementById('ai-provider-select');
   if (ps) ps.value = s.provider;
-  const p  = AI_PROVIDERS[s.provider] || AI_PROVIDERS.claude;
+  const p  = AI_PROVIDERS[s.provider] || AI_PROVIDERS.openrouter;
   const ms = document.getElementById('ai-model-select');
   if (ms) {
     if (s.provider === 'custom') {
@@ -188,8 +201,16 @@ export function renderAiSettingsCard() {
       const ep = document.getElementById('ai-custom-endpoint');
       if (ep && !ep.value) ep.value = p.endpoint;
       const cached = loadJSON('crm-openrouter-models', []);
-      if (cached.length) { ms.innerHTML = cached.map(m => `<option value="${m}">${m}</option>`).join(''); if (s.model) ms.value = s.model; }
-      else { ms.innerHTML = '<option value="">— 請點「載入模型」—</option>'; }
+      if (cached.length) {
+        ms.innerHTML = cached.map(m => `<option value="${m}">${m}</option>`).join('');
+        if (s.model && cached.includes(s.model)) ms.value = s.model;
+      } else {
+        // Preserve saved model as an option so value persists before fetch
+        ms.innerHTML = s.model
+          ? `<option value="${s.model}">${s.model}</option>`
+          : '<option value="">— 請點「載入模型」—</option>';
+        if (s.model) ms.value = s.model;
+      }
     } else {
       ms.style.display = '';
       const fetchBtn = document.getElementById('ai-fetch-models-btn');

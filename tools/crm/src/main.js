@@ -149,6 +149,7 @@ function loadData() {
   dispatch({ type: 'MONTHLY_SALES_TARGETS_SET', payload: STORE.loadMonthlySalesTargets() });
   dispatch({ type: 'DOCS_SET',                  payload: STORE.loadDocs() });
   dispatch({ type: 'STUDENTS_SET',              payload: STORE.loadStudents() });
+  dispatch({ type: 'CHAT_SET',                  payload: STORE.loadChat() });
 }
 
 /** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行） */
@@ -171,6 +172,10 @@ async function syncFromCloud() {
       STORE['save' + key.charAt(0).toUpperCase() + key.slice(1)]?.(remote[key]);
       dispatch({ type, payload: remote[key] });
     }
+  }
+  // 記憶單獨處理（不走 dispatch，直接寫 localStorage；下次 memoryService.list() 會讀到）
+  if (remote.memories != null) {
+    localStorage.setItem('crm-ai-memories', JSON.stringify(remote.memories));
   }
   console.log('[Cloud] 同步完成，已更新:', Object.keys(remote).join(', '));
   renderNodes(); drawEdges(); updateStats();

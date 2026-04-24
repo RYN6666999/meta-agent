@@ -7,6 +7,7 @@
 import { getNodes, getEvents, getSalesData, getDailyReports, getMonthlySalesTargets, getDocsData } from '../../core/state.js';
 import { STORE } from '../../core/store.js';
 import { CALC } from '../../core/calc.js';
+import { localMemoryService } from './memory-local.js';
 
 // ── Persona config ────────────────────────────────────────────────────────────
 
@@ -146,52 +147,8 @@ export function injectPrompt(idx) {
 }
 
 // ── Memory Service ─────────────────────────────────────────────────────────────
-
-export const memoryService = {
-  base: '/api/memories',
-
-  async list(opts = {}) {
-    try {
-      const p = new URLSearchParams();
-      if (opts.subject) p.set('subject', opts.subject);
-      if (opts.type)    p.set('type',    opts.type);
-      if (opts.pinned != null) p.set('pinned', opts.pinned);
-      if (opts.includeArchived) p.set('includeArchived', 'true');
-      const r = await fetch(`${this.base}?${p}`);
-      if (!r.ok) return [];
-      return (await r.json()).memories || [];
-    } catch { return []; }
-  },
-
-  async create(mem) {
-    try {
-      const r = await fetch(this.base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mem) });
-      return r.ok ? await r.json() : null;
-    } catch { return null; }
-  },
-
-  async update(id, patch) {
-    try {
-      const r = await fetch(`${this.base}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
-      return r.ok ? await r.json() : null;
-    } catch { return null; }
-  },
-
-  async delete(id) {
-    try { return (await fetch(`${this.base}/${id}`, { method: 'DELETE' })).ok; }
-    catch { return false; }
-  },
-
-  async retrieve(message, context = {}) {
-    try {
-      const r = await fetch(`${this.base}/retrieve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, context, topK: 5 }),
-      });
-      return r.ok ? await r.json() : { memories: [], promptSnippet: '' };
-    } catch { return { memories: [], promptSnippet: '' }; }
-  },
-};
+// 使用本地 localStorage 實作（原本的 /api/memories 後端不存在）
+export const memoryService = localMemoryService;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

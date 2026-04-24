@@ -32,7 +32,7 @@ function mdToHtml(text) {
 // ── Render chat history ───────────────────────────────────────────────────────
 
 export function renderChat() {
-  const box = document.getElementById('chat-messages');
+  const box = document.getElementById('chat-area');
   if (!box) return;
   const history = getChatHistory();
   if (!history.length) {
@@ -70,12 +70,24 @@ function roughTokens(text) { return Math.ceil((text || '').length / 3.5); }
 // ── Build API request body ────────────────────────────────────────────────────
 
 function buildRequestBody(provider, model, systemPrompt, messages) {
+  // OpenAI function-calling tool schema
+  const openaiTools = CRM_TOOLS.map(t => ({
+    type: 'function',
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema,
+    },
+  }));
+
   if (provider === 'openai' || provider === 'openrouter' || provider === 'custom' || provider === 'grok') {
     return {
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
       max_tokens: 2048,
       temperature: 0.7,
+      tools: openaiTools,
+      tool_choice: 'auto',
     };
   }
   if (provider === 'gemini') {
@@ -83,6 +95,13 @@ function buildRequestBody(provider, model, systemPrompt, messages) {
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
       generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+      tools: [{
+        function_declarations: CRM_TOOLS.map(t => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.input_schema,
+        })),
+      }],
     };
   }
   // claude (default)
@@ -114,17 +133,115 @@ function getHeaders(provider, apiKey) {
 }
 
 function extractContent(provider, data) {
-  if (provider === 'gemini') return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (provider === 'gemini') {
+    return (data.candidates?.[0]?.content?.parts || [])
+      .filter(p => p.text)
+      .map(p => p.text)
+      .join('\n');
+  }
   if (provider === 'claude') {
     const block = (data.content || []).find(b => b.type === 'text');
     return block?.text || '';
   }
+  // openai / openrouter / grok / custom — content may be null on pure tool_calls
   return data.choices?.[0]?.message?.content || '';
 }
 
 function extractToolUses(provider, data) {
-  if (provider !== 'claude') return [];
-  return (data.content || []).filter(b => b.type === 'tool_use');
+  if (provider === 'claude') {
+    return (data.content || []).filter(b => b.type === 'tool_use');
+  }
+  if (provider === 'gemini') {
+    return (data.candidates?.[0]?.content?.parts || [])
+      .filter(p => p.functionCall)
+      .map((p, i) => ({
+        id: 'g-' + Date.now() + '-' + i,
+        name: p.functionCall.name,
+        input: p.functionCall.args || {},
+      }));
+  }
+  // openai / openrouter — arguments is a JSON string, must parse
+  return (data.choices?.[0]?.message?.tool_calls || []).map(tc => {
+    let input = {};
+    try { input = JSON.parse(tc.function?.arguments || '{}'); }
+    catch { input = {}; }
+    return { id: tc.id, name: tc.function?.name, input, _raw: tc };
+  });
+}
+
+// ── Second round-trip: send tool results back to model ───────────────────────
+// After the first response returns tool_calls, we must execute them locally
+// then post the results back so the model can produce a natural-language reply.
+
+async function secondRoundChat({ provider, model, systemPrompt, messages, url, headers, firstData, toolExecutions }) {
+  try {
+    let body;
+
+    if (provider === 'claude') {
+      // Claude format: assistant message with tool_use blocks, then user message with tool_result blocks
+      const assistantBlocks = firstData.content || [];
+      const toolResultBlocks = toolExecutions.map(({ tu, result }) => ({
+        type: 'tool_result',
+        tool_use_id: tu.id,
+        content: JSON.stringify(result),
+      }));
+      body = {
+        model,
+        system: systemPrompt,
+        messages: [
+          ...messages,
+          { role: 'assistant', content: assistantBlocks },
+          { role: 'user', content: toolResultBlocks },
+        ],
+        max_tokens: 2048,
+        tools: CRM_TOOLS,
+      };
+    } else if (provider === 'gemini') {
+      // Gemini format: model part with functionCall, then user part with functionResponse
+      const functionCallParts = toolExecutions.map(({ tu }) => ({
+        functionCall: { name: tu.name, args: tu.input || {} },
+      }));
+      const functionResponseParts = toolExecutions.map(({ tu, result }) => ({
+        functionResponse: { name: tu.name, response: result },
+      }));
+      body = {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [
+          ...messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+          { role: 'model', parts: functionCallParts },
+          { role: 'user',  parts: functionResponseParts },
+        ],
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+      };
+    } else {
+      // openai / openrouter / grok / custom — OpenAI function-calling format
+      const assistantMsg = firstData.choices?.[0]?.message || { role: 'assistant', content: null, tool_calls: [] };
+      const toolMsgs = toolExecutions.map(({ tu, result }) => ({
+        role: 'tool',
+        tool_call_id: tu.id,
+        content: JSON.stringify(result),
+      }));
+      body = {
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages,
+          assistantMsg,
+          ...toolMsgs,
+        ],
+        max_tokens: 2048,
+        temperature: 0.7,
+      };
+    }
+
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!res.ok) return '';
+    const data = await res.json();
+    return extractContent(provider, data);
+  } catch (e) {
+    console.warn('[chat] secondRoundChat failed:', e);
+    return '';
+  }
 }
 
 // ── sendChat ──────────────────────────────────────────────────────────────────
@@ -146,7 +263,7 @@ export async function sendChat() {
   renderChat();
 
   // Show loading
-  const box = document.getElementById('chat-messages');
+  const box = document.getElementById('chat-area');
   const loading = document.createElement('div');
   loading.className = 'chat-msg assistant loading';
   loading.innerHTML = '<div class="chat-bubble assistant">⏳ 思考中…</div>';
@@ -176,19 +293,34 @@ export async function sendChat() {
     }
     const data = await res.json();
 
-    // Handle tool calls (Claude only)
+    // Extract tool calls + initial content
     const toolUses = extractToolUses(provider, data);
     let assistantContent = extractContent(provider, data);
 
     if (toolUses.length) {
-      const toolResults = [];
+      // Execute all tool calls locally
+      const toolExecutions = [];
       for (const tu of toolUses) {
         const result = await executeToolCall(tu.name, tu.input || {});
-        toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) });
-        if (result.message) assistantContent += (assistantContent ? '\n\n' : '') + `✅ ${result.message}`;
+        toolExecutions.push({ tu, result });
       }
-      // If tool calls produced a follow-up response, we could do a second round-trip here.
-      // For now, append the tool action descriptions inline.
+
+      // Second round-trip: feed results back to model to get natural-language reply
+      const followupContent = await secondRoundChat({
+        provider, model, systemPrompt, messages,
+        url, headers, firstData: data, toolExecutions,
+      });
+
+      // Prefer follow-up natural language; fall back to summarising tool results
+      if (followupContent) {
+        assistantContent = followupContent;
+      } else {
+        const summary = toolExecutions
+          .map(({ result }) => result.message ? `✅ ${result.message}` : (result.error ? `⚠ ${result.error}` : ''))
+          .filter(Boolean)
+          .join('\n');
+        assistantContent = (assistantContent ? assistantContent + '\n\n' : '') + summary;
+      }
     }
 
     if (!assistantContent) assistantContent = '（無回應）';

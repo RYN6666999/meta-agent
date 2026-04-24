@@ -1060,6 +1060,28 @@ select.field-input option{background:var(--surface2)}
 .chat-msg.tool-result .tool-icon{font-size:14px;flex-shrink:0}
 .chat-msg strong{color:var(--text);font-weight:600}
 
+/* AI 對話 — 記憶按鈕（hover 浮現 pill） */
+.chat-actions{
+  display:flex;gap:6px;margin-top:4px;
+  opacity:0;transition:opacity .2s;
+}
+.chat-msg.assistant:hover .chat-actions,
+.chat-msg.ai:hover .chat-actions{opacity:1}
+
+.chat-action-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 12px;border-radius:16px;
+  border:1px solid var(--border);
+  background:var(--surface2);color:var(--text-muted);
+  font-size:11px;font-weight:500;cursor:pointer;
+  transition:all .15s;font-family:inherit;
+}
+.chat-action-btn:hover{
+  border-color:var(--accent);color:var(--accent);
+  background:var(--accent-dim);
+  box-shadow:0 2px 8px rgba(56,139,253,.2);
+}
+
 /* Input */
 .chat-input-area{
   padding:12px 18px;border-top:1px solid var(--border);

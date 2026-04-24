@@ -44,6 +44,7 @@ export const STORE = {
   saveShortcuts(sk)                { saveJSON(K.shortcuts,           sk); },
   saveDocs(docsData)               { saveJSON(K.docs,                docsData); },
   saveStudents(studentsData)       { saveJSON(K.students,            studentsData); },
+  saveMemories(memories)           { saveJSON(K.aiMemories,          memories); },
 
   saveCmd(mode, white, black) {
     localStorage.setItem(K.cmdMode,  mode);
@@ -64,6 +65,7 @@ export const STORE = {
   loadDocs()                 { return loadJSON(K.docs,                []); },
   loadStudents()             { return loadJSON(K.students,            []); },
   loadDrafts()               { return loadJSON(K.drafts,              {}); },
+  loadMemories()             { return loadJSON(K.aiMemories,          []); },
 
   loadCmdMode()  { return localStorage.getItem(K.cmdMode)  || 'blacklist'; },
   loadCmdWhite() { return new Set(loadJSON(K.cmdWhite, [])); },
