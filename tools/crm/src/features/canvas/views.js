@@ -1,10 +1,11 @@
 /**
  * canvas/views.js
- * CRM 人脈視圖切換：tree(畫布) / region / status / contact
+ * CRM 人脈視圖切換：tree(畫布) / graph / region / status / contact
  * 依賴：core/state.js, canvas/render.js, canvas/edges.js
  */
 
 import { getNodes } from '../../core/state.js';
+import { renderGraphView, refreshGraphView } from './graph-view.js';
 
 let _currentView  = 'tree';
 let _sortAsc      = false;
@@ -21,15 +22,32 @@ export function setCrmView(view) {
   const canvasCont = document.getElementById('canvas-container');
   const listCont   = document.getElementById('crm-list-view');
 
+  const graphCont = document.getElementById('gv-container');
+
   if (view === 'tree') {
     if (canvasCont) canvasCont.style.display = '';
     if (listCont)   listCont.style.display   = 'none';
+    if (graphCont)  graphCont.style.display  = 'none';
     if (sortBtn)    sortBtn.style.display     = 'none';
-    // trigger canvas re-render via window bridge
     window.__crmRenderNodes?.();
     window.__crmDrawEdges?.();
+  } else if (view === 'graph') {
+    if (canvasCont) canvasCont.style.display = 'none';
+    if (listCont)   listCont.style.display   = 'none';
+    if (sortBtn)    sortBtn.style.display     = 'none';
+    // create container if needed
+    let gc = document.getElementById('gv-container');
+    if (!gc) {
+      gc = document.createElement('div');
+      gc.id = 'gv-container';
+      gc.style.cssText = 'flex:1;position:relative;overflow:hidden;height:100%';
+      canvasCont?.parentNode?.insertBefore(gc, canvasCont.nextSibling);
+    }
+    gc.style.display = '';
+    renderGraphView(gc);
   } else {
     if (canvasCont) canvasCont.style.display = 'none';
+    if (graphCont)  graphCont.style.display  = 'none';
     if (sortBtn)    sortBtn.style.display     = '';
     renderListView(view);
   }
