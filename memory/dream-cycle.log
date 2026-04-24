@@ -1,0 +1,69 @@
+[2026-04-24 02:05:39] ====== Dream Cycle 開始 ======
+[2026-04-24 02:05:39] ▶ truth-xval...
+🔍 三真理源交叉驗證器
+====================================================
+✅ LightRAG 連線正常
+
+📊 驗證結果（共 8 筆決策）
+   ✅ 三源一致：8 筆
+   ⚠️  警告（LightRAG 查無或不可用）：0 筆
+   ❌ 錯誤（git 分支不存在）：0 筆
+   OK    | 2026-03-16-auto-git-score.md | git:✅ lightrag:✅
+   OK    | 2026-03-16-bug-fixes-and-automation-loop.md | git:✅ lightrag:✅
+   OK    | 2026-03-16-health-title-restored.md | git:✅ lightrag:✅
+   OK    | 2026-03-16-pdca-causal-chain.md | git:✅ lightrag:✅
+   OK    | 2026-03-17-jsonld-fallback-implementation.md | git:➖ lightrag:✅
+   OK    | 2026-03-24-CRM-status-pill-click-無法切換.md | git:➖ lightrag:✅
+   OK    | 2026-04-17-crm-esmodule-refactor.md | git:➖ lightrag:✅
+   OK    | 2026-04-23-mobile-bridge-root-cause.md | git:➖ lightrag:✅
+
+💾 狀態已寫入 memory/system-status.json[truth_xval]
+[2026-04-24 02:05:40] ✅ truth-xval 完成
+[2026-04-24 02:05:40] ▶ dedup-lightrag...
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python: can't open file '/Users/ryan/meta-agent/scripts/dedup-lightrag.py --dry-run': [Errno 2] No such file or directory
+[2026-04-24 02:05:40] ❌ dedup-lightrag 失敗（繼續下一步）
+[2026-04-24 02:05:40] ▶ memory-decay...
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/memory-decay.py", line 85, in <module>
+    def process_file(filepath: Path) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+[2026-04-24 02:05:40] ❌ memory-decay 失敗（繼續下一步）
+[2026-04-24 02:05:40] ▶ tiered-summary...
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/memory-tier-summary.py", line 9, in <module>
+    from common.status_store import load_status, save_status
+ModuleNotFoundError: No module named 'common'
+[2026-04-24 02:05:40] ❌ tiered-summary 失敗（繼續下一步）
+[2026-04-24 02:05:40] ▶ obsidian-ingest...
+🔄 Obsidian → LightRAG 同步器  2026-04-24 02:05
+====================================================
+⏱  上次同步：2026-04-22 00:09
+📂 找到 9 個修改文件
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/obsidian-ingest.py", line 223, in <module>
+    main()
+    ~~~~^^
+  File "/Users/ryan/meta-agent/scripts/obsidian-ingest.py", line 164, in main
+    text = md_file.read_text(encoding="utf-8", errors="ignore")
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py", line 788, in read_text
+    return f.read()
+           ~~~~~~^^
+OSError: [Errno 11] Resource deadlock avoided
+[2026-04-24 02:05:40] ❌ obsidian-ingest 失敗（繼續下一步）
+[2026-04-24 02:05:40] ▶ persona-tech-radar...
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/persona_tech_radar.py", line 14, in <module>
+    from common.status_store import load_status, save_status
+ModuleNotFoundError: No module named 'common'
+[2026-04-24 02:05:40] ❌ persona-tech-radar 失敗（繼續下一步）
+[2026-04-24 02:05:40] ▶ reactivate-webhooks...
+[reactivate_webhooks] 等待 n8n 就緒...
+[reactivate_webhooks] ❌ n8n 未就緒，放棄
+[2026-04-24 05:20:34] ❌ reactivate-webhooks 失敗（繼續下一步）
+[2026-04-24 05:20:34] ▶ inbox 清理...
+[2026-04-24 05:20:34] ✅ inbox 清理完成（歸檔 0 條）
+[2026-04-24 05:20:34] ▶ generate-handoff...
+[generate-handoff] ✅ 已寫入 /Users/ryan/meta-agent/memory/handoff/latest-handoff.md
+  未完成：3 | Turn：175 | 服務：{'LightRAG': '❌', 'n8n': '❌'}
+[2026-04-24 05:20:34] ✅ generate-handoff 完成
+[2026-04-24 05:20:34] ====== Dream Cycle 完成 ======
