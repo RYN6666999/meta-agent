@@ -77,4 +77,5 @@ export const STORE_KEYS = {
   aiEndpoint:          'crm-ai-endpoint',
   students:            'crm-students',
   drafts:              'crm-drafts',
+  aiMemories:          'crm-ai-memories',
 };

@@ -27,6 +27,16 @@ const KEY_MAP = {
   memories:            'ai-memories',
 };
 
+/** 裝置識別（首次生成後持久化），用於多裝置衝突識別 */
+function getDeviceId() {
+  let id = localStorage.getItem('crm-device-id');
+  if (!id) {
+    id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('crm-device-id', id);
+  }
+  return id;
+}
+
 function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
 }
@@ -50,9 +60,12 @@ export async function cloudLoadAll() {
     // 反轉 key map（KV key → store key）
     const out = {};
     for (const [storeKey, kvKey] of Object.entries(KEY_MAP)) {
-      if (data[kvKey] !== null && data[kvKey] !== undefined) {
-        out[storeKey] = data[kvKey];
-      }
+      const raw = data[kvKey];
+      if (raw == null) continue;
+      // 相容新舊格式：新寫入帶 wrapper { data, ts, device }，舊格式直接是資料本體
+      out[storeKey] = (raw && typeof raw === 'object' && raw.ts && raw.data !== undefined)
+        ? raw.data
+        : raw;
     }
     return out;
   } catch {
@@ -60,15 +73,22 @@ export async function cloudLoadAll() {
   }
 }
 
-/** 非同步推送單一 key 到 KV（fire-and-forget） */
+/** 非同步推送單一 key 到 KV（fire-and-forget），包 wrapper 帶 ts/device */
 export function cloudPush(storeKey, data) {
   const kvKey = KEY_MAP[storeKey];
   const token = getToken();
   if (!kvKey || !token) return;
+
+  const wrapper = {
+    data,
+    ts: Date.now(),
+    device: getDeviceId(),
+  };
+
   fetch(`${BASE}?key=${kvKey}`, {
     method: 'PUT',
     headers: authHeaders(),
-    body: JSON.stringify(data),
+    body: JSON.stringify(wrapper),
   }).catch(() => {}); // 靜默失敗，不影響本地操作
 }
 

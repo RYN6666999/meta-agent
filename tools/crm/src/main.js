@@ -4,71 +4,9 @@
  * 依賴：commands.js + 所有 features/*
  */
 
-// ── Theme grid ────────────────────────────────────────────────────────────────
-const _THEMES = [
-  // ── 新設計系統 ──
-  { id:'muji',       label:'無印',       icon:'📄', group:'新' },
-  { id:'muji-dark',  label:'無印夜',     icon:'🌙', group:'新' },
-  { id:'terminal',   label:'終端機',     icon:'📊', group:'新' },
-  { id:'linear',     label:'Linear',    icon:'🔷', group:'新' },
-  // ── 原有主題 ──
-  { id:'dark',       label:'深色',      icon:'🌑', group:'原' },
-  { id:'dark-blue',  label:'深藍',      icon:'🌌', group:'原' },
-  { id:'light',      label:'淺色',      icon:'☀️', group:'原' },
-  { id:'light-warm', label:'暖色',      icon:'🌤', group:'原' },
-  { id:'sage-gold',  label:'清新金綠',  icon:'🛫', group:'原' },
-  { id:'impact',     label:'Impact',   icon:'⚡', group:'原' },
-  { id:'neuo',       label:'浮凸 2.5D', icon:'🪨', group:'原' },
-];
-// 主題預覽色（給 tile 用，不依賴目前主題）
-const _THEME_PREVIEW = {
-  'muji':      { bg:'#f5f2ea', accent:'#5e7359', text:'#22201b' },
-  'muji-dark': { bg:'#1a1814', accent:'#8fa88a', text:'#ebe6d8' },
-  'terminal':  { bg:'#060911', accent:'#ffb020', text:'#d4deef' },
-  'linear':    { bg:'#0f1012', accent:'#8b7fff', text:'#e8e9ec' },
-  'dark':      { bg:'#0d1117', accent:'#388bfd', text:'#e6edf3' },
-  'dark-blue': { bg:'#090e1a', accent:'#4a9eff', text:'#d4e4f7' },
-  'light':     { bg:'#f6f8fa', accent:'#388bfd', text:'#1f2328' },
-  'light-warm':{ bg:'#faf8f5', accent:'#c79b2b', text:'#2c2416' },
-  'sage-gold': { bg:'#edf1ef', accent:'#c79b2b', text:'#1e2a25' },
-  'impact':    { bg:'#08090c', accent:'#ff2e63', text:'#f5f7fb' },
-  'neuo':      { bg:'#e0e5ec', accent:'#4a90d9', text:'#2d3748' },
-};
-
-function renderThemeGrid() {
-  const tg = document.getElementById('settings-theme-grid');
-  if (!tg) return;
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-
-  // Section header — spans all 4 columns
-  const sectionHdr = (txt) =>
-    `<div style="grid-column:1/-1;font-size:10px;text-transform:uppercase;
-      letter-spacing:.08em;color:var(--text-subtle);padding:4px 0 2px;
-      border-bottom:1px solid var(--border);margin-bottom:2px">${txt}</div>`;
-
-  // Tile — direct grid child, compact height
-  const tile = (t) => {
-    const p = _THEME_PREVIEW[t.id] || { bg:'#111', accent:'#888', text:'#eee' };
-    const active = cur === t.id;
-    return `<div onclick="window.__crmApplyTheme('${t.id}')"
-      style="background:${p.bg};border:2px solid ${active ? p.accent : 'rgba(128,128,128,.2)'};
-        border-radius:10px;padding:10px 8px 8px;cursor:pointer;text-align:center;
-        transition:all .15s;box-shadow:${active ? `0 0 0 2px ${p.accent}44` : '0 1px 3px rgba(0,0,0,.2)'}">
-      <div style="font-size:18px;line-height:1.2;margin-bottom:4px">${t.icon}</div>
-      <div style="font-size:11px;font-weight:600;color:${p.text};white-space:nowrap;margin-bottom:5px">${t.label}</div>
-      <div style="height:2px;border-radius:1px;background:${p.accent}"></div>
-    </div>`;
-  };
-
-  const newT  = _THEMES.filter(t => t.group === '新');
-  const origT = _THEMES.filter(t => t.group === '原');
-  tg.innerHTML = sectionHdr('新設計') + newT.map(tile).join('') +
-                 sectionHdr('經典')   + origT.map(tile).join('');
-}
-
 // ── Core ──────────────────────────────────────────────────────────────────────
 import { STORE } from './core/store.js';
-import { dispatch, getNodes, getChatHistory, gatherSubtree, isHidden } from './core/state.js';
+import { dispatch, getNodes, gatherSubtree, isHidden } from './core/state.js';
 import { toast } from './core/toast.js';
 import { undoLast, pushUndo } from './core/undo.js';
 
@@ -106,14 +44,10 @@ import {
 import { renderAiSettingsCard, saveAiSettings, onAiProviderChange, fetchDynamicModels, updateAiModelBadge } from './features/ai/providers.js';
 import { setPersona, renderQuickPrompts, injectPrompt, getCurrentPersona } from './features/ai/personas.js';
 import {
-  sendChat, renderChat, clearChat, smartClearChat, setCurrentContact,
-  extractAndSaveMemories, deleteMemory,
+  sendChat, renderChat, clearChat, extractAndSaveMemories, deleteMemory,
   toggleMemPanel, switchMemTab, renderMemPanel, addManualMemory,
   generateDailyBriefing, showTodayReminders,
-  toggleAiDiag, runAiDiagnostic,
 } from './features/ai/chat.js';
-import { initSessionPicker, loadSession, switchContact, switchThread, saveSession, renderSessionBar } from './features/ai/session.js';
-import { addFiles, initPasteHandler } from './features/ai/attachments.js';
 
 // ── Daily ─────────────────────────────────────────────────────────────────────
 import {
@@ -136,11 +70,10 @@ import { renderStudentsPage, openStudentModal, closeStudentModal, saveStudent, d
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 import {
-  initTheme, applyTheme, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
+  initTheme, onThemeChange, renderLoginCard, saveLogin, exportData, importData, clearAllData, renderShortcutsHelp,
   openSkModal, closeSkModal, resetShortcuts, saveShortcut, setCmdMode, resetCmdPolicy, renderCmdList,
   resetGoogleClientId, startSheetsOAuth, resetSheetsAuth, saveSheetsId,
   saveObsidianPath, openObsidianVault, renderObsidianPath, OB_BACKUP,
-  exportAiData, importAiData, renderAiBackupCard,
 } from './features/settings/index.js';
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
@@ -153,12 +86,14 @@ import {
 // ── Canvas Views ──────────────────────────────────────────────────────────────
 import { setCrmView, toggleCrmSortDir, renderListView } from './features/canvas/views.js';
 
+// ── Daily navigation ──────────────────────────────────────────────────────────
+import { dailyToday, dailyPrev, dailyNext } from './features/daily/index.js';
+
 // ── Google Calendar ───────────────────────────────────────────────────────────
 import { renderGcalCard, startGcalOAuth, disconnectGcal, fetchGcalEvents } from './integrations/gcal.js';
 
 // ── Cloud Sync ────────────────────────────────────────────────────────────────
 import { cloudLoadAll, cloudPush, setCloudToken, getCloudToken, testCloudConnection } from './core/cloud-sync.js';
-import { autoSnapshot, listSnapshots, restoreSnapshot } from './core/store.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation
@@ -196,7 +131,7 @@ export function navigate(page) {
     case 'ai':       renderChat(); renderQuickPrompts(getCurrentPersona()); updateAiModelBadge(); break;
     case 'settings':
       renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
-      renderObsidianPath(); renderCmdList(); renderThemeGrid(); renderAiBackupCard();
+      renderObsidianPath(); renderCmdList();
       break;
   }
 }
@@ -217,26 +152,10 @@ function loadData() {
   dispatch({ type: 'CHAT_SET',                  payload: STORE.loadChat() });
 }
 
-/** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行）
- *  安全策略：本地有資料時以本地為主（推送到 KV），避免舊 KV 蓋掉本地新資料。
- *            本地無節點時才從 KV 拉（跨裝置首次安裝場景）。
- */
+/** 啟動時從 KV 拉最新資料，合併後 re-dispatch（有 token 才執行） */
 async function syncFromCloud() {
   const remote = await cloudLoadAll();
   if (!remote || !Object.keys(remote).length) return;
-
-  // 判斷本地是否已有節點資料
-  const localNodes = STORE.loadNodes() || [];
-  const remoteNodes = remote.nodes || [];
-
-  if (localNodes.length > 0) {
-    // 本地有資料 → 本地為主，把本地資料推回 KV（確保 KV 是最新的）
-    console.log('[Cloud] 本地有資料，以本地為主，推送至 KV');
-    cloudPush('nodes', localNodes);
-    return;
-  }
-
-  // 本地無資料 → 從 KV 拉（跨裝置 / 清除後還原場景）
   const TYPE_MAP = {
     nodes:               'NODES_LOAD',
     events:              'EVENTS_SET',
@@ -249,11 +168,16 @@ async function syncFromCloud() {
   };
   for (const [key, type] of Object.entries(TYPE_MAP)) {
     if (remote[key] != null) {
+      // 同時寫回 localStorage（讓下次離線載入也是最新）
       STORE['save' + key.charAt(0).toUpperCase() + key.slice(1)]?.(remote[key]);
       dispatch({ type, payload: remote[key] });
     }
   }
-  console.log('[Cloud] 本地無資料，從 KV 還原:', Object.keys(remote).join(', '));
+  // 記憶單獨處理（不走 dispatch，直接寫 localStorage；下次 memoryService.list() 會讀到）
+  if (remote.memories != null) {
+    localStorage.setItem('crm-ai-memories', JSON.stringify(remote.memories));
+  }
+  console.log('[Cloud] 同步完成，已更新:', Object.keys(remote).join(', '));
   renderNodes(); drawEdges(); updateStats();
 }
 
@@ -263,53 +187,7 @@ async function syncFromCloud() {
 
 function registerWindowBridge() {
   // ── 內部 __crm* 橋接（render.js / panel/index.js 模板用）────────────────
-  let _chatContactId = null;
-
-  function loadContactSession(node, threadName) {
-    const msgs = loadSession(node.id, threadName);
-    dispatch({ type: 'CHAT_CLEAR' });
-    msgs.forEach(m => dispatch({ type: 'CHAT_PUSH', payload: m }));
-    renderChat();
-    return msgs.length;
-  }
-
-  window.__crmSelectNode = id => {
-    const node = getNodes().find(n => n.id === id);
-    const isContact = node && node.parentId !== null;
-    if (isContact) {
-      if (_chatContactId && _chatContactId !== id) {
-        // 只存檔，不清空——切換時不呼叫 smartClearChat（async 會蓋掉新聯絡人的對話）
-        const prevNode = getNodes().find(n => n.id === _chatContactId);
-        const history = getChatHistory();
-        if (prevNode && history.length > 0) saveSession(_chatContactId, prevNode.name, history);
-      }
-      // Switch contact in session store
-      const thread = switchContact(id, node.name);
-      // Load that contact's last active thread
-      const count = loadContactSession(node, thread);
-      if (count) toast(`📂 ${node.name} › ${thread}（${count} 則）`);
-      else toast(`👤 ${node.name}（新對話）`);
-
-      setCurrentContact(node);
-      _chatContactId = id;
-      renderSessionBar(id, node.name);
-    }
-    selectNode(id);
-  };
-
-  // Session picker callbacks
-  initSessionPicker({
-    onThreadSwitch: (threadName, msgs) => {
-      // Thread changed — load messages for new thread
-      dispatch({ type: 'CHAT_CLEAR' });
-      msgs.forEach(m => dispatch({ type: 'CHAT_PUSH', payload: m }));
-      renderChat();
-      toast(`切換場景：${threadName}${msgs.length ? `（${msgs.length} 則）` : '（新場景）'}`);
-    },
-    onContactSwitch: (contactId) => {
-      window.__crmSelectNode?.(contactId);
-    },
-  });
+  window.__crmSelectNode      = id => selectNode(id);
   window.__crmOpenPanel       = id => openPanel(id);
   window.__crmClosePanel      = () => closePanel();
   window.__crmCycleStatus     = id => cycleStatus(id);
@@ -427,9 +305,6 @@ function registerWindowBridge() {
   // AI
   window.sendChat               = () => sendChat();
   window.clearChat              = () => clearChat();
-  window.smartClearChat         = () => smartClearChat();
-  window.__crmAttachFiles       = (files) => addFiles(files);
-  initPasteHandler();
   window.setPersona             = (k, el) => setPersona(k, el);
   window.onAiProviderChange     = () => onAiProviderChange();
   window.saveAiSettings         = () => saveAiSettings();
@@ -437,16 +312,13 @@ function registerWindowBridge() {
 
   // Settings
   window.exportAll              = () => exportData();
-  window.importAll              = (e) => { const f = e?.target?.files?.[0]; if (f) importData(f); };
-  window.exportAiData           = () => exportAiData();
-  window.importAiData           = (e) => { const f = e?.target?.files?.[0]; if (f) importAiData(f); };
+  window.importAll              = () => document.getElementById('import-file-input')?.click();
   window.clearAllData           = () => clearAllData();
   window.startGoogleOAuth       = () => startGcalOAuth();
   window.fetchGcalEvents        = () => fetchGcalEvents();
   window.disconnectGcal         = () => disconnectGcal();
-  window.__crmApplyTheme        = t => { applyTheme(t); renderThemeGrid(); };
   window.renderSettingsPage     = () => {
-    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp(); renderThemeGrid(); renderAiBackupCard();
+    renderLoginCard(); renderAiSettingsCard(); renderGcalCard(); renderShortcutsHelp();
   };
   window.doLogout = () => {
     if (!confirm('確定要登出？')) return;
@@ -482,11 +354,9 @@ function registerWindowBridge() {
   window.addManualMemory        = () => addManualMemory();
   window.generateDailyBriefing  = () => generateDailyBriefing();
   window.showTodayReminders     = () => showTodayReminders();
-  window.toggleAiDiag          = () => toggleAiDiag();
-  window.runAiDiagnostic        = () => runAiDiagnostic();
 
   // Chat input (HTML inline handlers, logic already in initChatInput via addEventListener)
-  window.chatKeydown    = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); } };
+  window.chatKeydown    = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
   window.autoResizeChat = el => { if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; } };
 
   // Docs drag-drop
@@ -510,15 +380,12 @@ function initKeyboard() {
     const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
     const meta  = e.metaKey || e.ctrlKey;
 
-    // Cmd+K: clear chat（全域，在任何輸入框都有效）
-    if (meta && e.key === 'k') { e.preventDefault(); window.smartClearChat?.(); return; }
-
-    if (inInput) return;
-
     if (meta && e.key === 'z') { e.preventDefault(); undoLast(renderNodes, deselect); return; }
     if (meta && e.key === 'c') { e.preventDefault(); copySelected(); return; }
     if (meta && e.key === 'x') { e.preventDefault(); cutSelected();  return; }
     if (meta && e.key === 'v') { e.preventDefault(); pasteClipboard(); return; }
+
+    if (inInput) return;
 
     switch (e.key) {
       case 'Delete': case 'Backspace': {
@@ -561,8 +428,7 @@ function initChatInput() {
     inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
   });
   inp.addEventListener('keydown', e => {
-    const isEnter = e.key === 'Enter' || e.keyCode === 13;
-    if (isEnter && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });
 }
 
@@ -624,25 +490,11 @@ export async function init() {
   // 背景從 KV 拉最新（有 token 才跑，不阻塞啟動）
   syncFromCloud().catch(() => {});
 
-  // 頁面關閉前強制快照（確保最後狀態被捕捉）
-  window.addEventListener('beforeunload', () => { autoSnapshot(); });
-
-  // 每 5 分鐘定時快照
-  setInterval(() => { autoSnapshot(); }, 5 * 60 * 1000);
-
-  // 啟動時立即快照一次（捕捉啟動狀態）
-  setTimeout(() => { autoSnapshot(); }, 2000);
-
   // 暴露 cloud-sync 給設定頁
   window.__crmSetCloudToken     = setCloudToken;
   window.__crmGetCloudToken     = getCloudToken;
   window.__crmTestCloudConn     = testCloudConnection;
   window.__crmCloudPush         = cloudPush;
-
-  // 暴露快照工具給設定頁
-  window.__crmListSnapshots     = listSnapshots;
-  window.__crmRestoreSnapshot   = restoreSnapshot;
-  window.__crmAutoSnapshot      = autoSnapshot;
 
   console.log('[CRM] init complete');
 }
