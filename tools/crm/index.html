@@ -86,14 +86,14 @@
   </div>
   <div class="header-sep"></div>
   <div class="tab-nav">
-    <button class="tab-btn active" onclick="switchPage('crm')">🌳 人脈樹</button>
-    <button class="tab-btn" onclick="switchPage('daily')">📋 日報表</button>
-    <button class="tab-btn" onclick="switchPage('events')">📅 日程</button>
-    <button class="tab-btn" onclick="switchPage('docs')">📁 文件</button>
-    <button class="tab-btn" onclick="switchPage('sales')">💰 業績</button>
-    <button class="tab-btn" onclick="switchPage('ai')">🤖 AI助理</button>
-    <button class="tab-btn" onclick="switchPage('students')">🎓 學員</button>
-    <button class="tab-btn" onclick="switchPage('settings')">⚙️ 設定</button>
+    <button class="tab-btn active" onclick="switchPage('crm')" id="tab-crm"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><circle cx="18" cy="5" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="M12 7h3.5M12 7l4 10M12 7l-1 10"/><circle cx="8" cy="17" r="3"/></svg>人脈</button>
+    <button class="tab-btn" onclick="switchPage('daily')" id="tab-daily"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>日報</button>
+    <button class="tab-btn" onclick="switchPage('events')" id="tab-events"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>日程</button>
+    <button class="tab-btn" onclick="switchPage('sales')" id="tab-sales"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>業績</button>
+    <button class="tab-btn" onclick="switchPage('docs')" id="tab-docs"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>文件</button>
+    <button class="tab-btn" onclick="switchPage('ai')" id="tab-ai"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>AI</button>
+    <button class="tab-btn" onclick="switchPage('students')" id="tab-students"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>學員</button>
+    <button class="tab-btn" onclick="switchPage('settings')" id="tab-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>設定</button>
   </div>
   <div class="header-stats" id="header-stats"></div>
   <div class="header-actions">
