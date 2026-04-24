@@ -2,117 +2,40 @@
  * features/ai/personas.js
  * Persona 定義 + Memory Service + System Prompt 建立
  * 依賴：core/state.js, core/store.js, features/ai/providers.js
+ *
+ * rolePrompt / quickPrompts 外移到 personas.json，懶載入
  */
 
 import { getNodes, getEvents, getSalesData, getDailyReports, getMonthlySalesTargets, getDocsData } from '../../core/state.js';
 import { STORE } from '../../core/store.js';
 import { CALC } from '../../core/calc.js';
-import { localMemoryService } from './memory-local.js';
 
-// ── Persona config ────────────────────────────────────────────────────────────
+// ── Persona config（懶載入）────────────────────────────────────────────────
 
-export const PERSONA_CONFIG = {
-  assistant: {
-    label: '通用助理',
-    rolePrompt: `你是房多多業務智能助理，全方位支援業務員的日常工作。
-房多多定位：站在買方立場的全方位買房顧問，以財商教育為核心，透過房屋團購讓小資族買到低於市價的房子。
-核心觀念：「借比存快」「殺比賺快」。公司使命：讓人們便捷獲取房地產知識，用科技讓複雜房地產更簡單。`,
-    quickPrompts: ['今天要跟進誰？', '本月業績狀況如何？', '查今天的行程', '最近冷掉的客戶有哪些？'],
-  },
-  coach: {
-    label: '跟進教練',
-    rolePrompt: `你是專業業務跟進教練，精通房多多話術體系，依客戶狀態給予具體跟進策略。
-
-【電話開場話術框架】
-目標：要到對方下次見面的時間（不是立刻推銷）
-開場：「我剛調來這邊支援，新店準備開幕，特別設計了一份問卷，想請您撥15-20分鐘做個電訪。」
-如果說沒空：「後面哪一天有空檔？平日還是假日？幾點可以？」→ 要到確定時間
-如果要丟電子檔：「我們都是做線上的，電話問卷，你提供的資訊非常重要。」
-
-【依客戶狀態策略】
-🟢高意願：直接推進到看房/預約，提供具體付款方案
-🟡觀察中：持續暖線（發房市新聞、關心），往下挖三層找財務癥結點
-🔴冷淡：低壓維繫，找重新連結的自然理由
-
-【挖癥結3層問法】「如果沒有錢的壓力，你會想學嗎？為什麼？如果要讓它變現，你願意付出什麼代價？」`,
-    quickPrompts: ['這個客戶現在適合什麼話術？', '如何重新聯繫冷掉的客戶？', '客戶說沒時間怎麼回？', '客戶說要考慮怎麼推進？'],
-  },
-  analyst: {
-    label: '業績分析師',
-    rolePrompt: `你是業績數字分析師，精通佣金計算、業績趨勢、目標達成率，也能精確計算房貸試算。
-
-【快速房貸參考表】（單位：萬元，利率約2.16%）
-總價400→月付本利9,709/月薪16,181；總價900→27,192/月薪45,320
-總價1000→30,214/月薪63,690；總價1600→48,342/月薪80,570
-總價2000→60,427/月薪100,411；總價2400→77,672/月薪130,000
-新北團購條件：月薪7萬；南科：頭期180萬、月薪4-6.5萬
-
-【投資vs自住比較邏輯】
-投資：買便宜（低於銀行估價八折）→ 兩年賣出 → 滾複利
-自住：買在市價但有稅額減免 → 六年漲價換房
-
-使用 calculate_mortgage 工具可精確試算任意條件。`,
-    quickPrompts: ['本月業績卡在哪裡？', '幫客戶試算月供和頭期款', '離目標還差多少？', '自住 vs 投資哪個划算？'],
-  },
-  strategist: {
-    label: '人脈策略師',
-    rolePrompt: `你是人脈開發策略師，擅長分析人脈樹結構、尋找轉介紹機會與人才培育。
-
-【財商生命週期定位（說服邏輯）】
-20-40歲：創業/槓桿 = 團購賺錢（最適合現在行動）
-40-60歲：借錢 = 八大服務理財
-60-80歲：節稅、退休、繼承
-
-【人才篩選三關鍵】
-1. 認同：「你覺得學習財商對你有幫助嗎？」
-2. 需求：「你現在最想解決的財務問題是什麼？」
-3. 配合度：「如果有機會，你願意付出什麼代價？」
-
-【識別「連接人」節點】：能介紹3人以上、有廣泛人脈者優先深耕
-【轉介紹話術】：「你身邊有沒有也想了解房地產的朋友？我可以先幫他做個免費財務健診。」`,
-    quickPrompts: ['誰最有轉介紹潛力？', '如何開口要求轉介紹？', '分析我的人脈分布', '這個人才值得深入培養嗎？'],
-  },
-  secretary: {
-    label: '日報小秘書',
-    rolePrompt: `你是日報填寫助理。用戶口述今天工作，你提取結構化數字並整理成日報格式後詢問確認。
-
-【日報標準格式】
-邀約＿通 | 電訪＿通 | 表單＿份 | 追蹤＿組 | 成交＿件
-今日重要事項：
-明日計劃：
-
-填完後詢問：「這樣對嗎？需要修改哪裡？」
-也可查詢知識庫的問卷連結與表單。`,
-    quickPrompts: ['幫我填今天的日報', '今天打了10通電話、約到3組', '找問卷或表單連結', '根據目標今天達標了嗎？'],
-  },
-  closer: {
-    label: '成交專家',
-    rolePrompt: `你是臨門一腳成交顧問，專攻異議處理與成交信號識別。
-
-【常見異議標準應對】
-❓我沒有時間 → 「我們都是做線上的，大概15分鐘，這週哪個時間方便你？」→ 敲時間
-❓詐騙集團吧 → 「哪個詐騙集團會花這麼多時間幫負債的人翻身？正財曲線長期才恐怖。」
-❓現在沒辦法買房 → 「不管市場好壞，都可以先賺到專業知識的錢。重點是培養條件。」
-❓頭期款不足 → 「不是等存到頭期款再說，是要先培養財商與貸款條件。」
-❓要考慮 → 「你主要在考慮哪個部分？時間？錢？還是對我們不夠了解？」→ 挖癥結
-
-【成交信號識別】
-✅ 開始問細節（頭期多少、月供多少、地段選哪裡）
-✅ 主動帶家人/伴侶來了解
-✅ 問「我的條件夠嗎？」
-
-【FOMO觸發】：「我們每月限量三名，有符合條件才能學費全額補助。」`,
-    quickPrompts: ['客戶說太貴怎麼回？', '客戶說要考慮怎麼處理？', '怎麼識別成交信號？', '怎麼催促猶豫的客戶？'],
-  },
-  docfinder: {
-    label: '知識庫助理',
-    rolePrompt: `你是房多多知識庫查詢助理，專門從文件庫中找出精確資訊，不憑空捏造。
-遇到問題時，先用 search_docs 工具查詢知識庫，再基於查到的內容回答。
-如果知識庫沒有，直接說「知識庫目前沒有這份資料」，不要猜測。
-可查：話術範本、產品說明、FAQ、規定、表單連結、海報模板等。`,
-    quickPrompts: ['查一下電話話術怎麼說', '有關於團購的說明嗎？', '找問卷或表單連結', '關於房貸的資料有什麼？'],
-  },
+const PERSONA_SKELETON = {
+  assistant:   { label: '通用助理' },
+  analyst:     { label: '業績分析師' },
+  secretary:   { label: '日報小秘書' },
+  scriptforge: { label: '沙盤推演' },
 };
+
+let _personaData = null;
+
+async function loadPersonaData() {
+  if (_personaData) return _personaData;
+  try {
+    const res = await fetch('./src/features/ai/personas.json');
+    _personaData = await res.json();
+  } catch (e) {
+    console.warn('[personas] 載入 personas.json 失敗，使用 fallback', e);
+    _personaData = Object.fromEntries(
+      Object.entries(PERSONA_SKELETON).map(([k, v]) => [k, { ...v, rolePrompt: `你是${v.label}。`, quickPrompts: [] }])
+    );
+  }
+  return _personaData;
+}
+
+export const PERSONA_CONFIG = PERSONA_SKELETON;
 
 // ── Persona state ─────────────────────────────────────────────────────────────
 
@@ -128,10 +51,11 @@ export function setPersona(key, el) {
   renderQuickPrompts(key);
 }
 
-export function renderQuickPrompts(key) {
+export async function renderQuickPrompts(key) {
   const bar = document.getElementById('ai-quick-prompts');
   if (!bar) return;
-  _quickPrompts = (PERSONA_CONFIG[key] || PERSONA_CONFIG.assistant).quickPrompts;
+  const data = await loadPersonaData();
+  _quickPrompts = (data[key] || data.assistant || {}).quickPrompts || [];
   bar.innerHTML = _quickPrompts.map((p, i) =>
     `<button class="quick-prompt-chip" onclick="window.__crmInjectPrompt?.(${i})">${p}</button>`
   ).join('');
@@ -147,16 +71,83 @@ export function injectPrompt(idx) {
 }
 
 // ── Memory Service ─────────────────────────────────────────────────────────────
-// 使用本地 localStorage 實作（原本的 /api/memories 後端不存在）
-export const memoryService = localMemoryService;
+
+export const memoryService = {
+  getMemories() {
+    try { return JSON.parse(localStorage.getItem('crm-ai-memories')) || []; }
+    catch { return []; }
+  },
+  saveMemories(mems) {
+    localStorage.setItem('crm-ai-memories', JSON.stringify(mems));
+    import('../../core/cloud-sync.js').then(m => m.cloudPush('memories', mems)).catch(()=>{});
+  },
+
+  async list(opts = {}) {
+    let mems = this.getMemories();
+    if (opts.subject) mems = mems.filter(m => m.subject.includes(opts.subject));
+    if (opts.type)    mems = mems.filter(m => m.type === opts.type);
+    if (opts.pinned != null) mems = mems.filter(m => !!m.pinned === !!opts.pinned);
+    if (!opts.includeArchived) mems = mems.filter(m => !m.archived);
+    return mems;
+  },
+
+  async create(mem) {
+    const mems = this.getMemories();
+    const newMem = { id: Date.now().toString(), createdAt: new Date().toISOString(), ...mem };
+    mems.push(newMem);
+    this.saveMemories(mems);
+    return newMem;
+  },
+
+  async update(id, patch) {
+    const mems = this.getMemories();
+    const idx = mems.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    mems[idx] = { ...mems[idx], ...patch, updatedAt: new Date().toISOString() };
+    this.saveMemories(mems);
+    return mems[idx];
+  },
+
+  async delete(id) {
+    const mems = this.getMemories();
+    const initLen = mems.length;
+    const filtered = mems.filter(m => m.id !== id);
+    if (filtered.length !== initLen) {
+      this.saveMemories(filtered);
+      return true;
+    }
+    return false;
+  },
+
+  async retrieve(message, context = {}) {
+    // Run KV memories + GBrain knowledge search in parallel
+    // Brain fetch has 250ms timeout to avoid blocking on cold start
+    const brainTimeout = new Promise(r => setTimeout(() => r({ results: [] }), 250));
+    const brainFetch   = fetch('/api/brain', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'search', query: message, limit: 3 }),
+    }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }));
+
+    const mems = this.getMemories().filter(m => !m.archived).slice(-5);
+    let promptSnippet = mems.length ? '【相關記憶】\n' + mems.map(m => `- ${m.subject} (${m.type}): ${m.content}`).join('\n') : '';
+
+    const brainResults = await Promise.race([brainFetch, brainTimeout]);
+
+    // Merge: KV snippet first, then brain excerpts (200 chars each)
+    const brainHits = (brainResults.results || []).filter(r => r.score > 0.01);
+    if (brainHits.length) {
+      const brainBlock = brainHits.map(r => `【知識庫：${r.title}】\n${(r.excerpt || '').slice(0, 200)}`).join('\n\n');
+      promptSnippet = promptSnippet
+        ? `${promptSnippet}\n\n【相關知識庫段落】\n${brainBlock}`
+        : `【相關知識庫段落】\n${brainBlock}`;
+    }
+
+    return { memories: mems, promptSnippet };
+  },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Build a short finance summary string from a contact's info object.
- * @param {object} info
- * @returns {string}
- */
 function buildFinanceSummary(info) {
   if (!info) return '未填';
   const parts = [];
@@ -169,10 +160,94 @@ function buildFinanceSummary(info) {
 
 const STATUS_EMOJI = { green: '🟢高意願', yellow: '🟡觀察中', red: '🔴冷淡' };
 
+// ── 房多多共用知識庫 ──────────────────────────────────────────────────────────
+
+const FDD_KB = `
+【房多多品牌知識庫】
+▌公司定位
+站在買方立場的全方位買房顧問，以財商教育為核心，透過房屋團購讓小資族買到低於市價的房子。
+核心觀念：「借比存快」「殺比賺快」（善用槓桿與議價比慢慢儲蓄更有效）。
+使命：讓人便捷獲取房地產知識，用科技讓複雜房地產更簡單。
+
+▌三大商品
+①課程（房地產財商課程）
+  入口：免費體驗講座/線上說明會 → 成交：報名完整課程 → 升級：→顧問案
+  價值：從「不懂房產」→「能自己判斷好壞」→ 渴望：不再為錢焦慮，拿回人生主導權
+  坦誠缺陷：上課不等於會賺錢，需實際執行；不適合想明天就致富的人
+
+②顧問規劃案（一對一投資顧問）
+  入口：免費30分鐘財務健檢 → 成交：簽約顧問案 → 升級：→經銷商
+  價值：量身設計投資路徑，減少試錯 → 渴望：有信得過的人陪做重大財務決策
+  坦誠缺陷：不是代操，最終決策還是自己；需配合提供真實財務資訊
+
+③經銷商（合作夥伴招募）
+  入口：經銷商說明會/一對一咖啡聊 → 成交：簽約成為夥伴
+  價值：從時間換錢轉為系統換錢 → 渴望：有事業、有影響力、能幫助別人
+  坦誠缺陷：需投入時間經營，不是加入就自動賺錢
+  注意：「直銷/詐騙」疑慮必須提前處理，不可防禦性回應
+
+▌房貸速查（利率2.16%，30年，貸款八成）
+400萬→月付9,709/最低月薪16,181　900萬→月付27,192/最低月薪45,320
+1,000萬→月付30,214/最低月薪50,357　1,600萬→月付48,342/最低月薪80,570
+2,000萬→月付60,427/最低月薪100,711　2,400萬→月付72,512/最低月薪120,853
+新北團購：月薪≥7萬　南科：頭期180萬+月薪4-6.5萬
+投資邏輯：買低於銀行估價八折→兩年賣出→滾複利
+自住邏輯：買市價含稅額減免→六年漲價換房
+
+▌財商生命週期（年齡說服邏輯）
+20-40歲→槓桿/創業期，現在最適合行動（團購）
+40-60歲→借錢期，八大服務理財
+60-80歲→節稅/退休/繼承
+
+▌電話開場標準話術
+目標：約到下次見面時間（不是立刻推銷）
+開場：「我剛調來這邊支援，新店準備開幕，特別設計了一份問卷，想請您撥15-20分鐘做個電訪。」
+對方沒空：「後面哪一天有空檔？平日還是假日？幾點可以？」→ 要到確定時間
+對方要電子檔：「我們都是做線上的，電話問卷，你提供的資訊非常重要。」
+
+▌挖癥結三層問法
+①「如果沒有錢的壓力，你會想學嗎？為什麼？」
+②「如果要讓它變現，你願意付出什麼代價？」
+③「你現在最想解決的財務問題是什麼？」
+
+▌常見異議快速應對
+「沒時間」→「大概15分鐘，這週哪個時間方便你？」→ 鎖時間，不接受模糊
+「是詐騙吧」→「哪個詐騙集團會花這麼多時間幫負債的人翻身？正財曲線長期才恐怖。」
+「現在買不起」→「不管市場好壞，先賺到判斷的知識比等待更值錢。重點是培養條件。」
+「頭期不夠」→「不是等存到頭期才說，是先培養財商和貸款條件。」
+「要考慮」→「你主要在考慮哪部分？時間？費用？還是還不夠了解我們？」→ 挖出具體點再處理
+「太貴」→「攤到十年投資決策裡，每個決策多一個專業把關。一次失誤的損失可能是這費用的十倍，你覺得哪個比較貴？」
+「自己看YouTube就好」→「資訊不是問題，行動才是。課程最大差別是有人盯你做、幫你覆盤、push你跨出第一步。」
+「配偶反對」→「你覺得他/她主要擔心什麼？」→ 幫他預判反駁，提供彈藥讓他自己說服對方
+「虧過錢」→ 先接住情緒，再重新詮釋：「那次問題是當時沒有判斷工具，不是你不行。」
+「不適合做銷售」→「你當初是怎麼找來的？那個人在做銷售嗎？」
+
+▌成交信號
+✅ 開始問細節（頭期多少/月供多少/哪個地段）
+✅ 主動帶家人/伴侶來了解
+✅ 問「我的條件夠嗎？」
+
+▌轉介紹話術
+「你身邊有沒有也想了解房地產的朋友？我可以先幫他做個免費財務健診。」
+
+▌人才篩選三關鍵（招募經銷商時）
+①認同：「你覺得學習財商對你有幫助嗎？」
+②需求：「你現在最想解決的財務問題是什麼？」
+③配合度：「如果有機會，你願意付出什麼代價？」
+連接人節點：能介紹3人以上、有廣泛人脈者優先深耕
+
+▌絕對禁止
+・不用威脅詞：穩賺/不會虧/一定漲/保證獲利
+・不把業績壓力說給客戶聽
+・對「直銷/詐騙」疑慮：不防禦，先承認市場確有不靠譜的，再建立信任
+・前5分鐘只建立安全感，不推產品
+`;
+
 // ── System prompt ─────────────────────────────────────────────────────────────
 
-export async function buildSystemPrompt(personaKey, memSnippet = '') {
-  const persona    = PERSONA_CONFIG[personaKey || 'assistant'];
+export async function buildSystemPrompt(personaKey, memSnippet = '', currentContact = null) {
+  const data    = await loadPersonaData();
+  const persona = data[personaKey || 'assistant'] || data.assistant;
   const login      = JSON.parse(localStorage.getItem('crm-login') || '{}');
   const myRank     = STORE.getMyRank();
   const myRate     = STORE.getMyRate();
@@ -205,7 +280,6 @@ export async function buildSystemPrompt(personaKey, memSnippet = '') {
   const upcoming    = events.filter(ev => ev.date >= today).slice(0, 5).map(ev => `${ev.date} ${ev.title || ev.name || ''}`);
   const rankLabels  = { director: '主任', asst_mgr: '襄理', manager: '經理', shop_partner: '店股東', shop_head: '店長' };
 
-  // ── Top 20 contacts detail block ──────────────────────────────────────────
   const top20 = [...contactNodes]
     .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
     .slice(0, 20);
@@ -214,23 +288,19 @@ export async function buildSystemPrompt(personaKey, memSnippet = '') {
     const info = n.info || {};
     const lastC = info.lastContact || '未填';
     const daysDiff = info.lastContact
-      ? Math.floor((new Date(today) - new Date(info.lastContact)) / 86400000)
-      : null;
+      ? Math.floor((new Date(today) - new Date(info.lastContact)) / 86400000) : null;
     const daysStr = daysDiff !== null ? `（${daysDiff}天前）` : '';
     const statusStr = STATUS_EMOJI[n.status] || n.status || '未知';
     return `- ${n.name}｜${statusStr}｜電話:${info.phone || '未填'}｜最後聯繫:${lastC}${daysStr}｜備注:${info.notes || '無'}｜財務:${buildFinanceSummary(info)}`;
   }).join('\n');
 
-  // ── This month's sales ────────────────────────────────────────────────────
   const monthSales = salesData
     .filter(s => (s.date || '').startsWith(monthPrefix))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
   const salesLines = monthSales.map(s =>
     `- ${s.date || '?'} ${s.name || s.clientName || '?'} ${s.product || s.type || ''} $${(s.amount || 0).toLocaleString()}`
   ).join('\n');
 
-  // ── Today's daily report ──────────────────────────────────────────────────
   let dailyRptBlock = '';
   if (Object.keys(todayRpt).length > 0) {
     const bigThreeStr = Array.isArray(todayRpt.bigThree)
@@ -246,16 +316,11 @@ export async function buildSystemPrompt(personaKey, memSnippet = '') {
     dailyRptBlock = `\n【今日日報】\n${lines.join('\n')}`;
   }
 
-  // ── Students summary ──────────────────────────────────────────────────────
   const studentsData = nodes.filter(n => n.type === 'student' || n.isStudent);
   let studentsBlock = '';
   if (studentsData.length > 0) {
     const recentStudents = [...studentsData]
-      .sort((a, b) => {
-        const da = a.info?.lastContact || '';
-        const db = b.info?.lastContact || '';
-        return db.localeCompare(da);
-      })
+      .sort((a, b) => (a.info?.lastContact || '').localeCompare(b.info?.lastContact || '') * -1)
       .slice(0, 5)
       .map(s => {
         const lc = s.info?.lastContact;
@@ -265,8 +330,13 @@ export async function buildSystemPrompt(personaKey, memSnippet = '') {
     studentsBlock = `\n【學員】共${studentsData.length}人｜最近聯繫: ${recentStudents.join(', ')}`;
   }
 
+  const contactCtx = currentContact
+    ? `\n【本輪對話對象】${currentContact.name}｜${STATUS_EMOJI[currentContact.status] || '未知'}｜${buildFinanceSummary(currentContact.info)}｜備注:${currentContact.info?.notes?.slice(0, 80) || '無'}\n`
+    : '';
+
   return `${persona.rolePrompt}
-${memSnippet ? '\n' + memSnippet + '\n' : ''}
+${FDD_KB}
+${contactCtx}${memSnippet ? '\n' + memSnippet + '\n' : ''}
 【使用者】${login.name || '業務員'}｜${rankLabels[myRank] || myRank}｜佣金率 ${(myRate * 100).toFixed(0)}%
 【今日】${today}，月底還有 ${daysLeft} 天
 【本月業績】$${summary.income.toLocaleString()} / 目標 $${salesTarget.toLocaleString()}（${salesPct}%）稅後 $${summary.net.toLocaleString()}，成交 ${summary.newCount} 件
@@ -287,7 +357,8 @@ ${dailyRptBlock}${studentsBlock}
   return `${icon}《${d.name}》${d.url ? '→ ' + d.url : ''}`;
 }).join('　') : '尚無文件'}
 
-【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs / calculate_mortgage / read_calendar_events / get_contact_detail / list_contacts / add_event / update_daily_kpi / add_sale / patch_daily_report
+【可用工具】update_contact_status / add_note / log_contact / get_followup_list / search_docs / calculate_mortgage / read_calendar_events / get_contact_detail / list_contacts / add_event / update_daily_kpi / add_sale / patch_daily_report / add_student / list_students
+【重要】當用戶要求「新增學員」、「加到學員頁」、「幫我把 XXX 加為學員」，必須呼叫 add_student 工具，不能只用文字回應。工具執行後才算完成。
 
 【海報生成】當用戶要求製作活動海報，請提取時間與地點，直接回覆以下格式：
 👉 [點此預覽並下載海報](https://fdd-crm.pages.dev/poster.html?time=TIME&loc=LOCATION)
