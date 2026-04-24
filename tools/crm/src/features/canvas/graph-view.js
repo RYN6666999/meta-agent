@@ -280,7 +280,7 @@ function updateGhost() {
     left:${gx}px;top:${gy}px;
     background:${t.surf}F8;backdrop-filter:blur(16px);
     border:1px solid ${t.border};padding:14px 16px;width:265px;
-    box-shadow:0 10px 40px rgba(0,0,0,${t.light?.0.10:.0.50})`;
+    box-shadow:0 10px 40px rgba(0,0,0,${t.light ? 0.10 : 0.50})`;
 
   _ghostEl.innerHTML = `
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
