@@ -3,7 +3,7 @@
    策略：HTML/JS/CSS → Network-First（部署後立即生效）
          圖片/字型   → Cache-First（離線可用）
 ═══════════════════════════════════════ */
-const CACHE = 'fdd-crm-v11';
+const CACHE = 'fdd-crm-v49';
 const PRECACHE = [
   './icon.svg',
   './icon-192.png',
@@ -19,12 +19,13 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-/* 啟動：清掉舊快取 */
+/* 啟動：清掉舊快取，並通知所有頁面重載 */
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => clients.forEach(c => c.navigate(c.url)))
   );
   self.clients.claim();
 });
@@ -35,6 +36,12 @@ self.addEventListener('fetch', e => {
 
   // 只處理同源請求
   if (url.origin !== location.origin) return;
+
+  // ?bust= 強制更新請求 → 完全不走快取
+  if (url.searchParams.has('bust')) {
+    e.respondWith(fetch(e.request.url.replace(/[?&]bust=[^&]*/,''), { cache: 'no-store' }));
+    return;
+  }
 
   const isNav = e.request.mode === 'navigate';
   const isAsset = /\.(js|css|html)(\?.*)?$/.test(url.pathname);
