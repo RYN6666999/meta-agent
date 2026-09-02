@@ -1,7 +1,7 @@
 ---
 date: 2026-03-16
 type: error_fix
-status: active
+status: deprecated
 last_triggered: 2026-03-16
 expires_after_days: 365
 topic: d1-fix-verification

@@ -2,7 +2,7 @@
 date: 2026-03-17
 type: implementation_complete
 title: JSON-LD Fallback Layer Implementation
-status: verified
+status: deprecated
 ---
 
 # JSON-LD Fallback 層實施完成報告

@@ -1,7 +1,7 @@
 ---
 date: 2026-04-17
 type: verified_truth
-status: active
+status: deprecated
 last_triggered: 2026-04-17
 expires_after_days: 365
 source: bug-closeout autopipeline

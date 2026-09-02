@@ -67,3 +67,25 @@ ModuleNotFoundError: No module named 'common'
   未完成：3 | Turn：175 | 服務：{'LightRAG': '❌', 'n8n': '❌'}
 [2026-04-24 05:20:34] ✅ generate-handoff 完成
 [2026-04-24 05:20:34] ====== Dream Cycle 完成 ======
+[2026-09-02 12:42:07] ====== Dream Cycle 開始 ======
+[2026-09-02 12:42:07] ▶ truth-xval...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-02 12:42:07] ❌ truth-xval 失敗（繼續下一步）
+[2026-09-02 12:42:07] ▶ dedup-lightrag...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-02 12:42:07] ❌ dedup-lightrag 失敗（繼續下一步）
+[2026-09-02 12:42:07] ▶ memory-decay...
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/memory-decay.py", line 85, in <module>
+    def process_file(filepath: Path) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+[2026-09-02 12:42:07] ❌ memory-decay 失敗（繼續下一步）
+[2026-09-02 12:42:07] ▶ tiered-summary...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-02 12:42:07] ❌ tiered-summary 失敗（繼續下一步）
+[2026-09-02 12:42:07] ▶ obsidian-ingest...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-02 12:42:07] ❌ obsidian-ingest 失敗（繼續下一步）
+[2026-09-02 12:42:07] ▶ persona-tech-radar...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-02 12:42:07] ❌ persona-tech-radar 失敗（繼續下一步）

@@ -1,7 +1,7 @@
 ---
 date: 2026-03-18
 type: verified_truth
-status: active
+status: deprecated
 last_triggered: 2026-03-18
 base_score: 180.0
 usage_count: 1

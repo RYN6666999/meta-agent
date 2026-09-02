@@ -1,7 +1,7 @@
 ---
 date: 2026-03-16
 type: verified_truth
-status: active
+status: deprecated
 last_triggered: 2026-03-16
 expires_after_days: 365
 source: milestone-judge（自動生成）

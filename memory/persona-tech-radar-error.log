@@ -142,3 +142,4 @@ Traceback (most recent call last):
   File "/Users/ryan/meta-agent/scripts/persona_tech_radar.py", line 14, in <module>
     from common.status_store import load_status, save_status
 ModuleNotFoundError: No module named 'common'
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python: can't open file '/Users/ryan/meta-agent/.venv/bin/python': [Errno 2] No such file or directory

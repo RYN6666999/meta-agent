@@ -1,7 +1,7 @@
 ---
 date: 2026-03-17
 type: decision_analysis
-status: pending_decision
+status: deprecated
 priority: P2
 title: Lightpanda 評估：是否納入當前架構
 ---

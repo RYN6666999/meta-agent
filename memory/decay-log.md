@@ -8,3 +8,43 @@
 - 掃描檔案：24 個
 - 保留：24 個
 - 標記 deprecated：0 個
+
+## 2026-09-02 衰退掃描
+- 掃描檔案：38 個
+- 保留：5 個
+- 標記 deprecated：33 個
+
+### 已標記 deprecated
+- `plan-c-completion-summary.md` (score=0.0, 閒置 169 天)
+- `lightpanda-decision-analysis-2026-03-17.md` (score=0.0, 閒置 169 天)
+- `cleaning-rules.md` (score=0.0, 閒置 170 天)
+- `master-plan.md` (score=0.0, 閒置 168 天)
+- `2026-03-16-尖端工程師-技術雷達-2026-03-16.md` (score=0.0, 閒置 168 天)
+- `2026-03-17-tech-radar.md` (score=0.0, 閒置 168 天)
+- `2026-03-16-tech-radar.md` (score=0.0, 閒置 168 天)
+- `2026-03-16.md` (score=0.0, 閒置 170 天)
+- `2026-03-17.md` (score=0.0, 閒置 169 天)
+- `2026-03.md` (score=0.0, 閒置 169 天)
+- `2026-03-16-n8n-webhook-draft-path.md` (score=0.0, 閒置 170 天)
+- `2026-03-18-telegram-monitoring-source-mismatch.md` (score=0.0, 閒置 168 天)
+- `2026-03-16-claude-bug-log-discipline.md` (score=0.0, 閒置 170 天)
+- `2026-03-16-workflow-c-groq-proxy-dns.md` (score=0.0, 閒置 170 天)
+- `douyin-parser-bugs.md` (score=0.0, 閒置 170 天)
+- `2026-03-16-agent-behavior-bugs.md` (score=0.0, 閒置 170 天)
+- `2026-03-18-mobile-bridge-tunnel-down.md` (score=0.0, 閒置 168 天)
+- `2026-03-16-d1-fix-verification.md` (score=0.0, 閒置 170 天)
+- `2026-03-16-git-score-filepath-parsing.md` (score=0.0, 閒置 170 天)
+- `2026-03-21-mobile-bridge-tunnel-down.md` (score=0.0, 閒置 165 天)
+- `2026-03-18-mobile-bridge-webhook-bind-failed.md` (score=0.0, 閒置 168 天)
+- `2026-03-17-mobile-bridge-smoke.md` (score=0.0, 閒置 169 天)
+- `2026-03-19-mobile-bridge-tunnel-down.md` (score=0.0, 閒置 167 天)
+- `2026-03-17-mobile-bridge-tunnel-down.md` (score=0.0, 閒置 169 天)
+- `2026-03-17-mobile-bridge-webhook-bind-failed.md` (score=0.0, 閒置 169 天)
+- `2026-03-16-bug-fixes-and-automation-loop.md` (score=0.0, 閒置 168 天)
+- `2026-03-24-CRM-status-pill-click-無法切換.md` (score=0.0, 閒置 162 天)
+- `2026-03-16-auto-git-score.md` (score=0.0, 閒置 168 天)
+- `2026-03-16-health-title-restored.md` (score=0.0, 閒置 170 天)
+- `2026-03-17-jsonld-fallback-implementation.md` (score=0.0, 閒置 169 天)
+- `2026-03-16-pdca-causal-chain.md` (score=0.0, 閒置 168 天)
+- `2026-04-23-mobile-bridge-root-cause.md` (score=0.0, 閒置 132 天)
+- `2026-04-17-crm-esmodule-refactor.md` (score=0.0, 閒置 138 天)

@@ -1,7 +1,7 @@
 ---
 date: 2026-03-17
 type: completion_summary
-status: ready_for_production
+status: deprecated
 ---
 
 # 方案 C 實施完成總結
