@@ -4786,3 +4786,66 @@
   其他變更 memory/turn-count.txt +10
 
 ---
+
+## 2026-09-02 12:42 | auto-git-score | 分數 550 | 📥 達到閾值（550/60）→ 已送決策匣，待人類核准
+
+**描述：** git-score 自動 commit（score=845），含重要變更
+
+**評分明細：**
+  其他變更 error-log/2026-03-16-agent-behavior-bugs.md +10
+  其他變更 error-log/2026-03-16-claude-bug-log-discipline.md +10
+  其他變更 error-log/2026-03-16-d1-fix-verification.md +10
+  其他變更 error-log/2026-03-16-git-score-filepath-parsing.md +10
+  其他變更 error-log/2026-03-16-n8n-webhook-draft-path.md +10
+  其他變更 error-log/2026-03-16-workflow-c-groq-proxy-dns.md +10
+  其他變更 error-log/2026-03-17-mobile-bridge-smoke.md +10
+  其他變更 error-log/2026-03-17-mobile-bridge-tunnel-down.md +10
+  其他變更 error-log/2026-03-17-mobile-bridge-webhook-bind-failed.md +10
+  其他變更 error-log/2026-03-18-mobile-bridge-tunnel-down.md +10
+  其他變更 error-log/2026-03-18-mobile-bridge-webhook-bind-failed.md +10
+  其他變更 error-log/2026-03-18-telegram-monitoring-source-mismatch.md +10
+  其他變更 error-log/2026-03-19-mobile-bridge-tunnel-down.md +10
+  其他變更 error-log/2026-03-21-mobile-bridge-tunnel-down.md +10
+  其他變更 error-log/douyin-parser-bugs.md +10
+  其他變更 memory/cleaning-rules.md +10
+  其他變更 memory/decay-error.txt +10
+  其他變更 memory/decay-log.md +10
+  其他變更 memory/decay-log.txt +10
+  其他變更 memory/dedup-error.log +10
+  其他變更 memory/dedup-log.md +10
+  其他變更 memory/dedup-log.txt +10
+  其他變更 memory/dream-cycle-launchd.log +10
+  其他變更 memory/dream-cycle.log +10
+  其他變更 memory/handoff/generate-handoff.log +10
+  其他變更 memory/handoff/latest-handoff.md +10
+  其他變更 memory/lightpanda-decision-analysis-2026-03-17.md +10
+  其他變更 memory/master-plan.md +10
+  其他變更 memory/obsidian-ingest-error.log +10
+  其他變更 memory/persona-reports/builder/2026-03-16-tech-radar.md +10
+  其他變更 memory/persona-reports/builder/2026-03-17-tech-radar.md +10
+  其他變更 memory/persona-tech-radar-error.log +10
+  其他變更 memory/persona-tech-radar.log +10
+  其他變更 memory/plan-c-completion-summary.md +10
+  其他變更 memory/reactivate-webhooks.log +10
+  其他變更 memory/status/swap-monitor.log +10
+  其他變更 memory/tiered-summary-error.log +10
+  其他變更 memory/tiered-summary.log +10
+  其他變更 memory/tiered/daily/2026-03-16.md +10
+  其他變更 memory/tiered/daily/2026-03-17.md +10
+  其他變更 memory/tiered/daily/2026-09-02.md +10
+  其他變更 memory/tiered/monthly/2026-03.md +10
+  其他變更 memory/tiered/monthly/2026-09.md +10
+  其他變更 memory/tiered/yearly/2026.md +10
+  其他變更 memory/truth-xval-error.log +10
+  其他變更 memory/truth-xval.log +10
+  其他變更 "memory/users/builder/2026-03-16-\345\260\226\347\253\257\345\267\245\347\250\213\345\270\253-\346\212\200\350\241\223\351\233\267\351\201\224-2026-03-16.md" +10
+  其他變更 truth-source/2026-03-16-auto-git-score.md +10
+  其他變更 truth-source/2026-03-16-bug-fixes-and-automation-loop.md +10
+  其他變更 truth-source/2026-03-16-health-title-restored.md +10
+  其他變更 truth-source/2026-03-16-pdca-causal-chain.md +10
+  其他變更 truth-source/2026-03-17-jsonld-fallback-implementation.md +10
+  其他變更 "truth-source/2026-03-24-CRM-status-pill-click-\347\204\241\346\263\225\345\210\207\346\217\233.md" +10
+  其他變更 truth-source/2026-04-17-crm-esmodule-refactor.md +10
+  其他變更 truth-source/2026-04-23-mobile-bridge-root-cause.md +10
+
+---
