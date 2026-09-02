@@ -25,3 +25,7 @@
 [reactivate_webhooks] ❌ n8n 未就緒，放棄
 [reactivate_webhooks] 等待 n8n 就緒...
 [reactivate_webhooks] ❌ n8n 未就緒，放棄
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/reactivate_webhooks.py", line 12, in <module>
+    with open('/Users/ryan/meta-agent/.env') as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/ryan/meta-agent/.env'

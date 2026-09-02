@@ -142,3 +142,7 @@
 [health_check] ❌ n8n: <urlopen error [Errno 61] Connection refused>
 [health_check] ❌ Groq API: [Errno 8] nodename nor servname provided, or not known
 [health_check] 已寫入 /Users/ryan/meta-agent/error-log/2026-04-24-health-check.md
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/health_check.py", line 38, in <module>
+    with open(ENV_FILE) as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/ryan/graphify-repos/meta-agent/.env'
