@@ -41,3 +41,11 @@
 - `2026-04-17-crm-esmodule-refactor.md` (score=0.0, 閒置 138 天)
 
 [memory-decay] 完成。處理 38 個，deprecated 33 個
+[memory-decay] 2026-09-03 開始掃描 ['/Users/ryan/meta-agent/memory', '/Users/ryan/meta-agent/error-log', '/Users/ryan/meta-agent/truth-source']
+
+## 2026-09-03 衰退掃描
+- 掃描檔案：5 個
+- 保留：5 個
+- 標記 deprecated：0 個
+
+[memory-decay] 完成。處理 5 個，deprecated 0 個

@@ -48,3 +48,8 @@
 - `2026-03-16-pdca-causal-chain.md` (score=0.0, 閒置 168 天)
 - `2026-04-23-mobile-bridge-root-cause.md` (score=0.0, 閒置 132 天)
 - `2026-04-17-crm-esmodule-refactor.md` (score=0.0, 閒置 138 天)
+
+## 2026-09-03 衰退掃描
+- 掃描檔案：5 個
+- 保留：5 個
+- 標記 deprecated：0 個
