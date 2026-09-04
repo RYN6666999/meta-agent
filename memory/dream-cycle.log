@@ -137,3 +137,38 @@ FileNotFoundError: [Errno 2] No such file or directory: '/Users/ryan/meta-agent/
   未完成：3 | Turn：176 | 服務：{'LightRAG': '❌', 'n8n': '❌'}
 [2026-09-03 02:07:17] ✅ generate-handoff 完成
 [2026-09-03 02:07:17] ====== Dream Cycle 完成 ======
+[2026-09-04 02:00:37] ====== Dream Cycle 開始 ======
+[2026-09-04 02:00:37] ▶ truth-xval...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-04 02:00:37] ❌ truth-xval 失敗（繼續下一步）
+[2026-09-04 02:00:38] ▶ dedup-lightrag...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-04 02:00:38] ❌ dedup-lightrag 失敗（繼續下一步）
+[2026-09-04 02:00:38] ▶ memory-decay...
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/memory-decay.py", line 85, in <module>
+    def process_file(filepath: Path) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+[2026-09-04 02:00:39] ❌ memory-decay 失敗（繼續下一步）
+[2026-09-04 02:00:39] ▶ tiered-summary...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-04 02:00:39] ❌ tiered-summary 失敗（繼續下一步）
+[2026-09-04 02:00:39] ▶ obsidian-ingest...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-04 02:00:39] ❌ obsidian-ingest 失敗（繼續下一步）
+[2026-09-04 02:00:39] ▶ persona-tech-radar...
+/Users/ryan/meta-agent/scripts/dream-cycle.sh: line 43: /Users/ryan/meta-agent/.venv/bin/python: No such file or directory
+[2026-09-04 02:00:39] ❌ persona-tech-radar 失敗（繼續下一步）
+[2026-09-04 02:00:39] ▶ reactivate-webhooks...
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/reactivate_webhooks.py", line 12, in <module>
+    with open('/Users/ryan/meta-agent/.env') as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/ryan/meta-agent/.env'
+[2026-09-04 02:00:39] ❌ reactivate-webhooks 失敗（繼續下一步）
+[2026-09-04 02:00:39] ▶ inbox 清理...
+[2026-09-04 02:00:39] ✅ inbox 清理完成（歸檔 0 條）
+[2026-09-04 02:00:39] ▶ generate-handoff...
+[generate-handoff] ✅ 已寫入 /Users/ryan/meta-agent/memory/handoff/latest-handoff.md
+  未完成：3 | Turn：176 | 服務：{'LightRAG': '❌', 'n8n': '❌'}
+[2026-09-04 02:00:39] ✅ generate-handoff 完成
+[2026-09-04 02:00:39] ====== Dream Cycle 完成 ======

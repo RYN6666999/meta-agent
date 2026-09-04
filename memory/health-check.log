@@ -156,3 +156,8 @@ Traceback (most recent call last):
     with open(ENV_FILE) as f:
          ~~~~^^^^^^^^^^
 FileNotFoundError: [Errno 2] No such file or directory: '/Users/ryan/graphify-repos/meta-agent/.env'
+Traceback (most recent call last):
+  File "/Users/ryan/meta-agent/scripts/health_check.py", line 38, in <module>
+    with open(ENV_FILE) as f:
+         ~~~~^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/ryan/graphify-repos/meta-agent/.env'
