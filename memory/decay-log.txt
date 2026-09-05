@@ -57,3 +57,11 @@
 - 標記 deprecated：0 個
 
 [memory-decay] 完成。處理 6 個，deprecated 0 個
+[memory-decay] 2026-09-05 開始掃描 ['/Users/ryan/meta-agent/memory', '/Users/ryan/meta-agent/error-log', '/Users/ryan/meta-agent/truth-source']
+
+## 2026-09-05 衰退掃描
+- 掃描檔案：7 個
+- 保留：7 個
+- 標記 deprecated：0 個
+
+[memory-decay] 完成。處理 7 個，deprecated 0 個
